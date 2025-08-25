@@ -1,0 +1,64 @@
+{
+  "name": "tn-agent-launcher",
+  "stack": "heroku-24",
+  "env": {
+    "ALLOWED_HOSTS": {
+      "value": ".herokuapp.com"
+    },
+    "DEBUG": {
+      "value": "True"
+    },
+    "DISABLE_COLLECTSTATIC": {
+      "value": 0
+    },
+    "ENVIRONMENT": {
+      "value": "review"
+    },
+    "PROJECT_PATH": {
+      "value": "tn_agent_launcher"
+    },
+    "NPM_CONFIG_PRODUCTION": {
+      "value": "false"
+    },
+    "DJANGO_SUPERUSER_PASSWORD": {
+      "value": "0r_s5x9c)2f#deav(osj#kj&a0z3ztu*mie6ju3!axrm6v1)7o"
+    },
+    "PLAYWRIGHT_TEST_USER_PASS": {
+      "value": "0r_s5x9c)2f#deav(osj#kj&a0z3ztu*mie6ju3!axrm6v1)7o"
+    },
+    "SECRET_KEY": {
+      "generator": "secret"
+    },
+    "USE_EMAIL_ALLOWLIST": {
+      "value": "False"
+    },
+    "EMAIL_ALLOWLIST": {
+      "value": "[\"admin@thinknimble.com\"]"
+    }
+  },
+  "addons": [
+    "heroku-postgresql:standard-0",
+    "papertrail:choklad",
+    "heroku-redis:mini"
+  ],
+  "environments": {
+    "review": {
+      "addons": [
+        "heroku-postgresql:essential-0",
+        "papertrail:choklad",
+        "heroku-redis:mini"
+      ]
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    },
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "scripts": {
+    "postdeploy": "./scripts/db_setup.sh"
+  }
+}

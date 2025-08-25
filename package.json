@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "postinstall": "cd client && npm install",
+    "heroku-postbuild": "cd client && npm run build"
+  },
+  "engines": {
+    "node": "18.*.*",
+    "npm": "9.*.*"
+  },
+  "cacheDirectories": [
+    "client/node_modules",
+    ".cache/ms-playwright"
+  ],
+  "dependencies": {}
+}

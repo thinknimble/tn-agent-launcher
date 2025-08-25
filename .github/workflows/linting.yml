@@ -1,0 +1,41 @@
+name: Linter
+on: [push]
+jobs:
+  Ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+      - name: Run Ruff Lint Check
+        run: ruff check --output-format=github server
+      - name: Run Ruff Format Check
+        run: ruff format --check server -q
+  Lint_Web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: 📦 Install dependencies
+        env:
+          NPM_CONFIG_PRODUCTION: false
+        working-directory: ./client
+        run: |
+          npm install
+      - name: 🆎 TypeCheck
+        working-directory: ./client
+        run: npm run tslint
+      - name: 🚧 ESLint
+        working-directory: ./client
+        run: npm run eslint
+      - name: 🎨 Prettier
+        working-directory: ./client
+        run: npm run format:check
