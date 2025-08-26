@@ -26,7 +26,7 @@ export class AgentInstanceForm extends Form<AgentInstanceFormInputs> {
   static modelName = FormField.create({
     label: 'Model Name',
     placeholder: 'e.g., gpt-4, claude-2, etc.',
-    type: 'text',
+    type: 'select',
     value: '',
   })
   static apiKey = FormField.create({
