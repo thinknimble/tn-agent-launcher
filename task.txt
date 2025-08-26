@@ -1,0 +1,18 @@
+Create the services folder AgentInstances
+
+src/services/agent-instances/
+index.ts
+queries.ts
+api.ts 
+models.ts 
+forms.ts 
+
+index.ts will have the exports of all the other files 
+queries.ts will use tanstack to create queries for the api calls 
+api.ts will use tn-models and createApi to create the baseApi 
+models.ts will be a set of shapes using zod that are consumed by the api 
+forms.ts will use tn-forms to create the forms
+
+You can call the mcp tool tn_models_how_to_get_schema to receive the types for the models and the routes for the api
+
+

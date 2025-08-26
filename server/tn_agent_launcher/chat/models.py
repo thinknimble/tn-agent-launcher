@@ -75,7 +75,7 @@ class Feedback(AbstractBaseModel):
 
 
 class PromptTemplateManager(models.Manager):
-    def get_assembled_prompt(self, agent: str | None = None):
+    def get_assembled_prompt(self, agent: str | None = None, agent_instance: str| None = None):
         """Returns the assembled system prompt using all templates and fingerprints"""
         from .models import Fingerprint  # Local import to avoid circular dependency
 
@@ -85,7 +85,8 @@ class PromptTemplateManager(models.Manager):
         # Filter by agent if specified
         if agent:
             templates = templates.filter(agent_types__contains=[agent])
-
+        if agent_instance:
+            templates = templates.filter(agent_instance__id=agent_instance)
         # Get all fingerprints and sort by name
         fingerprints = Fingerprint.objects.all().order_by("name")
 
@@ -116,9 +117,11 @@ class PromptTemplateManager(models.Manager):
 
         return "\n\n".join(formatted_templates)
 
-    async def aget_assembled_prompt(self, agent: str | None = None):
+    async def aget_assembled_prompt(self, agent: str | None = None, agent_instance: str| None = None):
         """Async version of get_assembled_prompt"""
-        return await sync_to_async(self.get_assembled_prompt)(agent=agent)
+        
+        return await sync_to_async(self.get_assembled_prompt)(agent=agent, agent_instance=agent_instance)
+    
 
 
 class PromptTemplate(AbstractBaseModel):
@@ -141,7 +144,13 @@ class PromptTemplate(AbstractBaseModel):
         blank=True,
         help_text="List of agent types this template is for. Leave empty for none.",
     )
-
+    agent_instance = models.ForeignKey(
+        "agent.AgentInstance",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="Optional specific agent instance this template is associated with",
+    )
     objects = PromptTemplateManager()
 
     def __str__(self):

@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "tn_agent_launcher.common",
     "tn_agent_launcher.core",
     "tn_agent_launcher.chat",
+    "tn_agent_launcher.agent",
     # Django
     "django.contrib.admin",
     "django.contrib.auth",
