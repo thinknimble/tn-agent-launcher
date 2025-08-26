@@ -4,9 +4,9 @@ import pytest
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
 
+from tn_agent_launcher.agent.factories import AgentInstanceFactory, AgentProjectFactory
 from tn_agent_launcher.core.factories import UserFactory
 from tn_agent_launcher.core.models import User
-from tn_agent_launcher.agent.factories import AgentInstanceFactory, AgentProjectFactory
 
 JSON_RQST_HEADERS = dict(
     content_type="application/json",
@@ -67,6 +67,7 @@ def sample_agent_instance(agent_instance_factory):
     agent_instance = agent_instance_factory()
     agent_instance.save()
     return agent_instance
+
 
 @pytest.fixture
 def sample_agent_project(agent_project_factory):

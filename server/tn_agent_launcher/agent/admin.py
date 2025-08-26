@@ -1,7 +1,11 @@
 from django.contrib import admin
-from .models import AgentInstance
+
 from tn_agent_launcher.chat.models import PromptTemplate
+
+from .models import AgentInstance
+
 # Register your models here.
+
 
 class PromptTemplateInline(admin.TabularInline):
     model = PromptTemplate

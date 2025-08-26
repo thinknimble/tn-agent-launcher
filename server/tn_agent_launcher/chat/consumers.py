@@ -332,8 +332,9 @@
 #         return await ChatMessage.objects.acreate(chat=chat, content=content, role=role)
 
 
-
 from channels.generic.websocket import AsyncJsonWebsocketConsumer  # type: ignore[import-untyped]
+
+
 class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         await self.accept()

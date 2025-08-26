@@ -75,7 +75,7 @@ class Feedback(AbstractBaseModel):
 
 
 class PromptTemplateManager(models.Manager):
-    def get_assembled_prompt(self, agent: str | None = None, agent_instance: str| None = None):
+    def get_assembled_prompt(self, agent: str | None = None, agent_instance: str | None = None):
         """Returns the assembled system prompt using all templates and fingerprints"""
         from .models import Fingerprint  # Local import to avoid circular dependency
 
@@ -117,11 +117,14 @@ class PromptTemplateManager(models.Manager):
 
         return "\n\n".join(formatted_templates)
 
-    async def aget_assembled_prompt(self, agent: str | None = None, agent_instance: str| None = None):
+    async def aget_assembled_prompt(
+        self, agent: str | None = None, agent_instance: str | None = None
+    ):
         """Async version of get_assembled_prompt"""
-        
-        return await sync_to_async(self.get_assembled_prompt)(agent=agent, agent_instance=agent_instance)
-    
+
+        return await sync_to_async(self.get_assembled_prompt)(
+            agent=agent, agent_instance=agent_instance
+        )
 
 
 class PromptTemplate(AbstractBaseModel):
