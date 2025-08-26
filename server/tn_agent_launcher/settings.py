@@ -23,7 +23,9 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-SERVER_EMAIL = config("DEFAULT_FROM_EMAIL", default="tn-agent-launcher <noreply@tn_agent_launcher.com>")
+SERVER_EMAIL = config(
+    "DEFAULT_FROM_EMAIL", default="tn-agent-launcher <noreply@tn_agent_launcher.com>"
+)
 
 DEFAULT_FROM_EMAIL = SERVER_EMAIL
 
