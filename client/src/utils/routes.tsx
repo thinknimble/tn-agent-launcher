@@ -1,5 +1,5 @@
 import { Route, Routes, Navigate } from 'react-router-dom'
-import { Home, Layout, LogIn, SignUp } from 'src/pages'
+import { Home, Layout, LogIn, SignUp, CreateAgentProject } from 'src/pages'
 import { Dashboard } from 'src/pages/dashboard'
 import { ChatDemo } from 'src/pages/chat-demo'
 import { PageNotFound } from 'src/pages/page-not-found'
@@ -11,6 +11,10 @@ const PrivateRoutes = () => {
   return (
     <>
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/agent/">
+        <Route index element={<Navigate to="create" />} />
+        <Route path="create" element={<CreateAgentProject />} />
+      </Route>
       <Route path="/chat" element={<ChatDemo />} />
     </>
   )

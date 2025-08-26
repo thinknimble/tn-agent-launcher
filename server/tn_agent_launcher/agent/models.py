@@ -15,6 +15,14 @@ class AgentInstance(AbstractBaseModel):
         CHAT = "chat", "Chat"
         ONE_SHOT = "one-shot", "One-Shot"
 
+        @property
+        def description(self):
+            descriptions = {
+                self.CHAT: "A conversational agent that can engage in multi-turn dialogues.",
+                self.ONE_SHOT: "An agent designed for single-turn interactions or tasks, not maintaining context or history.",
+            }
+            return descriptions.get(self.value, "No description available.")
+
     friendly_name = models.CharField(max_length=255)
     provider = models.CharField(max_length=50, choices=ProviderChoices.choices)
     model_name = models.CharField(max_length=100)

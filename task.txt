@@ -1,18 +1,10 @@
-Create the services folder AgentInstances
+Lets create the UI for our feature
 
-src/services/agent-instances/
-index.ts
-queries.ts
-api.ts 
-models.ts 
-forms.ts 
+We want users to be able to create new agent projects from their dashboard 
+An agent project consists of one or many agent instances 
+An agent instance is connected to one or many prompts that are only available to that agent. 
 
-index.ts will have the exports of all the other files 
-queries.ts will use tanstack to create queries for the api calls 
-api.ts will use tn-models and createApi to create the baseApi 
-models.ts will be a set of shapes using zod that are consumed by the api 
-forms.ts will use tn-forms to create the forms
+Users bring their own api key
+if the selected provider is ollama a user can either add an api_key or provide a target_url
 
-You can call the mcp tool tn_models_how_to_get_schema to receive the types for the models and the routes for the api
-
-
+You can checkout the src/services/agent-project and src/services/agent-instance for details 
