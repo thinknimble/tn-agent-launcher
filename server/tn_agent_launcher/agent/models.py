@@ -53,7 +53,6 @@ class AgentInstance(AbstractBaseModel):
     async def agent(self):
         from tn_agent_launcher.chat.models import PromptTemplate
 
-        print("Fetching system prompt for agent instance:", self.id)
         system_prompt = await PromptTemplate.objects.aget_assembled_prompt(agent_instance=self.id)
         return Agent(
             name=self.friendly_name,

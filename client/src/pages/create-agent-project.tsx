@@ -4,9 +4,11 @@ import {
   AgentProjectForm,
   TAgentProjectForm,
   agentProjectApi,
+  agentProjectQueries,
 } from 'src/services/agent-project'
-import { useMutation } from '@tanstack/react-query'
-import { useCallback, useMemo, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { useCallback, useMemo, useState, useEffect } from 'react'
+import { Pagination } from '@thinknimble/tn-models'
 
 import { Button } from 'src/components/button'
 import { Input } from 'src/components/input'
@@ -21,81 +23,289 @@ import {
   providerKeysEnum,
 } from 'src/services/agent-instance'
 import { AgentInstance } from 'src/services/agent-instance/models'
-import { SelectOption } from 'src/services/base-model' // Assuming a Select component exists
-import { useNavigate } from 'react-router-dom'
+import { SelectOption } from 'src/services/base-model'
+import { useNavigate, useParams } from 'react-router-dom'
 import Select from 'react-dropdown-select'
+import { agentInstanceQueries } from 'src/services/agent-instance'
+import {
+  CreatePromptTemplate,
+  PromptTemplate,
+  promptTemplateApi,
+} from 'src/services/prompt-template'
+
+const ProjectDetailsSection = ({
+  agentProject,
+  isEditing,
+  onEdit,
+}: {
+  agentProject: AgentProject
+  isEditing: boolean
+  onEdit: () => void
+}) => (
+  <div className="rounded-lg border border-primary-200 bg-white p-6 shadow-sm">
+    <div className="flex items-start justify-between">
+      <div>
+        <h1 className="text-3xl font-bold text-primary-600">{agentProject.title}</h1>
+        <p className="mt-2 text-primary-400">{agentProject.description}</p>
+      </div>
+      <Button onClick={onEdit} variant="secondary">
+        Edit Project
+      </Button>
+    </div>
+  </div>
+)
 
 const CreateAgentProjectForm = ({
   onSuccess,
+  onCancel,
+  initialData,
+  isEditing = false,
 }: {
   onSuccess: (agentProject: AgentProject) => void
+  onCancel?: () => void
+  initialData?: AgentProject
+  isEditing?: boolean
 }) => {
-  const { form, createFormFieldChangeHandler } = useTnForm<TAgentProjectForm>()
+  const { form, createFormFieldChangeHandler, overrideForm } = useTnForm<TAgentProjectForm>()
 
-  const { mutate: create, isPending } = useMutation({
+  useEffect(() => {
+    if (initialData && isEditing) {
+      const updatedForm = new AgentProjectForm() as TAgentProjectForm
+      updatedForm.title.value = initialData.title
+      updatedForm.description.value = initialData.description
+      overrideForm(updatedForm)
+    }
+  }, [initialData, isEditing, overrideForm])
+
+  const { mutate: create, isPending: isCreating } = useMutation({
     mutationFn: agentProjectApi.create,
     onSuccess(data) {
       onSuccess(data)
     },
   })
 
+  const { mutate: update, isPending: isUpdating } = useMutation({
+    mutationFn: agentProjectApi.update,
+    onSuccess(data) {
+      onSuccess(data)
+    },
+  })
+
+  const isPending = isCreating || isUpdating
+
   return (
-    <div className="mx-auto mt-10 max-w-md">
-      <h1 className="mb-4 text-2xl font-bold">Create New Agent Project</h1>
+    <div className="rounded-lg border border-primary-200 bg-white p-6 shadow-sm">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-primary-600">
+          {isEditing ? 'Edit Project Details' : 'Create New Agent Project'}
+        </h2>
+        <p className="mt-2 text-sm text-primary-400">
+          {isEditing ? 'Update your project information' : 'Set up your new AI agent project'}
+        </p>
+      </div>
       <form
-        className="space-y-4"
+        className="space-y-6"
         onSubmit={(e) => {
           e.preventDefault()
           if (form.isValid) {
-            create({
+            const formData = {
               title: form.title.value ?? '',
               description: form.description.value ?? '',
-            })
+            }
+
+            if (isEditing && initialData) {
+              update({ ...formData, id: initialData.id })
+            } else {
+              create(formData)
+            }
           }
         }}
       >
-        <div>
-          <Input
-            label={form.title.label}
-            placeholder={form.title.placeholder}
-            value={form.title.value ?? ''}
-            onChange={(e) => createFormFieldChangeHandler(form.title)(e.target.value)}
-          />
-          <ErrorsList errors={form.title.errors} />
+        <div className="grid gap-6 md:grid-cols-1">
+          <div>
+            <Input
+              label={form.title.label}
+              placeholder={form.title.placeholder}
+              value={form.title.value ?? ''}
+              onChange={(e) => createFormFieldChangeHandler(form.title)(e.target.value)}
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+            />
+            <ErrorsList errors={form.title.errors} />
+          </div>
+          <div>
+            <Input
+              label={form.description.label}
+              placeholder={form.description.placeholder}
+              value={form.description.value ?? ''}
+              onChange={(e) => createFormFieldChangeHandler(form.description)(e.target.value)}
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+            />
+            <ErrorsList errors={form.description.errors} />
+          </div>
         </div>
-        <div>
-          <Input
-            label={form.description.label}
-            placeholder={form.description.placeholder}
-            value={form.description.value ?? ''}
-            onChange={(e) => createFormFieldChangeHandler(form.description)(e.target.value)}
-          />
-          <ErrorsList errors={form.description.errors} />
+        <div className="flex justify-end space-x-3">
+          {onCancel && (
+            <Button
+              type="button"
+              onClick={onCancel}
+              variant="ghost"
+              className="hover:bg-primary-50 border-primary-300 text-primary-600"
+            >
+              Cancel
+            </Button>
+          )}
+          <Button
+            type="submit"
+            disabled={isPending || !form.isValid}
+            className="bg-primary-600 hover:bg-primary-700"
+          >
+            {isPending ? 'Saving...' : isEditing ? 'Update Project' : 'Create Project'}
+          </Button>
         </div>
-        <Button type="submit" disabled={isPending || !form.isValid}>
-          Create Project
-        </Button>
       </form>
     </div>
   )
 }
 
-const AddAgentInstanceForm = ({
+const AgentInstanceCard = ({
+  instance,
+  onEdit,
+  onDelete,
+}: {
+  instance: AgentInstance
+  onEdit: (instance: AgentInstance) => void
+  onDelete: (id: string) => void
+}) => (
+  <div className="rounded-lg border border-primary-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="flex items-start justify-between">
+      <div className="flex-1">
+        <h3 className="font-semibold text-primary-600">{instance.friendlyName}</h3>
+        <div className="mt-2 space-y-1 text-sm text-primary-400">
+          <p>
+            <span className="font-medium">Provider:</span> {providerLabelMap[instance.provider]}
+          </p>
+          <p>
+            <span className="font-medium">Model:</span> {instance.modelName}
+          </p>
+          <p>
+            <span className="font-medium">Type:</span> {agentTypeLabelMap[instance.agentType]}
+          </p>
+          {instance.targetUrl && (
+            <p>
+              <span className="font-medium">URL:</span> {instance.targetUrl}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="flex space-x-2">
+        <Button
+          onClick={() => onEdit(instance)}
+          variant="ghost"
+          className="hover:bg-primary-50 border-primary-300 text-primary-600"
+        >
+          Edit
+        </Button>
+        <Button
+          onClick={() => onDelete(instance.id)}
+          variant="ghost"
+          className="border-error text-error hover:bg-red-50"
+        >
+          Delete
+        </Button>
+      </div>
+    </div>
+  </div>
+)
+
+const AgentInstanceInner = ({
   agentProject,
-  onInstanceAdded,
+  onInstanceSaved,
+  onCancel,
+  editingInstance,
 }: {
   agentProject: AgentProject
-  onInstanceAdded: (instance: AgentInstance) => void
+  onInstanceSaved: (instance: AgentInstance) => void
+  onCancel: () => void
+  editingInstance?: AgentInstance
 }) => {
   const { form, createFormFieldChangeHandler, overrideForm } = useTnForm<TAgentInstanceForm>()
+  const isEditing = Boolean(editingInstance)
+  const [promptTemplateContent, setPromptTemplateContent] = useState<string | null>(null)
 
-  const { mutate: create, isPending } = useMutation({
-    mutationFn: (data: any) => agentInstanceApi.create(data),
-    onSuccess: (newInstance) => {
-      onInstanceAdded(newInstance)
-      overrideForm(new AgentInstanceForm() as TAgentInstanceForm)
+  useEffect(() => {
+    if (editingInstance) {
+      const updatedForm = new AgentInstanceForm() as TAgentInstanceForm
+      updatedForm.friendlyName.value = editingInstance.friendlyName
+      updatedForm.provider.value = {
+        label: providerLabelMap[editingInstance.provider],
+        value: editingInstance.provider,
+      }
+      updatedForm.modelName.value = editingInstance.modelName
+      updatedForm.apiKey.value = editingInstance.apiKey
+      updatedForm.targetUrl.value = editingInstance.targetUrl || ''
+      updatedForm.agentType.value = {
+        label: agentTypeLabelMap[editingInstance.agentType],
+        value: editingInstance.agentType,
+      }
+      overrideForm(updatedForm)
+      setPromptTemplateContent(editingInstance.promptTemplate?.content || null)
+    }
+  }, [editingInstance, overrideForm])
+
+  const { mutate: createPrompt, isPending: isCreatingPrompt } = useMutation({
+    mutationFn: (data: CreatePromptTemplate) => promptTemplateApi.create(data),
+    onSuccess: (newPrompt) => {
+    
     },
   })
+
+  const { mutate: updatePrompt, isPending: isUpdatingPrompt } = useMutation({
+    mutationFn: (data: PromptTemplate) => promptTemplateApi.update(data),
+    onSuccess: (newPrompt) => {
+      
+    },
+  })
+
+  const { mutate: create, isPending: isCreating } = useMutation({
+    mutationFn: (data: any) => agentInstanceApi.create(data),
+    onSuccess: (newInstance) => {
+      onInstanceSaved(newInstance)
+      overrideForm(new AgentInstanceForm() as TAgentInstanceForm)
+      if (editingInstance?.promptTemplate?.id) {
+        updatePrompt({
+          id: editingInstance.promptTemplate.id,
+          name: editingInstance.promptTemplate.name,
+          content: promptTemplateContent ?? '',
+        })
+      } else {
+        createPrompt({
+          name: form.friendlyName.value ?? 'Default Prompt',
+          content: promptTemplateContent ?? '',
+        })
+      }
+    },
+  })
+
+  const { mutate: update, isPending: isUpdating } = useMutation({
+    mutationFn: (data: any) => agentInstanceApi.update(data),
+    onSuccess: (updatedInstance) => {
+      onInstanceSaved(updatedInstance)
+      if (editingInstance?.promptTemplate?.id) {
+        updatePrompt({
+          id: editingInstance.promptTemplate.id,
+          name: editingInstance.promptTemplate.name,
+          content: promptTemplateContent ?? '',
+        })
+      } else {
+        createPrompt({
+          name: form.friendlyName.value ?? 'Default Prompt',
+          content: promptTemplateContent ?? '',
+        })
+      }
+    },
+  })
+
+  const isPending = isCreating || isUpdating
 
   const modelOptions = useMemo(() => {
     if (!form.provider.value) return []
@@ -114,6 +324,7 @@ const AddAgentInstanceForm = ({
         return [
           { label: 'gemini-1.5', value: 'gemini-1.5' },
           { label: 'gemini-1.5-pro', value: 'gemini-1.5-pro' },
+          { label: 'gemini-2.0-flash', value: 'gemini-2.0-flash' },
         ]
       case providerKeysEnum.OLLAMA:
         return [
@@ -138,128 +349,327 @@ const AddAgentInstanceForm = ({
     e.preventDefault()
     if (form.isValid) {
       const formValue = form.value
-      console.log('formValue', formValue)
-      create({
+      const data = {
         ...formValue,
         agentProject: agentProject.id,
         provider: formValue.provider?.value,
         agentType: formValue.agentType?.value,
-      })
+      }
+
+      if (isEditing && editingInstance) {
+        update({ ...data, id: editingInstance.id })
+      } else {
+        create(data)
+      }
     }
   }
 
   return (
-    <div className="mt-6">
-      <h2 className="text-xl font-semibold">Add Agent Instance</h2>
-      <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
-        <Input
-          label={form.friendlyName.label}
-          placeholder={form.friendlyName.placeholder}
-          value={form.friendlyName.value}
-          onChange={(e) => createFormFieldChangeHandler(form.friendlyName)(e.target.value)}
-        />
-        <ErrorsList errors={form.friendlyName.errors} />
+    <div className="rounded-lg border border-primary-200 bg-white p-6 shadow-sm">
+      <div className="mb-6">
+        <h3 className="text-xl font-bold text-primary-600">
+          {isEditing ? 'Edit Agent Instance' : 'Add New Agent Instance'}
+        </h3>
+        <p className="mt-2 text-sm text-primary-400">
+          {isEditing
+            ? 'Update your agent configuration'
+            : 'Configure a new AI agent for your project'}
+        </p>
+      </div>
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div>
+            <Input
+              label={form.friendlyName.label}
+              placeholder={form.friendlyName.placeholder}
+              value={form.friendlyName.value}
+              onChange={(e) => createFormFieldChangeHandler(form.friendlyName)(e.target.value)}
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+            />
+            <ErrorsList errors={form.friendlyName.errors} />
+          </div>
 
-        <Select
-          options={providerOptions}
-          values={form.provider.value ? [form.provider.value] : []}
-          onChange={(values) =>
-            createFormFieldChangeHandler(form.provider)(values ? values[0] : null)
-          }
-        />
-        <ErrorsList errors={form.provider.errors} />
+          <div>
+            <label className="mb-2 block text-sm font-medium text-primary-600">Provider</label>
+            <Select
+              options={providerOptions}
+              values={form.provider.value ? [form.provider.value] : []}
+              onChange={(values) =>
+                createFormFieldChangeHandler(form.provider)(values ? values[0] : null)
+              }
+              placeholder="Select Provider"
+              className="bg-primary-50 border-primary-200"
+            />
+            <ErrorsList errors={form.provider.errors} />
+          </div>
+        </div>
 
-        <Select
-          options={modelOptions}
-          values={
-            form.modelName.value
-              ? [{ label: form.modelName.value, value: form.modelName.value }]
-              : []
-          }
-          onChange={(values) =>
-            createFormFieldChangeHandler(form.modelName)(values.length > 0 ? values[0].value : '')
-          }
-        />
-        <ErrorsList errors={form.modelName.errors} />
+        <div className="grid gap-6 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-primary-600">Model</label>
+            <Select
+              options={modelOptions}
+              values={
+                form.modelName.value
+                  ? [{ label: form.modelName.value, value: form.modelName.value }]
+                  : []
+              }
+              onChange={(values) =>
+                createFormFieldChangeHandler(form.modelName)(
+                  values.length > 0 ? values[0].value : '',
+                )
+              }
+              placeholder="Select Model"
+              className="bg-primary-50 border-primary-200"
+            />
+            <ErrorsList errors={form.modelName.errors} />
+          </div>
 
-        <Input
-          label={form.apiKey.label}
-          placeholder={form.apiKey.placeholder}
-          value={form.apiKey.value ?? ''}
-          onChange={(e) => createFormFieldChangeHandler(form.apiKey)(e.target.value)}
-          type="password"
-        />
-        <ErrorsList errors={form.apiKey.errors} />
+          <div>
+            <label className="mb-2 block text-sm font-medium text-primary-600">Agent Type</label>
+            <Select
+              options={agentTypeOptions}
+              values={form.agentType.value ? [form.agentType.value] : []}
+              onChange={(values) =>
+                createFormFieldChangeHandler(form.agentType)(values ? values[0] : null)
+              }
+              placeholder="Select Agent Type"
+              className="bg-primary-50 border-primary-200"
+            />
+            <ErrorsList errors={form.agentType.errors} />
+          </div>
+        </div>
 
-        <Input
-          label={form.targetUrl.label}
-          placeholder={form.targetUrl.placeholder}
-          value={form.targetUrl.value}
-          onChange={() => createFormFieldChangeHandler(form.targetUrl)}
-        />
-        <ErrorsList errors={form.targetUrl.errors} />
+        <div className="grid gap-6 md:grid-cols-2">
+          <div>
+            <Input
+              label={form.apiKey.label}
+              placeholder={form.apiKey.placeholder}
+              value={form.apiKey.value ?? ''}
+              onChange={(e) => createFormFieldChangeHandler(form.apiKey)(e.target.value)}
+              type="password"
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+            />
+            <ErrorsList errors={form.apiKey.errors} />
+          </div>
 
-        <Select
-          options={agentTypeOptions}
-          values={form.agentType.value ? [form.agentType.value] : []}
-          onChange={(values) =>
-            createFormFieldChangeHandler(form.agentType)(values ? values[0] : null)
-          }
-        />
-        <ErrorsList errors={form.agentType.errors} />
+          <div>
+            <Input
+              label={form.targetUrl.label}
+              placeholder={form.targetUrl.placeholder}
+              value={form.targetUrl.value}
+              onChange={(e) => createFormFieldChangeHandler(form.targetUrl)(e.target.value)}
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+            />
+            <ErrorsList errors={form.targetUrl.errors} />
+          </div>
+        </div>
 
-        <Button type="submit" disabled={isPending || !form.isValid}>
-          Add Instance
-        </Button>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-primary-600">System Prompt</label>
+          <textarea
+            placeholder="Enter the system prompt for this agent..."
+            className="bg-primary-50 resize-vertical h-32 w-full rounded-md border border-primary-200 p-3 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+            value={promptTemplateContent ?? ''}
+            onChange={(e) => setPromptTemplateContent(e.target.value)}
+          />
+          <p className="mt-1 text-xs text-primary-400">
+            Define the behavior and personality of your AI agent
+          </p>
+        </div>
+
+        <div className="flex justify-end space-x-3 border-t border-primary-200 pt-4">
+          <Button
+            type="button"
+            onClick={onCancel}
+            variant="ghost"
+            className="hover:bg-primary-50 border-primary-300 text-primary-600"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isPending || !form.isValid}
+            className="bg-primary-600 hover:bg-primary-700"
+          >
+            {isPending ? 'Saving...' : isEditing ? 'Update Agent' : 'Create Agent'}
+          </Button>
+        </div>
       </form>
     </div>
   )
 }
 
 export const CreateAgentProject = () => {
+  const { id } = useParams<{ id: string }>()
   const [agentProject, setAgentProject] = useState<AgentProject | null>(null)
   const [instances, setInstances] = useState<AgentInstance[]>([])
+  const [editingProject, setEditingProject] = useState(false)
+  const [editingInstance, setEditingInstance] = useState<AgentInstance | null>(null)
+  const [showInstanceForm, setShowInstanceForm] = useState(false)
   const navigate = useNavigate()
+  const isEditing = Boolean(id)
 
-  const handleInstanceAdded = (instance: AgentInstance) => {
-    setInstances((prev) => [...prev, instance])
+  const { data: existingProject, isLoading: loadingProject } = useQuery(
+    agentProjectQueries.retrieve(id!),
+  )
+
+  const { data: projectInstances, isLoading: loadingInstances } = useQuery(
+    agentInstanceQueries.list(new Pagination(), { agentProject: id }),
+  )
+
+  useEffect(() => {
+    if (existingProject) {
+      setAgentProject(existingProject)
+    }
+  }, [existingProject])
+
+  useEffect(() => {
+    if (projectInstances?.results) {
+      setInstances(projectInstances.results)
+    }
+  }, [projectInstances])
+
+  const handleInstanceSaved = (instance: AgentInstance) => {
+    if (editingInstance) {
+      setInstances((prev) => prev.map((inst) => (inst.id === instance.id ? instance : inst)))
+    } else {
+      setInstances((prev) => [...prev, instance])
+    }
+    setShowInstanceForm(false)
+    setEditingInstance(null)
+  }
+
+  const handleEditInstance = (instance: AgentInstance) => {
+    setEditingInstance(instance)
+    setShowInstanceForm(true)
+  }
+
+  const handleDeleteInstance = (instanceId: string) => {
+    // TODO: Add delete mutation
+    setInstances((prev) => prev.filter((inst) => inst.id !== instanceId))
+  }
+
+  const isLoading = loadingProject || loadingInstances
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen">
+        <div className="mx-auto max-w-6xl px-4 py-8">
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent"></div>
+              <p className="mt-4 text-primary-600">Loading project details...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="mx-auto mt-10 max-w-2xl p-4">
-      {!agentProject ? (
-        <FormProvider formClass={AgentProjectForm}>
-          <CreateAgentProjectForm onSuccess={setAgentProject} />
-        </FormProvider>
-      ) : (
-        <div>
-          <h1 className="text-3xl font-bold">{agentProject.title}</h1>
-          <p className="text-gray-600">{agentProject.description}</p>
-          <div className="my-6">
-            <h2 className="text-2xl font-semibold">Instances</h2>
-            {instances.length === 0 ? (
-              <p className="mt-2 text-gray-500">No instances added yet.</p>
-            ) : (
-              <ul className="mt-2 list-disc pl-5">
-                {instances.map((inst) => (
-                  <li key={inst.id}>{inst.friendlyName}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <FormProvider formClass={AgentInstanceForm}>
-            <AddAgentInstanceForm
-              agentProject={agentProject}
-              onInstanceAdded={handleInstanceAdded}
-            />
-          </FormProvider>
-          <div className="mt-8 flex justify-end">
-            <Button onClick={() => navigate('/dashboard')} variant="primary">
-              Done
-            </Button>
-          </div>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="mb-8">
+          <Button
+            onClick={() => navigate('/dashboard')}
+            variant="ghost"
+            className="mb-4 border-primary-300 text-primary-600 hover:bg-primary-100"
+          >
+            ← Back to Dashboard
+          </Button>
         </div>
-      )}
+
+        <div className="space-y-8">
+          {/* Project Details Section */}
+          {!agentProject || editingProject ? (
+            <FormProvider formClass={AgentProjectForm}>
+              <CreateAgentProjectForm
+                onSuccess={(project) => {
+                  setAgentProject(project)
+                  setEditingProject(false)
+                }}
+                onCancel={agentProject ? () => setEditingProject(false) : undefined}
+                initialData={agentProject || existingProject}
+                isEditing={Boolean(agentProject) || isEditing}
+              />
+            </FormProvider>
+          ) : (
+            <ProjectDetailsSection
+              agentProject={agentProject}
+              isEditing={editingProject}
+              onEdit={() => setEditingProject(true)}
+            />
+          )}
+
+          {/* Agent Instances Section */}
+          {agentProject && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-primary-600">Agent Instances</h2>
+                  <p className="mt-1 text-sm text-primary-400">
+                    Manage your AI agents and their configurations
+                  </p>
+                </div>
+                {!showInstanceForm && (
+                  <Button
+                    onClick={() => setShowInstanceForm(true)}
+                    className="bg-primary-600 hover:bg-primary-700"
+                  >
+                    + Add New Agent
+                  </Button>
+                )}
+              </div>
+
+              {/* Agent Instance Cards */}
+              {instances.length > 0 && (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {instances.map((instance) => (
+                    <AgentInstanceCard
+                      key={instance.id}
+                      instance={instance}
+                      onEdit={handleEditInstance}
+                      onDelete={handleDeleteInstance}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {instances.length === 0 && !showInstanceForm && (
+                <div className="rounded-lg border-2 border-dashed border-primary-200 bg-white p-12 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100">
+                    <span className="text-2xl text-primary-600">🤖</span>
+                  </div>
+                  <h3 className="mb-2 text-lg font-medium text-primary-600">No agents yet</h3>
+                  <p className="mb-6 text-primary-400">Create your first AI agent to get started</p>
+                  <Button
+                    onClick={() => setShowInstanceForm(true)}
+                    className="bg-primary-600 hover:bg-primary-700"
+                  >
+                    Create First Agent
+                  </Button>
+                </div>
+              )}
+
+              {/* Agent Instance Form */}
+              {showInstanceForm && (
+                <FormProvider formClass={AgentInstanceForm}>
+                  <AgentInstanceInner
+                    agentProject={agentProject}
+                    onInstanceSaved={handleInstanceSaved}
+                    onCancel={() => {
+                      setShowInstanceForm(false)
+                      setEditingInstance(null)
+                    }}
+                    editingInstance={editingInstance ?? undefined}
+                  />
+                </FormProvider>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

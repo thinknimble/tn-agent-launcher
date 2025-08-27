@@ -11,9 +11,9 @@ const PrivateRoutes = () => {
   return (
     <>
       <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/agent/">
-        <Route index element={<Navigate to="create" />} />
-        <Route path="create" element={<CreateAgentProject />} />
+      <Route path="/projects/">
+  
+        <Route index  path=":id" element={<CreateAgentProject />} />
       </Route>
       <Route path="/chat" element={<ChatDemo />} />
     </>

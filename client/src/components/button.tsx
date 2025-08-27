@@ -15,7 +15,7 @@ const buttonVariantMap: Record<ButtonVariant, string> = {
   primary: 'text-white bg-primary active:bg-primary-300 ',
   secondary: 'text-white bg-accent active:bg-accent-400',
   discreet: 'text-primary hover:shadow-none',
-  ghost: 'border border-primary text-primary active:bg-primary-100 active:text-dark',
+  ghost: 'border-none text-primary active:bg-primary-100 active:text-dark',
   'secondary-reversed': 'text-secondary bg-white border border-secondary',
   unstyled: '',
 }
@@ -41,7 +41,7 @@ const Button = forwardRef<
       <Link
         {...props.link}
         className={cn([
-          'flex items-center rounded-lg transition-transform hover:scale-[0.98]',
+          'flex items-center rounded-lg transition-transform hover:scale-[0.98] px-4 py-2',
           'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:transform-none',
           buttonVariantMap[variant],
           props.link.className,
@@ -60,7 +60,7 @@ const Button = forwardRef<
         {...rest}
         ref={ref}
         className={cn([
-          'flex items-center justify-center rounded-lg transition-transform hover:scale-[0.98] hover:shadow-lg',
+          'flex items-center justify-center rounded-lg transition-transform hover:scale-[0.98] px-4 py-2 hover:shadow-lg',
           'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:transform-none',
           buttonVariantMap[variant],
           props.className,

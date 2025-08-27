@@ -10,4 +10,10 @@ export const agentProjectQueries = {
       queryFn: () => agentProjectApi.list({ ...pagination, ...filters }),
       enabled: true,
     }),
+  retrieve: (id: string) =>
+    queryOptions({
+      queryKey: [...agentProjectQueries.all(), id],
+      queryFn: () => agentProjectApi.retrieve(id),
+      enabled: Boolean(id),
+    }),
 }

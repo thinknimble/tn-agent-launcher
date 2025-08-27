@@ -153,6 +153,7 @@ class PromptTemplate(AbstractBaseModel):
         blank=True,
         on_delete=models.SET_NULL,
         help_text="Optional specific agent instance this template is associated with",
+        related_name="prompt_templates",
     )
     objects = PromptTemplateManager()
 

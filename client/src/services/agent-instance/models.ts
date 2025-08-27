@@ -1,5 +1,6 @@
 import { GetInferredFromRaw } from '@thinknimble/tn-models'
 import { z } from 'zod'
+import { promptTemplateShape } from '../prompt-template'
 
 export const providerKeysEnum = {
   OPENAI: 'OPENAI',
@@ -25,6 +26,7 @@ export const agentTypeLabelMap = {
   [agentTypeEnum.ONE_SHOT]: 'One-Shot',
 }
 
+
 export const agentInstanceShape = {
   id: z.string().uuid(),
   friendlyName: z.string(),
@@ -34,6 +36,7 @@ export const agentInstanceShape = {
   targetUrl: z.string().optional().nullable(),
   agentType: z.nativeEnum(agentTypeEnum),
   user: z.string().uuid(),
+  promptTemplate: z.object(promptTemplateShape).nullable().optional(),
 }
 
 export const createAgentInstanceShape = {
