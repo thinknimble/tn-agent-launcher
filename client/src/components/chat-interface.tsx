@@ -220,7 +220,7 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
   }
 
   const extractThinkingPart = (msg: string) => {
-    const regex = /<think>(.*?)<\/think>/s
+    const regex = /<think>(.*?)<\/think>/
 
     const match = msg.match(regex)
 

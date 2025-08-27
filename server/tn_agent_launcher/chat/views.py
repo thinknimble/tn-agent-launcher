@@ -19,7 +19,7 @@ def get_current_system_prompt(request):
     except BadTemplateException as e:
         return Response({"error": str(e)}, status=500)
 
-    serializer = SystemPromptSerializer({"content": assembled_prompt})
+    serializer = SystemPromptSerializer({"content": assembled_prompt, "name": "Assembled Prompt"})
     return Response(serializer.data)
 
 

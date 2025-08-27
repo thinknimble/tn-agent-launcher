@@ -26,7 +26,7 @@ def test_agent_viewset_create(api_client, sample_user):
         "agent_type": "chat",
         "api_key": "some_test",
     }
-    response = api_client.post("/api/agents/", data, format="json")
+    response = api_client.post("/api/agents/instances/", data, format="json")
     assert response.status_code == 201
     assert response.data["friendly_name"] == "Test Agent"
     assert response.data["provider"] == "OPENAI"
