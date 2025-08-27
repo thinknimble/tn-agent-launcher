@@ -26,7 +26,6 @@ export const agentTypeLabelMap = {
   [agentTypeEnum.ONE_SHOT]: 'One-Shot',
 }
 
-
 export const agentInstanceShape = {
   id: z.string().uuid(),
   friendlyName: z.string(),
@@ -37,6 +36,7 @@ export const agentInstanceShape = {
   agentType: z.nativeEnum(agentTypeEnum),
   user: z.string().uuid(),
   promptTemplate: z.object(promptTemplateShape).nullable().optional(),
+  maskedApiKey: z.string().optional(),
 }
 
 export const createAgentInstanceShape = {

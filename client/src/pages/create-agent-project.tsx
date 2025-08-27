@@ -6,7 +6,7 @@ import {
   agentProjectApi,
   agentProjectQueries,
 } from 'src/services/agent-project'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import { Pagination } from '@thinknimble/tn-models'
 
@@ -171,10 +171,12 @@ const AgentInstanceCard = ({
   instance,
   onEdit,
   onDelete,
+  onChat,
 }: {
   instance: AgentInstance
   onEdit: (instance: AgentInstance) => void
   onDelete: (id: string) => void
+  onChat: (instance: AgentInstance) => void
 }) => (
   <div className="rounded-lg border border-primary-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
     <div className="flex items-start justify-between">
@@ -197,21 +199,31 @@ const AgentInstanceCard = ({
           )}
         </div>
       </div>
-      <div className="flex space-x-2">
-        <Button
-          onClick={() => onEdit(instance)}
-          variant="ghost"
-          className="hover:bg-primary-50 border-primary-300 text-primary-600"
-        >
-          Edit
-        </Button>
-        <Button
-          onClick={() => onDelete(instance.id)}
-          variant="ghost"
-          className="border-error text-error hover:bg-red-50"
-        >
-          Delete
-        </Button>
+      <div className="flex flex-col space-y-2">
+        {instance.agentType === agentTypeEnum.CHAT && (
+          <Button
+            onClick={() => onChat(instance)}
+            className="bg-accent-600 px-3 py-1 text-xs text-white hover:bg-accent-700"
+          >
+            💬 Chat
+          </Button>
+        )}
+        <div className="flex space-x-2">
+          <Button
+            onClick={() => onEdit(instance)}
+            variant="ghost"
+            className="hover:bg-primary-50 border-primary-300 px-2 py-1 text-xs text-primary-600"
+          >
+            Edit
+          </Button>
+          <Button
+            onClick={() => onDelete(instance.id)}
+            variant="ghost"
+            className="border-error px-2 py-1 text-xs text-error hover:bg-red-50"
+          >
+            Delete
+          </Button>
+        </div>
       </div>
     </div>
   </div>
@@ -231,7 +243,7 @@ const AgentInstanceInner = ({
   const { form, createFormFieldChangeHandler, overrideForm } = useTnForm<TAgentInstanceForm>()
   const isEditing = Boolean(editingInstance)
   const [promptTemplateContent, setPromptTemplateContent] = useState<string | null>(null)
-
+  const queryClient = useQueryClient()
   useEffect(() => {
     if (editingInstance) {
       const updatedForm = new AgentInstanceForm() as TAgentInstanceForm
@@ -255,14 +267,14 @@ const AgentInstanceInner = ({
   const { mutate: createPrompt, isPending: isCreatingPrompt } = useMutation({
     mutationFn: (data: CreatePromptTemplate) => promptTemplateApi.create(data),
     onSuccess: (newPrompt) => {
-    
+      queryClient.invalidateQueries({ queryKey: ['agent-instances'] })
     },
   })
 
   const { mutate: updatePrompt, isPending: isUpdatingPrompt } = useMutation({
     mutationFn: (data: PromptTemplate) => promptTemplateApi.update(data),
     onSuccess: (newPrompt) => {
-      
+      queryClient.invalidateQueries({ queryKey: ['agent-instances'] })
     },
   })
 
@@ -276,11 +288,13 @@ const AgentInstanceInner = ({
           id: editingInstance.promptTemplate.id,
           name: editingInstance.promptTemplate.name,
           content: promptTemplateContent ?? '',
+          agentInstance: newInstance.id,
         })
       } else {
         createPrompt({
           name: form.friendlyName.value ?? 'Default Prompt',
           content: promptTemplateContent ?? '',
+          agentInstance: newInstance.id,
         })
       }
     },
@@ -295,17 +309,19 @@ const AgentInstanceInner = ({
           id: editingInstance.promptTemplate.id,
           name: editingInstance.promptTemplate.name,
           content: promptTemplateContent ?? '',
+          agentInstance: updatedInstance.id,
         })
       } else {
         createPrompt({
           name: form.friendlyName.value ?? 'Default Prompt',
           content: promptTemplateContent ?? '',
+          agentInstance: updatedInstance.id,
         })
       }
     },
   })
 
-  const isPending = isCreating || isUpdating
+  const isPending = isCreating || isUpdating || isCreatingPrompt || isUpdatingPrompt
 
   const modelOptions = useMemo(() => {
     if (!form.provider.value) return []
@@ -330,6 +346,7 @@ const AgentInstanceInner = ({
         return [
           { label: 'llama2', value: 'llama2' },
           { label: 'llama3', value: 'llama3' },
+          { label: 'qwen3:30b', value: 'qwen3:30b' },
         ]
 
       default:
@@ -447,7 +464,7 @@ const AgentInstanceInner = ({
               placeholder={form.apiKey.placeholder}
               value={form.apiKey.value ?? ''}
               onChange={(e) => createFormFieldChangeHandler(form.apiKey)(e.target.value)}
-              type="password"
+              type="text"
               className="bg-primary-50 border-primary-200 focus:border-primary-500"
             />
             <ErrorsList errors={form.apiKey.errors} />
@@ -550,6 +567,10 @@ export const CreateAgentProject = () => {
     setInstances((prev) => prev.filter((inst) => inst.id !== instanceId))
   }
 
+  const handleChatWithAgent = (instance: AgentInstance) => {
+    navigate(`/chat/agent/${instance.id}`)
+  }
+
   const isLoading = loadingProject || loadingInstances
 
   if (isLoading) {
@@ -631,6 +652,7 @@ export const CreateAgentProject = () => {
                       instance={instance}
                       onEdit={handleEditInstance}
                       onDelete={handleDeleteInstance}
+                      onChat={handleChatWithAgent}
                     />
                   ))}
                 </div>

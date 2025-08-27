@@ -1,5 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import { chatApi } from './api'
+import { Pagination } from '@thinknimble/tn-models'
+import { ChatFilter } from './models'
 
 export const chatQueries = {
   all: () => ['chat'],
@@ -9,10 +11,10 @@ export const chatQueries = {
       queryFn: () => chatApi.retrieve(id),
       enabled: Boolean(id),
     }),
-  list: () =>
+  list: ({ filters, pagination }: { filters?: ChatFilter; pagination: Pagination }) =>
     queryOptions({
-      queryKey: chatQueries.all(),
-      queryFn: () => chatApi.list(),
+      queryKey: [...chatQueries.all(), { filters, pagination }],
+      queryFn: () => chatApi.list({ filters, pagination }),
       enabled: true,
     }),
 }

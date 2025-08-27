@@ -1,7 +1,6 @@
 import { createApi } from '@thinknimble/tn-models'
 import { axiosInstance } from 'src/services/axios-instance'
-import { createPromptTemplateShape, promptTemplateShape } from './models';
-
+import { createPromptTemplateShape, promptTemplateShape } from './models'
 
 export const promptTemplateApi = createApi({
   client: axiosInstance,

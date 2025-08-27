@@ -41,7 +41,7 @@ const Button = forwardRef<
       <Link
         {...props.link}
         className={cn([
-          'flex items-center rounded-lg transition-transform hover:scale-[0.98] px-4 py-2',
+          'flex items-center rounded-lg px-4 py-2 transition-transform hover:scale-[0.98]',
           'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:transform-none',
           buttonVariantMap[variant],
           props.link.className,
@@ -60,7 +60,7 @@ const Button = forwardRef<
         {...rest}
         ref={ref}
         className={cn([
-          'flex items-center justify-center rounded-lg transition-transform hover:scale-[0.98] px-4 py-2 hover:shadow-lg',
+          'flex items-center justify-center rounded-lg px-4 py-2 transition-transform hover:scale-[0.98] hover:shadow-lg',
           'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:transform-none',
           buttonVariantMap[variant],
           props.className,

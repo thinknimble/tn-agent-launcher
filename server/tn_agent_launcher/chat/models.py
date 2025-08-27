@@ -164,3 +164,63 @@ class PromptTemplate(AbstractBaseModel):
         ordering = ["order"]
         verbose_name = "Prompt Template"
         verbose_name_plural = "Prompt Templates"
+
+
+class Chat(AbstractBaseModel):
+    """
+    Represents a conversation between a user and the AI.
+    """
+
+    name = models.CharField(max_length=255, help_text="Name of the chat conversation")
+    user = models.ForeignKey(
+        "core.User",
+        on_delete=models.CASCADE,
+        related_name="chats",
+        help_text="User who owns this chat",
+    )
+    completed = models.BooleanField(
+        default=False,
+        help_text="Whether this chat has been completed",
+    )
+    agent_instance = models.ForeignKey(
+        "agent.AgentInstance",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="The agent instance used for this chat, if any",
+        related_name="chats",
+    )
+
+    def __str__(self):
+        return f"{self.name} ({self.user.email})"
+
+    class Meta:
+        ordering = ["-created"]
+
+
+class ChatMessage(AbstractBaseModel):
+    """
+    Represents a single message in a chat conversation.
+    """
+
+    class MessageSender(models.TextChoices):
+        USER = "user", "User"
+        AI = "assistant", "AI Assistant"
+        TOOL = "tool", "Tool Call"
+
+    chat = models.ForeignKey(
+        Chat,
+        on_delete=models.CASCADE,
+        related_name="messages",
+        help_text="The chat this message belongs to",
+    )
+    content = models.TextField(help_text="Content of the message")
+    role = models.CharField(
+        max_length=10, choices=MessageSender.choices, help_text="Who sent this message"
+    )
+
+    def __str__(self):
+        return f"{self.role}: {self.content[:50]}..."
+
+    class Meta:
+        ordering = ["-created"]

@@ -8,7 +8,9 @@ router = routers.SimpleRouter()
 if settings.DEBUG:
     router = routers.DefaultRouter()
 
-router.register(r'prompt-templates', chat_views.PromptTemplateViewSet)
+router.register(r"prompt-templates", chat_views.PromptTemplateViewSet)
+router.register(r"conversations", chat_views.ChatViewSet)
+router.register(r"chat-messages", chat_views.ChatMessageViewSet, basename="chat-messages")
 
 urlpatterns = [
     path("", include(router.urls)),

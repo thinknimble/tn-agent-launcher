@@ -1,18 +1,41 @@
 import { useState, useRef, FormEvent, useEffect, useMemo } from 'react'
-import useWebSocket from 'react-use-websocket';
+import useWebSocket from 'react-use-websocket'
 import { useAuth } from 'src/stores/auth'
 import { Sidebar } from './sidebar'
-import { useQuery } from '@tanstack/react-query'
-import { chatQueries } from 'src/services/chat'
-import { Spinner } from './spinner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { chatQueries } from 'src/services/chat/queries'
+import { agentInstanceQueries } from 'src/services/agent-instance'
+import { chatApi } from 'src/services/chat/api'
+import { Spinner } from './spinner'
+import { Pagination } from '@thinknimble/tn-models'
+import { chatMessageQueries } from '../services/chat-messages/queries'
 
 type Message = {
   content: string
   role: 'user' | 'assistant'
 }
 
-export const ChatInterface = () => {
-  const { data: chats } = useQuery(chatQueries.list())
+interface ChatInterfaceProps {
+  agentId?: string
+}
+
+export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
+  const queryClient = useQueryClient()
+  const token = useAuth.use.token()
+
+  // Fetch agent details if agentId is provided
+  const { data: agent } = useQuery({
+    ...agentInstanceQueries.retrieve(agentId!),
+    enabled: Boolean(agentId),
+  })
+
+  // Filter chats for specific agent if agentId is provided
+  const { data: chats } = useQuery({
+    ...chatQueries.list({
+      filters: { agentInstance: agentId ?? '' },
+      pagination: new Pagination(),
+    }),
+  })
 
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
@@ -20,8 +43,24 @@ export const ChatInterface = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isConnectionError, setIsConnectionError] = useState(false)
   const [, setStreamingContent] = useState('')
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
+  const { data: existingMessages, isFetching } = useQuery(
+    chatMessageQueries.list({
+      filters: { chat: selectedChatId ?? '' },
+      pagination: new Pagination(),
+    }),
+  )
   const chatHistoryRef = useRef<HTMLDivElement>(null)
-  const token = useAuth.use.token()
+
+  // Create conversation mutation
+  const { mutate: createConversation, isPending: isCreatingChat } = useMutation({
+    mutationFn: (data: { name: string; agentInstance?: string }) => chatApi.create(data),
+    onSuccess: (newChat) => {
+      setSelectedChatId(newChat.id)
+      // Invalidate and refetch chats
+      queryClient.invalidateQueries({ queryKey: chatQueries.all() })
+    },
+  })
 
   const webSocketUrl = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -29,11 +68,7 @@ export const ChatInterface = () => {
     return `${protocol}//${host}/ws/chat/?token=${token}`
   }, [token])
 
-  const {
-    sendJsonMessage,
-    lastJsonMessage,
-    readyState,
-  } = useWebSocket(webSocketUrl, {
+  const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(webSocketUrl, {
     onOpen: () => console.log('opened'),
     //Will attempt to reconnect on all close events, such as server shutting down
     shouldReconnect: (closeEvent) => true,
@@ -41,10 +76,8 @@ export const ChatInterface = () => {
       console.error('WebSocket error:', event)
       setIsConnectionError(true)
       setIsLoading(false)
-
     },
-
-  });
+  })
 
   useEffect(() => {
     if (readyState === WebSocket.OPEN) {
@@ -59,8 +92,17 @@ export const ChatInterface = () => {
       console.log('WebSocket is closing')
       setIsLoading(true)
     }
-
   }, [readyState])
+
+  useEffect(() => {
+    if (selectedChatId && existingMessages) {
+      const loadedMessages = existingMessages.results.map((msg) => ({
+        content: msg.content,
+        role: msg.role,
+      }))
+      setMessages(loadedMessages.reverse())
+    }
+  }, [selectedChatId, existingMessages])
 
   useEffect(() => {
     if (lastJsonMessage) {
@@ -99,17 +141,47 @@ export const ChatInterface = () => {
     }
   }, [lastJsonMessage])
 
-
-
   useEffect(() => {
     // Scroll to bottom when messages change
     chatHistoryRef.current?.scrollTo(0, chatHistoryRef.current.scrollHeight)
   }, [messages])
 
+  // Auto-select first chat if none selected
+  useEffect(() => {
+    if (chats?.results?.length && !selectedChatId && !isCreatingChat) {
+      setSelectedChatId(chats.results[0].id)
+    }
+  }, [chats, selectedChatId, isCreatingChat])
+
+  const handleNewChat = () => {
+    const chatName = agent
+      ? `Chat with ${agent.friendlyName} - ${new Date().toLocaleDateString()}`
+      : `New Chat - ${new Date().toLocaleDateString()}`
+
+    createConversation({
+      name: chatName,
+      agentInstance: agentId,
+    })
+  }
+
+  const handleChatSelect = (chatId: string) => {
+    setSelectedChatId(chatId)
+    // Clear current messages when switching chats
+    setMessages([])
+    // TODO: Load messages for the selected chat
+  }
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const content = inputMessage.trim()
     if (!content) return
+
+    // If no chat is selected and no chats exist, create one first
+    if (!selectedChatId && !chats?.results?.length) {
+      handleNewChat()
+      // The message will be sent after the chat is created via the useEffect
+      return
+    }
 
     // Add user message to conversation
     const userMessage: Message = { content, role: 'user' }
@@ -122,12 +194,11 @@ export const ChatInterface = () => {
 
     // Send full conversation history through WebSocket
     sendJsonMessage({
-
       messages: [...messages, userMessage], // Include previous messages plus new user message
       stream: true,
-      chat_id: chats?.results?.[0]?.id, // Use the first chat ID for now
+      chat_id: selectedChatId || chats?.results?.[0]?.id, // Use selected chat or first available
+      agent_instance_id: agentId, // Pass the agent ID if available
     })
-
   }
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -148,9 +219,27 @@ export const ChatInterface = () => {
     textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`
   }
 
+  const extractThinkingPart = (msg: string) => {
+    const regex = /<think>(.*?)<\/think>/s
+
+    const match = msg.match(regex)
+
+    // The captured text is in the second element of the match array (index 1)
+    // We also use .trim() to remove any leading/trailing whitespace
+    return match ? match[1].trim() : null
+  }
+
   return (
     <div className="flex h-full">
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        conversations={chats?.results || []}
+        selectedChatId={selectedChatId ?? ''}
+        onChatSelect={handleChatSelect}
+        onNewChat={handleNewChat}
+        agentName={agent?.friendlyName}
+      />
 
       <div className="flex flex-1 flex-col">
         {/* Mobile Sidebar Toggle */}
@@ -172,39 +261,52 @@ export const ChatInterface = () => {
         </div>
 
         {/* Chat Loading Overlay */}
-        {(isLoading || isConnectionError) && (<div className="relative z-100 h-full w-full">
-          <div className="h-full w-full flex items-center justify-center bg-gray-100 opacity-50">
-
-            {
-              isLoading ? (<Spinner size='lg' />) : (
+        {(isLoading || isConnectionError) && (
+          <div className="z-100 relative h-full w-full">
+            <div className="flex h-full w-full items-center justify-center bg-gray-100 opacity-50">
+              {isLoading ? (
+                <Spinner size="lg" />
+              ) : (
                 <div className="text-red-500">
                   <p>Connection Error</p>
                   <p>There is an error connecting, will retry.</p>
                 </div>
-              )
-            }
+              )}
+            </div>
           </div>
-        </div>)}
+        )}
         {/* Main Chat Area - Scrollable */}
         <div className="flex flex-1 flex-col overflow-hidden">
-
           <div ref={chatHistoryRef} className="flex-1 overflow-y-auto p-4">
-            <div className="mx-auto max-w-3xl">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`mb-4 flex ${message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
-                >
+            {isFetching ? (
+              <div className="flex h-full w-full items-center justify-center">
+                <Spinner size="lg" />
+              </div>
+            ) : messages.length === 0 ? (
+              <p>No Messages Yet</p>
+            ) : (
+              <div className="mx-auto max-w-3xl">
+                {messages.map((message, index) => (
                   <div
-                    className={`max-w-[80%] rounded-lg p-3 text-left ${message.role === 'user' ? 'bg-blue-50' : 'bg-gray-50'
-                      }`}
+                    key={index}
+                    className={`mb-4 flex ${
+                      message.role === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
                   >
-                    {message.content}
+                    <div
+                      className={`max-w-[80%] rounded-lg p-3 text-left ${
+                        message.role === 'user' ? 'bg-blue-50' : 'bg-gray-50'
+                      }`}
+                    >
+                      {message.content
+                        .replace(extractThinkingPart(message.content) ?? '', '')
+                        .replace('<think>', '')
+                        .replace('</think>', '')}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Chat Input Area - Fixed at Bottom */}
