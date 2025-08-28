@@ -5,7 +5,7 @@ export const CreateProjectCard = () => {
   return (
     <div
       className="flex cursor-pointer items-center justify-center rounded-lg bg-white p-4 shadow-md hover:bg-gray-100"
-      onClick={() => navigate('/agent/create')}
+      onClick={() => navigate('/projects/')}
     >
       <div className="text-center">
         <h2 className="text-xl font-bold text-gray-500">+</h2>

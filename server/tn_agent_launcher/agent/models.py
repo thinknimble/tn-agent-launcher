@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils import timezone
 from pydantic_ai import Agent
 
 from tn_agent_launcher.common.models import AbstractBaseModel
