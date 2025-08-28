@@ -2,7 +2,7 @@ from django.conf import settings
 from django.urls import include, path
 from rest_framework_nested import routers
 
-from .views import AgentInstanceViewSet, AgentProjectViewSet
+from .views import AgentInstanceViewSet, AgentProjectViewSet, AgentTaskViewSet, AgentTaskExecutionViewSet
 
 router = routers.SimpleRouter()
 if settings.DEBUG:
@@ -10,6 +10,8 @@ if settings.DEBUG:
 
 router.register("instances", AgentInstanceViewSet)
 router.register("projects", AgentProjectViewSet)
+router.register("tasks", AgentTaskViewSet)
+router.register("executions", AgentTaskExecutionViewSet)
 
 urlpatterns = [
     path("api/agents/", include(router.urls)),
