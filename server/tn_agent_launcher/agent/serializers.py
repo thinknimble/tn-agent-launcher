@@ -57,16 +57,18 @@ class AgentProjectSerializer(serializers.ModelSerializer):
 
 
 class AgentTaskSerializer(serializers.ModelSerializer):
-    agent_instance_name = serializers.CharField(source='agent_instance.friendly_name', read_only=True)
+    agent_instance_name = serializers.CharField(
+        source="agent_instance.friendly_name", read_only=True
+    )
     next_execution_display = serializers.SerializerMethodField()
     last_execution_display = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = AgentTask
         fields = [
             "id",
             "name",
-            "description", 
+            "description",
             "agent_instance",
             "agent_instance_name",
             "instruction",
@@ -84,13 +86,13 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "last_edited",
         ]
         read_only_fields = [
-            "id", 
-            "created", 
-            "last_edited", 
+            "id",
+            "created",
+            "last_edited",
             "last_executed_at",
             "next_execution_at",
             "execution_count",
-            "agent_instance_name"
+            "agent_instance_name",
         ]
 
     def get_next_execution_display(self, obj):
@@ -111,28 +113,28 @@ class AgentTaskSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        schedule_type = data.get('schedule_type')
-        
+        schedule_type = data.get("schedule_type")
+
         if schedule_type == AgentTask.ScheduleTypeChoices.ONCE:
-            if not data.get('scheduled_at'):
-                raise serializers.ValidationError({
-                    'scheduled_at': 'scheduled_at is required for one-time tasks'
-                })
+            if not data.get("scheduled_at"):
+                raise serializers.ValidationError(
+                    {"scheduled_at": "scheduled_at is required for one-time tasks"}
+                )
         elif schedule_type == AgentTask.ScheduleTypeChoices.CUSTOM_INTERVAL:
-            if not data.get('interval_minutes'):
-                raise serializers.ValidationError({
-                    'interval_minutes': 'interval_minutes is required for custom interval tasks'
-                })
-        
+            if not data.get("interval_minutes"):
+                raise serializers.ValidationError(
+                    {"interval_minutes": "interval_minutes is required for custom interval tasks"}
+                )
+
         return data
 
 
 class AgentTaskExecutionSerializer(serializers.ModelSerializer):
-    agent_task_name = serializers.CharField(source='agent_task.name', read_only=True)
+    agent_task_name = serializers.CharField(source="agent_task.name", read_only=True)
     duration_display = serializers.SerializerMethodField()
     started_display = serializers.SerializerMethodField()
     completed_display = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = AgentTaskExecution
         fields = [
@@ -142,7 +144,7 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
             "status",
             "started_at",
             "started_display",
-            "completed_at", 
+            "completed_at",
             "completed_display",
             "input_data",
             "output_data",
@@ -155,14 +157,14 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "started_at",
-            "completed_at", 
+            "completed_at",
             "input_data",
             "output_data",
             "error_message",
             "execution_time_seconds",
             "background_task_id",
             "created",
-            "agent_task_name"
+            "agent_task_name",
         ]
 
     def get_duration_display(self, obj):

@@ -1,6 +1,7 @@
 from django.db import models
-from pydantic_ai import Agent
 from django.utils import timezone
+from pydantic_ai import Agent
+
 from tn_agent_launcher.common.models import AbstractBaseModel
 
 
@@ -96,35 +97,31 @@ class AgentTask(AbstractBaseModel):
         AgentInstance,
         on_delete=models.CASCADE,
         related_name="agent_tasks",
-        limit_choices_to={"agent_type": AgentInstance.AgentTypeChoices.ONE_SHOT}
+        limit_choices_to={"agent_type": AgentInstance.AgentTypeChoices.ONE_SHOT},
     )
     instruction = models.TextField(help_text="The prompt/instruction to send to the agent")
-    
+
     schedule_type = models.CharField(max_length=20, choices=ScheduleTypeChoices.choices)
     scheduled_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="For one-time tasks, when to run. For recurring tasks, when to start."
+        help_text="For one-time tasks, when to run. For recurring tasks, when to start.",
     )
     interval_minutes = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="For custom intervals, how many minutes between executions"
+        null=True, blank=True, help_text="For custom intervals, how many minutes between executions"
     )
-    
+
     status = models.CharField(
-        max_length=20,
-        choices=StatusChoices.choices,
-        default=StatusChoices.ACTIVE
+        max_length=20, choices=StatusChoices.choices, default=StatusChoices.ACTIVE
     )
-    
+
     last_executed_at = models.DateTimeField(null=True, blank=True)
     next_execution_at = models.DateTimeField(null=True, blank=True)
-    
+
     max_executions = models.PositiveIntegerField(
         null=True,
         blank=True,
-        help_text="Maximum number of times to execute this task. Leave blank for unlimited."
+        help_text="Maximum number of times to execute this task. Leave blank for unlimited.",
     )
     execution_count = models.PositiveIntegerField(default=0)
 
@@ -154,11 +151,11 @@ class AgentTask(AbstractBaseModel):
     def calculate_next_execution(self):
         if self.schedule_type == self.ScheduleTypeChoices.ONCE:
             return None
-        
+
         from datetime import timedelta
-        
+
         base_time = self.last_executed_at or timezone.now()
-        
+
         if self.schedule_type == self.ScheduleTypeChoices.HOURLY:
             return base_time + timedelta(hours=1)
         elif self.schedule_type == self.ScheduleTypeChoices.DAILY:
@@ -167,22 +164,24 @@ class AgentTask(AbstractBaseModel):
             return base_time + timedelta(weeks=1)
         elif self.schedule_type == self.ScheduleTypeChoices.MONTHLY:
             return base_time + timedelta(days=30)
-        elif self.schedule_type == self.ScheduleTypeChoices.CUSTOM_INTERVAL and self.interval_minutes:
+        elif (
+            self.schedule_type == self.ScheduleTypeChoices.CUSTOM_INTERVAL and self.interval_minutes
+        ):
             return base_time + timedelta(minutes=self.interval_minutes)
-        
+
         return None
 
     @property
     def is_ready_for_execution(self):
         if self.status != self.StatusChoices.ACTIVE:
             return False
-        
+
         if self.max_executions and self.execution_count >= self.max_executions:
             return False
-        
+
         if not self.next_execution_at:
             return False
-        
+
         return self.next_execution_at <= timezone.now()
 
 
@@ -193,35 +192,20 @@ class AgentTaskExecution(AbstractBaseModel):
         COMPLETED = "completed", "Completed"
         FAILED = "failed", "Failed"
 
-    agent_task = models.ForeignKey(
-        AgentTask,
-        on_delete=models.CASCADE,
-        related_name="executions"
-    )
+    agent_task = models.ForeignKey(AgentTask, on_delete=models.CASCADE, related_name="executions")
     status = models.CharField(
-        max_length=20,
-        choices=StatusChoices.choices,
-        default=StatusChoices.PENDING
+        max_length=20, choices=StatusChoices.choices, default=StatusChoices.PENDING
     )
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-    
-    input_data = models.JSONField(
-        default=dict,
-        help_text="The input sent to the agent"
-    )
-    output_data = models.JSONField(
-        null=True,
-        blank=True,
-        help_text="The response from the agent"
-    )
+
+    input_data = models.JSONField(default=dict, help_text="The input sent to the agent")
+    output_data = models.JSONField(null=True, blank=True, help_text="The response from the agent")
     error_message = models.TextField(blank=True)
     execution_time_seconds = models.FloatField(null=True, blank=True)
-    
+
     background_task_id = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="ID of the django-background-tasks task"
+        max_length=100, blank=True, help_text="ID of the django-background-tasks task"
     )
 
     class Meta:

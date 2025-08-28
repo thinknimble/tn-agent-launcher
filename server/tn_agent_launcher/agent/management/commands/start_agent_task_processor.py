@@ -8,9 +8,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("Starting agent task processor...")
-        
+
         process_pending_agent_tasks(repeat=60, repeat_until=None)
-        
-        self.stdout.write(
-            self.style.SUCCESS("Agent task processor started successfully!")
-        )
+
+        self.stdout.write(self.style.SUCCESS("Agent task processor started successfully!"))

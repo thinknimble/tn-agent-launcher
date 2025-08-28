@@ -1,8 +1,9 @@
 import { Pagination } from '@thinknimble/tn-models'
 import { agentTaskApi } from './api'
+import { AgentTaskFilter } from './models';
 
 export const agentTaskQueries = {
-  list: ({ filters, pagination }: { filters?: any; pagination: Pagination }) => ({
+  list: ({ filters, pagination }: { filters?: AgentTaskFilter; pagination: Pagination }) => ({
     queryKey: ['agentTasks', 'list', filters, pagination],
     queryFn: () => agentTaskApi.list({ filters, pagination }),
   }),
