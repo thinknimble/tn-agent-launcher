@@ -33,7 +33,7 @@ export const AgentTasks = () => {
     data: agentInstance,
     isLoading: loadingAgent,
     error: agentError,
-  } = useQuery(agentInstanceQueries.retrieve(agentInstanceId))
+  } = useQuery(agentInstanceQueries.retrieve(agentInstanceId ?? ''))
 
   // Get executions for this agent instance or selected task
   const executionFilters = selectedTaskForHistory
