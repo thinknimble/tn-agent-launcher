@@ -43,7 +43,7 @@ class PromptTemplateAdmin(admin.ModelAdmin):
     ordering = ("order",)
     readonly_fields = ("created", "last_edited")
     fieldsets = (
-        (None, {"fields": ("name", "content")}),
+        (None, {"fields": ("name", "content", "agent_instance")}),
         ("Settings", {"fields": ("description", "order")}),
         ("Metadata", {"fields": ("created", "last_edited"), "classes": ("collapse",)}),
     )

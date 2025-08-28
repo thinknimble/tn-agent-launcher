@@ -27,5 +27,10 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
   },
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
   ignorePatterns: ['tailwind.config.js'],
 }

@@ -1,4 +1,14 @@
+import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { CreateProjectCard } from 'src/components/create-project-card'
+import { ProjectCard } from 'src/components/project-card'
+import { agentProjectQueries } from 'src/services/agent-project'
+import { Pagination } from '@thinknimble/tn-models'
+
 export const Dashboard = () => {
+  const navigate = useNavigate()
+  const { data: projects } = useQuery(agentProjectQueries.list(new Pagination()))
+
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="relative mx-auto flex h-32 w-full flex-col justify-center bg-primary sm:h-48">
@@ -6,7 +16,12 @@ export const Dashboard = () => {
           <h1 className="mb-6 text-left text-3xl font-bold uppercase text-white">Dashboard</h1>
         </div>
       </header>
-      <div className="h-full min-h-full p-4 sm:px-16 sm:py-4">Content goes here...</div>
+      <div className="h-full min-h-full p-4 sm:px-16 sm:py-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <CreateProjectCard />
+          {projects?.results.map((project) => <ProjectCard key={project.id} project={project} />)}
+        </div>
+      </div>
     </div>
   )
 }
