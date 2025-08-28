@@ -17,7 +17,7 @@ export const Dashboard = () => {
         </div>
       </header>
       <div className="h-full min-h-full p-4 sm:px-16 sm:py-4">
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-9">
           <CreateProjectCard />
           {projects?.results.map((project) => <ProjectCard key={project.id} project={project} />)}
         </div>
