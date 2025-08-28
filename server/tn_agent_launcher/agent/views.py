@@ -32,19 +32,13 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        return self.queryset.filter(agent_instance__user=self.request.user)
 
     @action(detail=True, methods=['post'])
     def execute_now(self, request, pk=None):
         task = self.get_object()
         
-        if task.status != AgentTask.StatusChoices.ACTIVE:
-            return Response(
-                {"error": "Task must be active to execute"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        execution = schedule_agent_task_execution(task.id)
+        execution = schedule_agent_task_execution(task.id, force_execute=True)
         
         if execution:
             serializer = AgentTaskExecutionSerializer(execution)
@@ -73,18 +67,6 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(task)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'])
-    def executions(self, request, pk=None):
-        task = self.get_object()
-        executions = task.executions.all()
-        
-        page = self.paginate_queryset(executions)
-        if page is not None:
-            serializer = AgentTaskExecutionSerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = AgentTaskExecutionSerializer(executions, many=True)
-        return Response(serializer.data)
 
 
 class AgentTaskExecutionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -93,7 +75,7 @@ class AgentTaskExecutionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return self.queryset.filter(agent_task__user=self.request.user)
+        return self.queryset.filter(agent_task__agent_instance__user=self.request.user)
 
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):

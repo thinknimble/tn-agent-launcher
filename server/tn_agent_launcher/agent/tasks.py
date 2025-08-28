@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
-
+import re 
 from background_task import background
 from django.utils import timezone
 
@@ -34,7 +34,7 @@ def execute_agent_task(task_execution_id: int):
         input_data = {
             "instruction": task.instruction,
             "task_name": task.name,
-            "execution_id": execution.id
+            "execution_id": str(execution.id)
         }
         
         execution.input_data = input_data
@@ -55,7 +55,11 @@ def execute_agent_task(task_execution_id: int):
         execution.status = AgentTaskExecution.StatusChoices.COMPLETED
         execution.completed_at = end_time
         execution.execution_time_seconds = duration
-        execution.output_data = {"result": str(result)}
+        # lets filter out the thinknig from the output <think> some text </think>
+
+        filtered_output = re.sub(r'<think>.*?</think>', '', result.output, flags=re.DOTALL).strip()
+        execution.output_data = {"result": filtered_output}
+        
         execution.save()
         
         task.execution_count += 1
@@ -88,7 +92,7 @@ def execute_agent_task(task_execution_id: int):
         task.save()
 
 
-def schedule_agent_task_execution(agent_task_id: int, scheduled_time: Optional[datetime] = None):
+def schedule_agent_task_execution(agent_task_id: int, scheduled_time: Optional[datetime] = None, force_execute: bool = False):
     from .models import AgentTask, AgentTaskExecution
     
     try:
@@ -97,9 +101,20 @@ def schedule_agent_task_execution(agent_task_id: int, scheduled_time: Optional[d
         logger.error(f"AgentTask {agent_task_id} not found")
         return None
     
-    if not task.is_ready_for_execution:
-        logger.info(f"Task {task.name} is not ready for execution")
-        return None
+    # For manual execution (force_execute=True), only check if task is active
+    if force_execute:
+        if task.status != task.StatusChoices.ACTIVE:
+            logger.info(f"Task {task.name} is not active")
+            return None
+        # Check max executions if set
+        if task.max_executions and task.execution_count >= task.max_executions:
+            logger.info(f"Task {task.name} has reached maximum executions")
+            return None
+    else:
+        # For scheduled execution, use the full readiness check
+        if not task.is_ready_for_execution:
+            logger.info(f"Task {task.name} is not ready for execution")
+            return None
     
     execution = AgentTaskExecution.objects.create(
         agent_task=task,
@@ -107,9 +122,9 @@ def schedule_agent_task_execution(agent_task_id: int, scheduled_time: Optional[d
     )
     
     if scheduled_time:
-        bg_task = execute_agent_task(execution.id, schedule=scheduled_time)
+        bg_task = execute_agent_task(str(execution.id), schedule=scheduled_time)
     else:
-        bg_task = execute_agent_task(execution.id)
+        bg_task = execute_agent_task(str(execution.id))
     
     execution.background_task_id = bg_task.id
     execution.save()

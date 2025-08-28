@@ -1,6 +1,6 @@
 from django.db import models
 from pydantic_ai import Agent
-
+from django.utils import timezone
 from tn_agent_launcher.common.models import AbstractBaseModel
 
 
@@ -127,8 +127,6 @@ class AgentTask(AbstractBaseModel):
         help_text="Maximum number of times to execute this task. Leave blank for unlimited."
     )
     execution_count = models.PositiveIntegerField(default=0)
-    
-    user = models.ForeignKey("core.User", on_delete=models.CASCADE, related_name="agent_tasks")
 
     class Meta:
         ordering = ["-created"]
@@ -143,11 +141,15 @@ class AgentTask(AbstractBaseModel):
 
     def _set_next_execution(self):
         if self.schedule_type == self.ScheduleTypeChoices.ONCE:
-            self.next_execution_at = self.scheduled_at
-        elif self.scheduled_at:
+            # For one-time tasks, use the scheduled_at time or None
             self.next_execution_at = self.scheduled_at
         else:
-            self.next_execution_at = timezone.now()
+            # For recurring tasks, use scheduled_at as start time, or calculate immediate next
+            if self.scheduled_at:
+                self.next_execution_at = self.scheduled_at
+            else:
+                # If no start time specified, calculate next execution from now
+                self.next_execution_at = self.calculate_next_execution()
 
     def calculate_next_execution(self):
         if self.schedule_type == self.ScheduleTypeChoices.ONCE:

@@ -172,11 +172,13 @@ const AgentInstanceCard = ({
   onEdit,
   onDelete,
   onChat,
+  onTasks,
 }: {
   instance: AgentInstance
   onEdit: (instance: AgentInstance) => void
   onDelete: (id: string) => void
   onChat: (instance: AgentInstance) => void
+  onTasks: (instance: AgentInstance) => void
 }) => (
   <div className="rounded-lg border border-primary-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
     <div className="flex items-start justify-between">
@@ -206,6 +208,14 @@ const AgentInstanceCard = ({
             className="bg-accent-600 px-3 py-1 text-xs text-white hover:bg-accent-700"
           >
             💬 Chat
+          </Button>
+        )}
+        {instance.agentType === agentTypeEnum.ONE_SHOT && (
+          <Button
+            onClick={() => onTasks(instance)}
+            className="bg-accent-600 px-3 py-1 text-xs text-white hover:bg-accent-700"
+          >
+            ⏰ Tasks
           </Button>
         )}
         <div className="flex space-x-2">
@@ -571,6 +581,10 @@ export const CreateAgentProject = () => {
     navigate(`/chat/agent/${instance.id}`)
   }
 
+  const handleTasksWithAgent = (instance: AgentInstance) => {
+    navigate(`/tasks/agent/${instance.id}`)
+  }
+
   const isLoading = loadingProject || loadingInstances
 
   if (isLoading) {
@@ -653,6 +667,7 @@ export const CreateAgentProject = () => {
                       onEdit={handleEditInstance}
                       onDelete={handleDeleteInstance}
                       onChat={handleChatWithAgent}
+                      onTasks={handleTasksWithAgent}
                     />
                   ))}
                 </div>

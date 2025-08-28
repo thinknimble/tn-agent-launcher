@@ -80,13 +80,13 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "next_execution_display",
             "max_executions",
             "execution_count",
-            "created_at",
-            "updated_at",
+            "created",
+            "last_edited",
         ]
         read_only_fields = [
             "id", 
-            "created_at", 
-            "updated_at", 
+            "created", 
+            "last_edited", 
             "last_executed_at",
             "next_execution_at",
             "execution_count",
@@ -126,10 +126,6 @@ class AgentTaskSerializer(serializers.ModelSerializer):
         
         return data
 
-    def to_internal_value(self, data):
-        data["user"] = self.context["request"].user.id
-        return super().to_internal_value(data)
-
 
 class AgentTaskExecutionSerializer(serializers.ModelSerializer):
     agent_task_name = serializers.CharField(source='agent_task.name', read_only=True)
@@ -146,7 +142,7 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
             "status",
             "started_at",
             "started_display",
-            "completed", 
+            "completed_at", 
             "completed_display",
             "input_data",
             "output_data",
@@ -159,7 +155,7 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "started_at",
-            "completed", 
+            "completed_at", 
             "input_data",
             "output_data",
             "error_message",
@@ -184,6 +180,6 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
         return None
 
     def get_completed_display(self, obj):
-        if obj.completed:
-            return obj.completed.strftime("%Y-%m-%d %H:%M:%S UTC")
+        if obj.completed_at:
+            return obj.completed_at.strftime("%Y-%m-%d %H:%M:%S UTC")
         return None
