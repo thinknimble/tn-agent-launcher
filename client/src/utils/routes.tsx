@@ -5,6 +5,7 @@ import { ChatDemo } from 'src/pages/chat-demo'
 import { PageNotFound } from 'src/pages/page-not-found'
 import { RequestPasswordReset } from 'src/pages/request-password-reset'
 import { ResetPassword } from 'src/pages/reset-password'
+import { AgentTasks } from 'src/pages/agent-tasks'
 import { useAuth } from 'src/stores/auth'
 
 const PrivateRoutes = () => {
@@ -16,6 +17,7 @@ const PrivateRoutes = () => {
       </Route>
       <Route path="/chat" element={<ChatDemo />} />
       <Route path="/chat/agent/:agentId" element={<AgentChat />} />
+      <Route path="/tasks/agent/:agentInstanceId" element={<AgentTasks />} />
     </>
   )
 }

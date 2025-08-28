@@ -20,12 +20,6 @@
     "NPM_CONFIG_PRODUCTION": {
       "value": "false"
     },
-    "DJANGO_SUPERUSER_PASSWORD": {
-      "value": "TN_ADMIN!"
-    },
-    "PLAYWRIGHT_TEST_USER_PASS": {
-      "value": "0r_s5x9c)2f#deav(osj#kj&a0z3ztu*mie6ju3!axrm6v1)7o"
-    },
     "SECRET_KEY": {
       "generator": "secret"
     },
