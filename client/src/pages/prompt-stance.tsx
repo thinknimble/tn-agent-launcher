@@ -37,9 +37,10 @@ export const PromptStance = () => {
               Why Our Agent Builder Works
             </h1>
             <p className="mb-10 text-xl leading-relaxed text-gray-600">
-              We didn&apos;t read papers and theorize. We&apos;ve built agents, orchestrated teams of agents,
-              failed, and improved. We&apos;re constantly learning from people on the bleeding edge of
-              building these tools, and working to translate them to a workbench for everyday use.
+              We didn&apos;t read papers and theorize. We&apos;ve built agents, orchestrated teams
+              of agents, failed, and improved. We&apos;re constantly learning from people on the
+              bleeding edge of building these tools, and working to translate them to a workbench
+              for everyday use.
             </p>
           </div>
 
@@ -193,7 +194,8 @@ export const PromptStance = () => {
               </div>
               <div>
                 <h2 className="mb-2 text-3xl font-bold leading-tight">
-                  Your &lsquo;creative process&rsquo; is just undocumented steps you&apos;re too precious about.
+                  Your &lsquo;creative process&rsquo; is just undocumented steps you&apos;re too
+                  precious about.
                 </h2>
                 <p className="text-lg italic text-gray-600">
                   Document them and anyone can be creative like you.
@@ -254,8 +256,8 @@ export const PromptStance = () => {
                   <li className="flex">
                     <span className="mr-2 font-bold text-black">•</span>
                     <span className="text-gray-700">
-                      Be honest about what&apos;s actually creative vs. what&apos;s just following a pattern
-                      you haven&apos;t admitted to yourself
+                      Be honest about what&apos;s actually creative vs. what&apos;s just following a
+                      pattern you haven&apos;t admitted to yourself
                     </span>
                   </li>
                 </ul>
@@ -382,7 +384,9 @@ export const PromptStance = () => {
                   </li>
                   <li className="flex">
                     <span className="mr-2 font-bold text-black">•</span>
-                    <span className="text-gray-700">How should it know when it&apos;s succeeding?</span>
+                    <span className="text-gray-700">
+                      How should it know when it&apos;s succeeding?
+                    </span>
                   </li>
                   <li className="flex">
                     <span className="mr-2 font-bold text-black">•</span>
@@ -693,7 +697,9 @@ export const PromptStance = () => {
                 <ul className="space-y-2">
                   <li className="flex">
                     <span className="mr-2 font-bold text-black">•</span>
-                    <span className="text-gray-700">Scope: &quot;You only handle X, not Y&quot;</span>
+                    <span className="text-gray-700">
+                      Scope: &quot;You only handle X, not Y&quot;
+                    </span>
                   </li>
                   <li className="flex">
                     <span className="mr-2 font-bold text-black">•</span>
@@ -774,10 +780,10 @@ export const PromptStance = () => {
           <div className="rounded-xl bg-black p-10 text-center text-white">
             <h2 className="mb-4 text-4xl font-bold">Here&apos;s the thing.</h2>
             <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed">
-              Building prompts that work is an art form (it&apos;s funny because I just spent this entire
-              page convincing you all art can be broken into steps). Try something. Fail. Iterate.
-              Give yourself the freedom to be in the loop on the interesting parts. Get back to the
-              parts of your job you like.
+              Building prompts that work is an art form (it&apos;s funny because I just spent this
+              entire page convincing you all art can be broken into steps). Try something. Fail.
+              Iterate. Give yourself the freedom to be in the loop on the interesting parts. Get
+              back to the parts of your job you like.
             </p>
             <Button
               onClick={() => navigate('/projects')}
@@ -790,9 +796,9 @@ export const PromptStance = () => {
           {/* Footer Note */}
           <div className="text-center leading-relaxed text-gray-600">
             <p>
-              We didn&apos;t make this up. Turns out the engineers at Anthropic, OpenAI, and the builders
-              in Lenny&apos;s Newsletter community came to the same conclusions. Sometimes the best ideas
-              are just obvious once you&apos;ve failed enough times.
+              We didn&apos;t make this up. Turns out the engineers at Anthropic, OpenAI, and the
+              builders in Lenny&apos;s Newsletter community came to the same conclusions. Sometimes
+              the best ideas are just obvious once you&apos;ve failed enough times.
             </p>
           </div>
         </div>
