@@ -1,7 +1,9 @@
-from rest_framework import permissions, status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from .filters import AgentInstanceFilter
 from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution
 from .serializers import (
     AgentInstanceSerializer,
@@ -17,6 +19,9 @@ class AgentInstanceViewSet(viewsets.ModelViewSet):
     queryset = AgentInstance.objects.all()
     serializer_class = AgentInstanceSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    filterset_class = AgentInstanceFilter
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)

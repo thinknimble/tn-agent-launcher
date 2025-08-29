@@ -13,6 +13,7 @@ import { Pagination } from '@thinknimble/tn-models'
 import { Button } from 'src/components/button'
 import { Input } from 'src/components/input'
 import { ErrorsList } from 'src/components/errors'
+import { PromptBuilder } from 'src/components/prompt-builder'
 import {
   AgentInstanceForm,
   TAgentInstanceForm,
@@ -378,7 +379,7 @@ const AgentInstanceInner = ({
       const formValue = form.value
       const data = {
         ...formValue,
-        agentProject: agentProject.id,
+        projects: [agentProject.id],
         provider: formValue.provider?.value,
         agentType: formValue.agentType?.value,
       }
@@ -492,29 +493,11 @@ const AgentInstanceInner = ({
           </div>
         </div>
 
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="text-sm font-medium text-primary-600">System Prompt</label>
-            <Link
-              to="/prompt-stance"
-              className="flex items-center text-xs text-accent-600 hover:text-accent-700"
-            >
-              Our stance on how to build prompts the right way
-              <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-          </div>
-          <textarea
-            placeholder="Enter the system prompt for this agent..."
-            className="bg-primary-50 resize-vertical h-32 w-full rounded-md border border-primary-200 p-3 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            value={promptTemplateContent ?? ''}
-            onChange={(e) => setPromptTemplateContent(e.target.value)}
-          />
-          <p className="mt-1 text-xs text-primary-400">
-            Define the behavior and personality of your AI agent
-          </p>
-        </div>
+        <PromptBuilder
+          value={promptTemplateContent ?? ''}
+          onChange={setPromptTemplateContent}
+          placeholder="Enter the system prompt for this agent..."
+        />
 
         <div className="flex justify-end space-x-3 border-t border-primary-200 pt-4">
           <Button
@@ -553,7 +536,7 @@ export const CreateAgentProject = () => {
   )
 
   const { data: projectInstances, isLoading: loadingInstances } = useQuery(
-    agentInstanceQueries.list(new Pagination(), { agentProject: id }),
+    agentInstanceQueries.list(new Pagination(), { projects: [id ?? ''] }),
   )
 
   useEffect(() => {

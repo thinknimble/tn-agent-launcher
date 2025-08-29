@@ -4,7 +4,11 @@ import pytest
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
 
-from tn_agent_launcher.agent.factories import AgentInstanceFactory, AgentProjectFactory
+from tn_agent_launcher.agent.factories import (
+    AgentInstanceFactory,
+    AgentProjectFactory,
+    AgentTaskFactory,
+)
 from tn_agent_launcher.core.factories import UserFactory
 from tn_agent_launcher.core.models import User
 
@@ -17,6 +21,7 @@ JSON_RQST_HEADERS = dict(
 register(UserFactory)
 register(AgentInstanceFactory)
 register(AgentProjectFactory)
+register(AgentTaskFactory)
 
 
 @pytest.fixture
@@ -74,3 +79,10 @@ def sample_agent_project(agent_project_factory):
     agent_project = agent_project_factory()
     agent_project.save()
     return agent_project
+
+
+@pytest.fixture
+def sample_agent_task(agent_task_factory):
+    agent_task = agent_task_factory()
+    agent_task.save()
+    return agent_task
