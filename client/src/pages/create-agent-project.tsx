@@ -24,7 +24,7 @@ import {
 } from 'src/services/agent-instance'
 import { AgentInstance } from 'src/services/agent-instance/models'
 import { SelectOption } from 'src/services/base-model'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import Select from 'react-dropdown-select'
 import { agentInstanceQueries } from 'src/services/agent-instance'
 import {
@@ -493,7 +493,18 @@ const AgentInstanceInner = ({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-primary-600">System Prompt</label>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-primary-600">System Prompt</label>
+            <Link
+              to="/prompt-stance"
+              className="flex items-center text-xs text-accent-600 hover:text-accent-700"
+            >
+              Our stance on how to build prompts the right way
+              <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
           <textarea
             placeholder="Enter the system prompt for this agent..."
             className="bg-primary-50 resize-vertical h-32 w-full rounded-md border border-primary-200 p-3 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
