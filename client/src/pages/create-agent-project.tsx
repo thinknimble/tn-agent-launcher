@@ -379,7 +379,7 @@ const AgentInstanceInner = ({
       const formValue = form.value
       const data = {
         ...formValue,
-        agentProject: agentProject.id,
+        projects: [agentProject.id],
         provider: formValue.provider?.value,
         agentType: formValue.agentType?.value,
       }
@@ -536,7 +536,7 @@ export const CreateAgentProject = () => {
   )
 
   const { data: projectInstances, isLoading: loadingInstances } = useQuery(
-    agentInstanceQueries.list(new Pagination(), { agentProject: id }),
+    agentInstanceQueries.list(new Pagination(), { projects: [id ?? ''] }),
   )
 
   useEffect(() => {

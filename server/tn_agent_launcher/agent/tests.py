@@ -1,4 +1,7 @@
 import pytest
+from django.urls import reverse
+
+from .models import AgentInstance, AgentProject, AgentTask
 
 
 @pytest.mark.django_db
@@ -16,7 +19,7 @@ def test_agent_serializer(api_client, sample_agent_instance):
 
 
 @pytest.mark.django_db
-def test_agent_viewset_create(api_client, sample_user):
+def test_agent_viewset_create(api_client, sample_user, sample_agent_project):
     api_client.force_authenticate(user=sample_user)
     data = {
         "friendly_name": "Test Agent",
@@ -25,6 +28,7 @@ def test_agent_viewset_create(api_client, sample_user):
         "target_url": "http://example.com",
         "agent_type": "chat",
         "api_key": "some_test",
+        "projects": [sample_agent_project.id],
     }
     response = api_client.post("/api/agents/instances/", data, format="json")
     assert response.status_code == 201
@@ -62,3 +66,31 @@ def test_agent_project_viewset_create(api_client, sample_user, sample_agent_inst
     assert response.data["title"] == "Test Project"
     assert response.data["description"] == "A test project"
     assert response.data["user"] == sample_user.id
+
+
+@pytest.mark.django_db
+def test_agent_project_viewset_filters(
+    api_client, sample_user, sample_agent_instance, agent_project_factory, agent_instance_factory
+):
+    new_agent = agent_instance_factory()
+    new_agent.save()
+    new_agent.user = sample_agent_instance.user
+    new_agent.save()
+
+    assert new_agent.projects.count() == 1
+    assert AgentProject.objects.count() == 2
+    assert AgentInstance.objects.count() == 2
+    assert sample_agent_instance.projects.count() == 1
+    assert sample_agent_instance.projects.first().id != new_agent.projects.first().id
+
+    api_client.force_authenticate(user=sample_agent_instance.user)
+    res = api_client.get(
+        reverse("agentinstance-list"), {"projects": str(sample_agent_instance.projects.first().id)}
+    )
+    assert res.status_code == 200
+    assert res.data["results"][0]["id"] == str(sample_agent_instance.id)
+
+
+@pytest.mark.django_db
+def test_agent_task(api_client, sample_agent_task):
+    assert AgentTask.objects.count()
