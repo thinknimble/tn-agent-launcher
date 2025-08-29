@@ -8,6 +8,6 @@ export const agentInstanceApi = createApi({
   models: {
     entity: agentInstanceShape,
     create: createAgentInstanceShape,
-    extraFilters: agentInstanceFiltersShape
+    extraFilters: agentInstanceFiltersShape,
   },
 })

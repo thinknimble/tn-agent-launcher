@@ -47,12 +47,12 @@ export const createAgentInstanceShape = {
   apiKey: agentInstanceShape.apiKey,
   targetUrl: agentInstanceShape.targetUrl,
   agentType: agentInstanceShape.agentType,
-  projects: agentInstanceShape.projects
+  projects: agentInstanceShape.projects,
 }
 
 export const agentInstanceFiltersShape = {
   projects: z.string().array(),
-  agentType: z.string()
+  agentType: z.string(),
 }
 
 export type AgentInstance = GetInferredFromRaw<typeof agentInstanceShape>
