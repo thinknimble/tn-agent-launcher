@@ -7,6 +7,8 @@ from typing import Optional
 from background_task import background
 from django.utils import timezone
 
+from tn_agent_launcher.utils.input_sources import download_and_process_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,10 +34,39 @@ def execute_agent_task(task_execution_id: int):
     try:
         agent_instance = task.agent_instance
 
+        # Process input sources if any
+        input_sources_content = []
+        if task.input_urls:
+            logger.info(f"Processing {len(task.input_urls)} input URLs for task {task.name}")
+            for url in task.input_urls:
+                try:
+                    processed_content = download_and_process_url(url)
+                    input_sources_content.append(processed_content)
+                    logger.info(f"Successfully processed input source: {url}")
+                except Exception as e:
+                    logger.error(f"Failed to process input source {url}: {e}")
+                    # Continue with other URLs even if one fails
+                    input_sources_content.append({
+                        'source_url': url,
+                        'error': str(e),
+                        'processed_content': f"[Error processing URL: {url}]"
+                    })
+
+        # Prepare the instruction with input sources
+        enhanced_instruction = task.instruction
+        if input_sources_content:
+            sources_text = "\n\n--- INPUT SOURCES ---\n"
+            for i, source in enumerate(input_sources_content, 1):
+                sources_text += f"\nSource {i}: {source.get('source_url', 'Unknown')}\n"
+                sources_text += f"Content: {source.get('processed_content', '[No content]')}\n"
+            enhanced_instruction = f"{task.instruction}\n{sources_text}"
+
         input_data = {
             "instruction": task.instruction,
+            "enhanced_instruction": enhanced_instruction,
             "task_name": task.name,
             "execution_id": str(execution.id),
+            "input_sources": input_sources_content,
         }
 
         execution.input_data = input_data
@@ -48,7 +79,7 @@ def execute_agent_task(task_execution_id: int):
         # Run the async agent in a new event loop
         async def run_agent():
             agent = await agent_instance.agent()
-            return await agent.run(task.instruction)
+            return await agent.run(enhanced_instruction)
 
         result = asyncio.run(run_agent())
 
@@ -58,7 +89,7 @@ def execute_agent_task(task_execution_id: int):
         execution.status = AgentTaskExecution.StatusChoices.COMPLETED
         execution.completed_at = end_time
         execution.execution_time_seconds = duration
-        # lets filter out the thinknig from the output <think> some text </think>
+        # lets filter out the thinking from the output <think> some text </think>
 
         filtered_output = re.sub(r"<think>.*?</think>", "", result.output, flags=re.DOTALL).strip()
         execution.output_data = {"result": filtered_output}
