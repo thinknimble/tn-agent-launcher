@@ -11,6 +11,7 @@ type ButtonVariant =
   | 'secondary-reversed'
   | 'unstyled'
   | 'card'
+  | 'neutral'
 
 const buttonVariantMap: Record<ButtonVariant, string> = {
   primary: 'text-white bg-primary active:bg-primary-300 ',
@@ -20,6 +21,8 @@ const buttonVariantMap: Record<ButtonVariant, string> = {
   'secondary-reversed': 'text-secondary bg-white border border-secondary',
   unstyled: '',
   card: 'rounded-lg bg-white p-4 shadow-md hover:bg-gray-100',
+  neutral:
+    'border border-gray-200 bg-white text-neutral-900 hover:border-neutral-400 hover:bg-neutral-50',
 }
 
 type CommonButtonProps = {

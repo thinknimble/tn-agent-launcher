@@ -13,6 +13,7 @@ import { Pagination } from '@thinknimble/tn-models'
 import { Button } from 'src/components/button'
 import { Input } from 'src/components/input'
 import { ErrorsList } from 'src/components/errors'
+import { PromptBuilder } from 'src/components/prompt-builder'
 import {
   AgentInstanceForm,
   TAgentInstanceForm,
@@ -24,7 +25,7 @@ import {
 } from 'src/services/agent-instance'
 import { AgentInstance } from 'src/services/agent-instance/models'
 import { SelectOption } from 'src/services/base-model'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import Select from 'react-dropdown-select'
 import { agentInstanceQueries } from 'src/services/agent-instance'
 import {
@@ -378,7 +379,7 @@ const AgentInstanceInner = ({
       const formValue = form.value
       const data = {
         ...formValue,
-        agentProject: agentProject.id,
+        projects: [agentProject.id],
         provider: formValue.provider?.value,
         agentType: formValue.agentType?.value,
       }
@@ -492,18 +493,11 @@ const AgentInstanceInner = ({
           </div>
         </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-primary-600">System Prompt</label>
-          <textarea
-            placeholder="Enter the system prompt for this agent..."
-            className="bg-primary-50 resize-vertical h-32 w-full rounded-md border border-primary-200 p-3 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            value={promptTemplateContent ?? ''}
-            onChange={(e) => setPromptTemplateContent(e.target.value)}
-          />
-          <p className="mt-1 text-xs text-primary-400">
-            Define the behavior and personality of your AI agent
-          </p>
-        </div>
+        <PromptBuilder
+          value={promptTemplateContent ?? ''}
+          onChange={setPromptTemplateContent}
+          placeholder="Enter the system prompt for this agent..."
+        />
 
         <div className="flex justify-end space-x-3 border-t border-primary-200 pt-4">
           <Button
@@ -542,7 +536,7 @@ export const CreateAgentProject = () => {
   )
 
   const { data: projectInstances, isLoading: loadingInstances } = useQuery(
-    agentInstanceQueries.list(new Pagination(), { agentProject: id }),
+    agentInstanceQueries.list(new Pagination(), { projects: [id ?? ''] }),
   )
 
   useEffect(() => {
