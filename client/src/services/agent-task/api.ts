@@ -1,6 +1,12 @@
 import { createApi, createCustomServiceCall } from '@thinknimble/tn-models'
 import { axiosInstance } from 'src/services/axios-instance'
-import { agentTaskShape, createAgentTaskShape, agentTaskFilterShape } from './models'
+import {
+  agentTaskShape,
+  createAgentTaskShape,
+  agentTaskFilterShape,
+  presignedUrlRequestShape,
+  presignedUrlResponseShape,
+} from './models'
 import { z } from 'zod'
 import { agentTaskExecutionShape } from '../agent-task-execution'
 
@@ -31,6 +37,15 @@ const resumeCall = createCustomServiceCall({
   },
 })
 
+const generatePresignedUrlCall = createCustomServiceCall({
+  inputShape: presignedUrlRequestShape,
+  outputShape: presignedUrlResponseShape,
+  cb: async ({ client, slashEndingBaseUri, input, utils: { toApi, fromApi } }) => {
+    const response = await client.post(`${slashEndingBaseUri}generate_presigned_url/`, toApi(input))
+    return fromApi(response.data)
+  },
+})
+
 export const agentTaskApi = createApi({
   client: axiosInstance,
   baseUri: '/agents/tasks/',
@@ -43,5 +58,6 @@ export const agentTaskApi = createApi({
     executeNow: executeNowCall,
     pause: pauseCall,
     resume: resumeCall,
+    generatePresignedUrl: generatePresignedUrlCall,
   },
 })

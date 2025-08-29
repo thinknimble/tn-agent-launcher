@@ -7,6 +7,7 @@ interface AgentTaskCardProps {
   onPause?: (task: AgentTask) => void
   onResume?: (task: AgentTask) => void
   onEdit?: (task: AgentTask) => void
+  onDuplicate?: (task: AgentTask) => void
   onDelete?: (taskId: string) => void
   onShowHistory?: (task: AgentTask) => void
 }
@@ -17,6 +18,7 @@ export const AgentTaskCard = ({
   onPause,
   onResume,
   onEdit,
+  onDuplicate,
   onDelete,
   onShowHistory,
 }: AgentTaskCardProps) => {
@@ -115,6 +117,16 @@ export const AgentTaskCard = ({
                 className="hover:bg-primary-50 border-primary-300 px-2 py-1 text-xs text-primary-600"
               >
                 Edit
+              </Button>
+            )}
+
+            {onDuplicate && (
+              <Button
+                onClick={() => onDuplicate(task)}
+                variant="ghost"
+                className="border-blue-300 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+              >
+                Duplicate
               </Button>
             )}
 

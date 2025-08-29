@@ -101,6 +101,13 @@ class AgentTask(AbstractBaseModel):
     )
     instruction = models.TextField(help_text="The prompt/instruction to send to the agent")
 
+    # Input sources
+    input_sources = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of input source objects with metadata (url, source_type, etc.)",
+    )
+
     schedule_type = models.CharField(max_length=20, choices=ScheduleTypeChoices.choices)
     scheduled_at = models.DateTimeField(
         null=True,

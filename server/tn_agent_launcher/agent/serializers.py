@@ -73,6 +73,7 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "agent_instance",
             "agent_instance_name",
             "instruction",
+            "input_sources",
             "schedule_type",
             "scheduled_at",
             "interval_minutes",

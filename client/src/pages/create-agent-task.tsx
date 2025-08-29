@@ -8,6 +8,7 @@ import Select from 'react-dropdown-select'
 import { Button } from 'src/components/button'
 import { Input } from 'src/components/input'
 import { ErrorsList } from 'src/components/errors'
+import { InputSourceUploader } from 'src/components/input-source-uploader'
 import {
   AgentTask,
   AgentTaskForm,
@@ -17,6 +18,8 @@ import {
   scheduleTypeLabelMap,
   scheduleTypeEnum,
   ScheduleTypeValues,
+  InputSource,
+  sourceTypeEnum,
 } from 'src/services/agent-task'
 import { AgentInstance, agentInstanceQueries, agentTypeEnum } from 'src/services/agent-instance'
 import { SelectOption } from 'src/services/base-model'
@@ -26,12 +29,14 @@ const CreateEditAgentTaskInner = ({
   onCancel,
   preselectedAgentId,
   initialData,
+  duplicateFrom,
   isEditing = false,
 }: {
   onSuccess: (task: AgentTask) => void
   onCancel?: () => void
   preselectedAgentId?: string
   initialData?: AgentTask
+  duplicateFrom?: AgentTask
   isEditing?: boolean
 }) => {
   const { form, createFormFieldChangeHandler, overrideForm } = useTnForm<TAgentTaskForm>()
@@ -82,6 +87,7 @@ const CreateEditAgentTaskInner = ({
       updatedForm._name.value = initialData.name
       updatedForm.description.value = initialData.description || ''
       updatedForm.instruction.value = initialData.instruction
+      updatedForm.inputSources.value = initialData.inputSources || []
       updatedForm.scheduledAt.value = initialData.scheduledAt || ''
       updatedForm.intervalMinutes.value = initialData.intervalMinutes
       updatedForm.maxExecutions.value = initialData.maxExecutions
@@ -104,9 +110,39 @@ const CreateEditAgentTaskInner = ({
     }
   }, [initialData, isEditing, agentOptions, scheduleTypeOptions, overrideForm])
 
-  // Pre-select agent for new tasks
+  // Pre-populate form for duplication
   useEffect(() => {
-    if (preselectedAgentId && agentOptions.length > 0 && !isEditing) {
+    if (duplicateFrom && !isEditing && agentOptions.length > 0) {
+      const updatedForm = new AgentTaskForm() as TAgentTaskForm
+      updatedForm._name.value = `${duplicateFrom.name} (Copy)`
+      updatedForm.description.value = duplicateFrom.description || ''
+      updatedForm.instruction.value = duplicateFrom.instruction
+      updatedForm.inputSources.value = duplicateFrom.inputSources || []
+      updatedForm.scheduledAt.value = duplicateFrom.scheduledAt || ''
+      updatedForm.intervalMinutes.value = duplicateFrom.intervalMinutes
+      updatedForm.maxExecutions.value = duplicateFrom.maxExecutions
+
+      // Set agent instance
+      const agentOption = agentOptions.find((opt) => opt.value === duplicateFrom.agentInstance)
+      if (agentOption) {
+        updatedForm.agentInstance.value = agentOption
+      }
+
+      // Set schedule type
+      const scheduleOption = scheduleTypeOptions.find(
+        (opt) => opt.value === duplicateFrom.scheduleType,
+      )
+      if (scheduleOption) {
+        updatedForm.scheduleType.value = scheduleOption
+      }
+
+      overrideForm(updatedForm)
+    }
+  }, [duplicateFrom, agentOptions, scheduleTypeOptions, overrideForm, isEditing])
+
+  // Pre-select agent for new tasks (only if not duplicating)
+  useEffect(() => {
+    if (preselectedAgentId && agentOptions.length > 0 && !isEditing && !duplicateFrom) {
       const selectedAgent = agentOptions.find((option) => option.value === preselectedAgentId)
       if (selectedAgent) {
         const updatedForm = new AgentTaskForm() as TAgentTaskForm
@@ -114,20 +150,32 @@ const CreateEditAgentTaskInner = ({
         overrideForm(updatedForm)
       }
     }
-  }, [preselectedAgentId, agentOptions, overrideForm, isEditing])
+  }, [preselectedAgentId, agentOptions, overrideForm, isEditing, duplicateFrom])
 
   const isScheduleTypeOnce = form.scheduleType.value?.value === scheduleTypeEnum.ONCE
   const isScheduleTypeCustom = form.scheduleType.value?.value === scheduleTypeEnum.CUSTOM_INTERVAL
+
+  // Helper function to create InputSource object from URL
+  const createInputSourceFromUrl = (url: string): InputSource => {
+    const filename = url.split('/').pop() || 'unknown_file'
+    return {
+      url,
+      sourceType: sourceTypeEnum.PUBLIC_URL,
+      filename,
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (form.isValid) {
       const formValue = form.value
+      console.log(form.value)
       const data = {
         name: formValue._name || '',
         description: formValue.description || '',
         agentInstance: formValue.agentInstance?.value || '',
         instruction: formValue.instruction || '',
+        inputSources: (formValue.inputSources || []).filter((source) => source.url.trim() !== ''),
         scheduleType: (formValue.scheduleType?.value || '') as ScheduleTypeValues,
         scheduledAt: formValue.scheduledAt || undefined,
         intervalMinutes: formValue.intervalMinutes || undefined,
@@ -146,12 +194,18 @@ const CreateEditAgentTaskInner = ({
     <div className="rounded-lg border border-primary-200 bg-white p-6 shadow-sm">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-primary-600">
-          {isEditing ? 'Edit Agent Task' : 'Create New Agent Task'}
+          {isEditing
+            ? 'Edit Agent Task'
+            : duplicateFrom
+              ? 'Duplicate Agent Task'
+              : 'Create New Agent Task'}
         </h2>
         <p className="mt-2 text-sm text-primary-400">
           {isEditing
             ? 'Update your scheduled task configuration'
-            : 'Schedule automated tasks for your one-shot agents'}
+            : duplicateFrom
+              ? `Creating a copy of "${duplicateFrom.name}"`
+              : 'Schedule automated tasks for your one-shot agents'}
         </p>
       </div>
 
@@ -206,6 +260,109 @@ const CreateEditAgentTaskInner = ({
             onChange={(e) => createFormFieldChangeHandler(form.instruction)(e.target.value)}
           />
           <ErrorsList errors={form.instruction.errors} />
+        </div>
+
+        <div>
+          <label className="mb-3 block text-sm font-medium text-primary-600">Input Sources</label>
+
+          {/* File Upload Section */}
+          <div className="mb-4">
+            <InputSourceUploader
+              onFilesSelected={(inputSources) => {
+                const currentSources = form.inputSources.value || []
+                createFormFieldChangeHandler(form.inputSources)([
+                  ...currentSources,
+                  ...inputSources,
+                ])
+              }}
+              maxFiles={5}
+              maxSize={50}
+            />
+          </div>
+
+          {/* URL Input Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-px flex-1 bg-primary-200"></div>
+              <span className="px-2 text-xs text-primary-400">Or add URLs manually</span>
+              <div className="h-px flex-1 bg-primary-200"></div>
+            </div>
+
+            <div className="space-y-2">
+              {(form.inputSources.value || []).map((source, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Input
+                      type="url"
+                      placeholder="https://example.com/document.pdf"
+                      value={source.url || ''}
+                      onChange={(e) => {
+                        const currentSources = form.inputSources.value || []
+                        const newSources = [...currentSources]
+                        if (e.target.value.trim()) {
+                          newSources[index] = createInputSourceFromUrl(e.target.value.trim())
+                        } else {
+                          newSources[index] = { ...source, url: e.target.value }
+                        }
+                        createFormFieldChangeHandler(form.inputSources)(newSources)
+                      }}
+                      className="bg-primary-50 border-primary-200 focus:border-primary-500"
+                    />
+                    <div className="mt-1 flex gap-2">
+                      <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                        {source.sourceType === sourceTypeEnum.OUR_S3 ? '📁' : '🌐'}
+                        {source.sourceType === sourceTypeEnum.OUR_S3
+                          ? 'Uploaded File'
+                          : 'Public URL'}
+                      </span>
+                      {source.filename && (
+                        <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600">
+                          📄 {source.filename}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      const currentSources = form.inputSources.value || []
+                      const newSources = currentSources.filter((_, i) => i !== index)
+                      createFormFieldChangeHandler(form.inputSources)(newSources)
+                    }}
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  const currentSources = form.inputSources.value || []
+                  const newInputSource: InputSource = {
+                    url: '',
+                    sourceType: sourceTypeEnum.PUBLIC_URL,
+                    filename: '',
+                  }
+                  createFormFieldChangeHandler(form.inputSources)([
+                    ...currentSources,
+                    newInputSource,
+                  ])
+                }}
+                className="hover:bg-primary-50 text-primary-600 hover:text-primary-700"
+              >
+                Add URL
+              </Button>
+            </div>
+          </div>
+
+          <ErrorsList errors={form.inputSources.errors} />
+          <p className="mt-2 text-xs text-primary-400">
+            Upload files or add URLs to documents, images, or other resources for the agent to
+            process
+          </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -301,18 +458,17 @@ const CreateEditAgentTaskInner = ({
 export const CreateAgentTask = ({
   task,
   agent,
+  duplicateFrom,
   onSuccess,
   onCancel,
 }: {
   task?: AgentTask
-  agent: AgentInstance
+  agent?: AgentInstance
+  duplicateFrom?: AgentTask
   onSuccess?: () => void
   onCancel?: () => void
 }) => {
   const isEditing = useMemo(() => !!task, [task])
-
-  const pageTitle = isEditing ? 'Edit Agent Task' : 'Create Agent Task'
-  const backPath = isEditing ? `/tasks` : '/tasks'
 
   return (
     <div className="min-h-screen">
@@ -325,8 +481,9 @@ export const CreateAgentTask = ({
             onCancel={() => {
               onCancel?.()
             }}
-            preselectedAgentId={agent.id || undefined}
+            preselectedAgentId={agent?.id || undefined}
             initialData={task}
+            duplicateFrom={duplicateFrom}
             isEditing={isEditing}
           />
         </FormProvider>

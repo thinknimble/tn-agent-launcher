@@ -1,5 +1,6 @@
 import { AgentTaskExecution, executionStatusLabelMap } from 'src/services/agent-task-execution'
 import { Button } from './button'
+import { MarkdownRenderer } from './markdown-renderer'
 
 interface AgentTaskExecutionCardProps {
   execution: AgentTaskExecution
@@ -65,11 +66,10 @@ export const AgentTaskExecutionCard = ({ execution, onCancel }: AgentTaskExecuti
 
           {execution.outputData && (
             <div className="mt-2">
-              <details className="text-sm">
+              <details className="rounded-md bg-secondary-400 p-4 text-left text-sm">
                 <summary className="cursor-pointer font-medium text-primary-600">Output</summary>
-                <pre className="bg-primary-50 mt-1 max-h-32 overflow-auto rounded p-2 text-xs">
-                  {JSON.stringify(execution.outputData, null, 2)}
-                </pre>
+                <MarkdownRenderer content={execution.outputData?.result || ''} />
+                {/* {JSON.stringify(execution.outputData?.result, null, 2)} */}
               </details>
             </div>
           )}
