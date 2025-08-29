@@ -25,7 +25,7 @@ import {
 } from 'src/services/agent-instance'
 import { AgentInstance } from 'src/services/agent-instance/models'
 import { SelectOption } from 'src/services/base-model'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import Select from 'react-dropdown-select'
 import { agentInstanceQueries } from 'src/services/agent-instance'
 import {
