@@ -16,6 +16,7 @@ class AgentInstanceSerializer(serializers.ModelSerializer):
             "friendly_name",
             "provider",
             "model_name",
+            "projects",
             "target_url",
             "agent_type",
             "created",

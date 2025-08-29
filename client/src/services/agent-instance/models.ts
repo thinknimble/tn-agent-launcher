@@ -37,6 +37,7 @@ export const agentInstanceShape = {
   user: z.string().uuid(),
   promptTemplate: z.object(promptTemplateShape).nullable().optional(),
   maskedApiKey: z.string().optional(),
+  projects: z.string().array().default([]),
 }
 
 export const createAgentInstanceShape = {
@@ -46,7 +47,14 @@ export const createAgentInstanceShape = {
   apiKey: agentInstanceShape.apiKey,
   targetUrl: agentInstanceShape.targetUrl,
   agentType: agentInstanceShape.agentType,
+  projects: agentInstanceShape.projects
+}
+
+export const agentInstanceFiltersShape = {
+  projects: z.string().array(),
+  agentType: z.string()
 }
 
 export type AgentInstance = GetInferredFromRaw<typeof agentInstanceShape>
 export type CreateAgentInstance = GetInferredFromRaw<typeof createAgentInstanceShape>
+export type AgentInstanceFilters = GetInferredFromRaw<typeof agentInstanceFiltersShape>

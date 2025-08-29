@@ -1,6 +1,6 @@
 import { createApi } from '@thinknimble/tn-models'
 import { axiosInstance } from 'src/services/axios-instance'
-import { agentInstanceShape, createAgentInstanceShape } from './models'
+import { agentInstanceFiltersShape, agentInstanceShape, createAgentInstanceShape } from './models'
 
 export const agentInstanceApi = createApi({
   client: axiosInstance,
@@ -8,5 +8,6 @@ export const agentInstanceApi = createApi({
   models: {
     entity: agentInstanceShape,
     create: createAgentInstanceShape,
+    extraFilters: agentInstanceFiltersShape
   },
 })

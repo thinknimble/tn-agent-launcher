@@ -38,7 +38,7 @@ const CreateEditAgentTaskInner = ({
   const queryClient = useQueryClient()
 
   const { data: agentInstances } = useQuery(
-    agentInstanceQueries.list(new Pagination(), { agentType: agentTypeEnum.ONE_SHOT }),
+    agentInstanceQueries.list(new Pagination(), { projects: [], agentType: (agentTypeEnum.ONE_SHOT) as string }),
   )
 
   const { mutate: create, isPending: isCreating } = useMutation({
