@@ -26,9 +26,7 @@ export const Dashboard = () => {
             <h2 className="text-xl font-bold">+</h2>
             <p>Create New Project</p>
           </Button>
-          {projects?.results.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
+          {projects?.results.map((project) => <ProjectCard key={project.id} project={project} />)}
         </div>
       </div>
     </div>
