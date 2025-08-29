@@ -12,7 +12,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   onFilesUploaded,
   maxFiles = 5,
   maxSize = 50,
-  acceptedFileTypes = ['image/*', 'application/pdf', 'text/*', '.csv', '.json']
+  acceptedFileTypes = ['image/*', 'application/pdf', 'text/*', '.csv', '.json'],
 }) => {
   const [files, setFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -28,7 +28,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     // Check file type (basic validation)
     const fileExtension = file.name.split('.').pop()?.toLowerCase()
     const allowedExtensions = ['pdf', 'txt', 'csv', 'json', 'md', 'jpg', 'jpeg', 'png', 'gif']
-    
+
     if (fileExtension && !allowedExtensions.includes(fileExtension)) {
       return `File type ".${fileExtension}" is not supported.`
     }
@@ -62,19 +62,22 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       return
     }
 
-    setFiles(prev => [...prev, ...validFiles])
+    setFiles((prev) => [...prev, ...validFiles])
     setError(null)
   }
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragActive(false)
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setDragActive(false)
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files)
-      e.dataTransfer.clearData()
-    }
-  }, [files.length, maxFiles])
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFiles(e.dataTransfer.files)
+        e.dataTransfer.clearData()
+      }
+    },
+    [files.length, maxFiles],
+  )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -106,16 +109,16 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       // Create a temporary URL for each file using URL.createObjectURL
       // In a real implementation, you'd upload to a server and get back URLs
       const tempUrls: string[] = []
-      
+
       for (const file of files) {
         // For demo purposes, we'll create blob URLs
         // In production, you'd upload to your server here
         const formData = new FormData()
         formData.append('file', file)
-        
+
         // Simulate upload delay
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
         // For now, we'll just create a local URL
         // In production, this would be the server response URL
         const tempUrl = URL.createObjectURL(file)
@@ -124,7 +127,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
       onFilesUploaded?.(tempUrls)
       setFiles([])
-      
     } catch (err) {
       setError('Failed to upload files. Please try again.')
       console.error('Upload error:', err)
@@ -143,9 +145,10 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         onClick={() => document.getElementById('file-input')?.click()}
         className={`
           relative cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors
-          ${dragActive 
-            ? 'border-primary-500 bg-primary-50' 
-            : 'border-primary-300 hover:border-primary-400 hover:bg-primary-25'
+          ${
+            dragActive
+              ? 'bg-primary-50 border-primary-500'
+              : 'hover:bg-primary-25 border-primary-300 hover:border-primary-400'
           }
         `}
       >
@@ -157,23 +160,28 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           onChange={handleFileInput}
           className="hidden"
         />
-        
+
         <div className="space-y-2">
           <div className="text-primary-400">
             <svg className="mx-auto h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
             </svg>
           </div>
-          
+
           {dragActive ? (
-            <p className="text-primary-600 font-medium">Drop files here</p>
+            <p className="font-medium text-primary-600">Drop files here</p>
           ) : (
             <div>
-              <p className="text-primary-600 font-medium">Click to upload files</p>
-              <p className="text-xs text-primary-400 mt-1">or drag and drop files here</p>
+              <p className="font-medium text-primary-600">Click to upload files</p>
+              <p className="mt-1 text-xs text-primary-400">or drag and drop files here</p>
             </div>
           )}
-          
+
           <p className="text-xs text-primary-400">
             Supports PDF, images, text files, CSV, JSON (max {maxSize}MB each)
           </p>
@@ -182,7 +190,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
       {/* Error Message */}
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-3">
+        <div className="rounded-md border border-red-200 bg-red-50 p-3">
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
@@ -193,10 +201,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           <h4 className="font-medium text-primary-600">Selected Files:</h4>
           <div className="space-y-1">
             {files.map((file, index) => (
-              <div key={index} className="flex items-center justify-between bg-primary-50 rounded p-2 text-sm">
+              <div
+                key={index}
+                className="bg-primary-50 flex items-center justify-between rounded p-2 text-sm"
+              >
                 <div className="flex items-center space-x-2">
                   <span className="text-primary-600">{file.name}</span>
-                  <span className="text-primary-400 text-xs">
+                  <span className="text-xs text-primary-400">
                     ({(file.size / 1024 / 1024).toFixed(1)} MB)
                   </span>
                 </div>
@@ -204,21 +215,23 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                   type="button"
                   variant="ghost"
                   onClick={() => removeFile(index)}
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1"
+                  className="p-1 text-red-500 hover:bg-red-50 hover:text-red-700"
                 >
                   Remove
                 </Button>
               </div>
             ))}
           </div>
-          
+
           <Button
             type="button"
             onClick={uploadFiles}
             disabled={isUploading}
-            className="bg-primary-600 hover:bg-primary-700 text-white"
+            className="bg-primary-600 text-white hover:bg-primary-700"
           >
-            {isUploading ? 'Processing...' : `Process ${files.length} File${files.length > 1 ? 's' : ''}`}
+            {isUploading
+              ? 'Processing...'
+              : `Process ${files.length} File${files.length > 1 ? 's' : ''}`}
           </Button>
         </div>
       )}

@@ -40,15 +40,15 @@ def execute_agent_task(task_execution_id: int):
             logger.info(f"Processing {len(task.input_sources)} input sources for task {task.name}")
             for source in task.input_sources:
                 if isinstance(source, dict):
-                    url = source.get('url')
-                    source_type = source.get('source_type', 'unknown')
-                    filename = source.get('filename')
-                    content_type = source.get('content_type')
-                    size = source.get('size')
+                    url = source.get("url")
+                    source_type = source.get("source_type", "unknown")
+                    filename = source.get("filename")
+                    content_type = source.get("content_type")
+                    size = source.get("size")
                 else:
                     # Backward compatibility for simple URL strings
                     url = source
-                    source_type = 'public_url'
+                    source_type = "public_url"
                     filename = None
                     content_type = None
                     size = None
@@ -59,16 +59,16 @@ def execute_agent_task(task_execution_id: int):
 
                 try:
                     processed_content = download_and_process_url(url)
-                    
+
                     # Enhance with original metadata
                     if filename:
-                        processed_content['original_filename'] = filename
+                        processed_content["original_filename"] = filename
                     if content_type:
-                        processed_content['original_content_type'] = content_type
+                        processed_content["original_content_type"] = content_type
                     if size:
-                        processed_content['original_size'] = size
-                    processed_content['source_type'] = source_type
-                    
+                        processed_content["original_size"] = size
+                    processed_content["source_type"] = source_type
+
                     input_sources_content.append(processed_content)
                     logger.info(f"Successfully processed {source_type} input source: {url}")
                 except Exception as e:
@@ -89,12 +89,12 @@ def execute_agent_task(task_execution_id: int):
         if input_sources_content:
             sources_text = "\n\n--- INPUT SOURCES ---\n"
             for i, source in enumerate(input_sources_content, 1):
-                source_url = source.get('source_url', 'Unknown')
-                source_type = source.get('source_type', 'unknown')
-                
+                source_url = source.get("source_url", "Unknown")
+                source_type = source.get("source_type", "unknown")
+
                 sources_text += f"\nSource {i}: {source_url}\n"
                 sources_text += f"Source Type: {source_type}\n"
-                
+
                 if source.get("error"):
                     sources_text += f"Error: {source.get('error')}\n"
                 else:

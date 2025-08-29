@@ -24,34 +24,46 @@ export class InputSourceValidator extends PatternValidator {
     // Allow empty arrays
     if (!value || (Array.isArray(value) && value.length === 0)) {
       if (this.isRequired) {
-        throw new Error(JSON.stringify({ code: this.code, message: 'At least one input source is required' }))
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'At least one input source is required' }),
+        )
       }
       return
     }
 
     if (!Array.isArray(value)) {
-      throw new Error(JSON.stringify({ code: this.code, message: 'Input sources must be an array' }))
+      throw new Error(
+        JSON.stringify({ code: this.code, message: 'Input sources must be an array' }),
+      )
     }
 
     for (let source of value) {
       // Validate each input source object
       if (typeof source !== 'object' || source === null) {
-        throw new Error(JSON.stringify({ code: this.code, message: 'Each input source must be an object' }))
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'Each input source must be an object' }),
+        )
       }
 
       // Check required fields
       if (!source.url || typeof source.url !== 'string') {
-        throw new Error(JSON.stringify({ code: this.code, message: 'Each input source must have a valid URL' }))
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'Each input source must have a valid URL' }),
+        )
       }
 
       // Validate URL format
       if (!this.pattern.test(source.url)) {
-        throw new Error(JSON.stringify({ code: this.code, message: `Invalid URL format: ${source.url}` }))
+        throw new Error(
+          JSON.stringify({ code: this.code, message: `Invalid URL format: ${source.url}` }),
+        )
       }
 
-      // Validate source_type if present
-      if (source.source_type && typeof source.source_type !== 'string') {
-        throw new Error(JSON.stringify({ code: this.code, message: 'Source type must be a string' }))
+      // Validate sourceType if present
+      if (source.sourceType && typeof source.sourceType !== 'string') {
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'Source type must be a string' }),
+        )
       }
 
       // Validate optional fields
@@ -60,11 +72,15 @@ export class InputSourceValidator extends PatternValidator {
       }
 
       if (source.size && (typeof source.size !== 'number' || source.size < 0)) {
-        throw new Error(JSON.stringify({ code: this.code, message: 'File size must be a positive number' }))
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'File size must be a positive number' }),
+        )
       }
 
-      if (source.content_type && typeof source.content_type !== 'string') {
-        throw new Error(JSON.stringify({ code: this.code, message: 'Content type must be a string' }))
+      if (source.contentType && typeof source.contentType !== 'string') {
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'Content type must be a string' }),
+        )
       }
     }
   }

@@ -1,3 +1,8 @@
+import uuid
+
+import boto3
+from botocore.exceptions import ClientError
+from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
@@ -75,6 +80,64 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(task)
         return Response(serializer.data)
+
+    @action(detail=False, methods=["post"])
+    def generate_presigned_url(self, request):
+        """Generate a presigned URL for file upload to S3"""
+        filename = request.data.get("filename")
+        content_type = request.data.get("content_type", "application/octet-stream")
+
+        if not filename:
+            return Response({"error": "filename is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Initialize S3 client
+            s3_client = boto3.client(
+                "s3",
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name=getattr(settings, "AWS_S3_REGION_NAME", "us-east-1"),
+            )
+
+            # Generate unique key for the file
+            unique_filename = f"input-sources/{uuid.uuid4()}/{filename}"
+
+            # Generate presigned POST (better for CORS)
+            presigned_post = s3_client.generate_presigned_post(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                Key=unique_filename,
+                Fields={"Content-Type": content_type},
+                Conditions=[
+                    {"Content-Type": content_type},
+                    ["content-length-range", 1, 104857600],  # 100MB max
+                ],
+                ExpiresIn=3600,
+            )
+
+            # Generate the public URL that will be used to access the file
+            public_url = (
+                f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{unique_filename}"
+            )
+
+            return Response(
+                {
+                    "presigned_post": presigned_post,
+                    "public_url": public_url,
+                    "filename": filename,
+                    "key": unique_filename,
+                }
+            )
+
+        except ClientError as e:
+            return Response(
+                {"error": f"Failed to generate presigned URL: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Unexpected error: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class AgentTaskExecutionViewSet(viewsets.ReadOnlyModelViewSet):

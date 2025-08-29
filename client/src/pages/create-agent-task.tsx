@@ -18,6 +18,8 @@ import {
   scheduleTypeLabelMap,
   scheduleTypeEnum,
   ScheduleTypeValues,
+  InputSource,
+  sourceTypeEnum,
 } from 'src/services/agent-task'
 import { AgentInstance, agentInstanceQueries, agentTypeEnum } from 'src/services/agent-instance'
 import { SelectOption } from 'src/services/base-model'
@@ -85,7 +87,7 @@ const CreateEditAgentTaskInner = ({
       updatedForm._name.value = initialData.name
       updatedForm.description.value = initialData.description || ''
       updatedForm.instruction.value = initialData.instruction
-      updatedForm.inputUrls.value = initialData.inputUrls || []
+      updatedForm.inputSources.value = initialData.inputSources || []
       updatedForm.scheduledAt.value = initialData.scheduledAt || ''
       updatedForm.intervalMinutes.value = initialData.intervalMinutes
       updatedForm.maxExecutions.value = initialData.maxExecutions
@@ -115,7 +117,7 @@ const CreateEditAgentTaskInner = ({
       updatedForm._name.value = `${duplicateFrom.name} (Copy)`
       updatedForm.description.value = duplicateFrom.description || ''
       updatedForm.instruction.value = duplicateFrom.instruction
-      updatedForm.inputUrls.value = duplicateFrom.inputUrls || []
+      updatedForm.inputSources.value = duplicateFrom.inputSources || []
       updatedForm.scheduledAt.value = duplicateFrom.scheduledAt || ''
       updatedForm.intervalMinutes.value = duplicateFrom.intervalMinutes
       updatedForm.maxExecutions.value = duplicateFrom.maxExecutions
@@ -153,16 +155,27 @@ const CreateEditAgentTaskInner = ({
   const isScheduleTypeOnce = form.scheduleType.value?.value === scheduleTypeEnum.ONCE
   const isScheduleTypeCustom = form.scheduleType.value?.value === scheduleTypeEnum.CUSTOM_INTERVAL
 
+  // Helper function to create InputSource object from URL
+  const createInputSourceFromUrl = (url: string): InputSource => {
+    const filename = url.split('/').pop() || 'unknown_file'
+    return {
+      url,
+      sourceType: sourceTypeEnum.PUBLIC_URL,
+      filename,
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (form.isValid) {
       const formValue = form.value
+      console.log(form.value)
       const data = {
         name: formValue._name || '',
         description: formValue.description || '',
         agentInstance: formValue.agentInstance?.value || '',
         instruction: formValue.instruction || '',
-        inputUrls: (formValue.inputUrls || []).filter((url) => url.trim() !== ''),
+        inputSources: (formValue.inputSources || []).filter((source) => source.url.trim() !== ''),
         scheduleType: (formValue.scheduleType?.value || '') as ScheduleTypeValues,
         scheduledAt: formValue.scheduledAt || undefined,
         intervalMinutes: formValue.intervalMinutes || undefined,
@@ -251,13 +264,16 @@ const CreateEditAgentTaskInner = ({
 
         <div>
           <label className="mb-3 block text-sm font-medium text-primary-600">Input Sources</label>
-          
+
           {/* File Upload Section */}
           <div className="mb-4">
             <InputSourceUploader
-              onFilesSelected={(urls) => {
-                const currentUrls = form.inputUrls.value || []
-                createFormFieldChangeHandler(form.inputUrls)([...currentUrls, ...urls])
+              onFilesSelected={(inputSources) => {
+                const currentSources = form.inputSources.value || []
+                createFormFieldChangeHandler(form.inputSources)([
+                  ...currentSources,
+                  ...inputSources,
+                ])
               }}
               maxFiles={5}
               maxSize={50}
@@ -267,33 +283,52 @@ const CreateEditAgentTaskInner = ({
           {/* URL Input Section */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="h-px bg-primary-200 flex-1"></div>
-              <span className="text-xs text-primary-400 px-2">Or add URLs manually</span>
-              <div className="h-px bg-primary-200 flex-1"></div>
+              <div className="h-px flex-1 bg-primary-200"></div>
+              <span className="px-2 text-xs text-primary-400">Or add URLs manually</span>
+              <div className="h-px flex-1 bg-primary-200"></div>
             </div>
-            
+
             <div className="space-y-2">
-              {(form.inputUrls.value || []).map((url, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    type="url"
-                    placeholder="https://example.com/document.pdf"
-                    value={url}
-                    onChange={(e) => {
-                      const currentUrls = form.inputUrls.value || []
-                      const newUrls = [...currentUrls]
-                      newUrls[index] = e.target.value
-                      createFormFieldChangeHandler(form.inputUrls)(newUrls)
-                    }}
-                    className="bg-primary-50 flex-1 border-primary-200 focus:border-primary-500"
-                  />
+              {(form.inputSources.value || []).map((source, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Input
+                      type="url"
+                      placeholder="https://example.com/document.pdf"
+                      value={source.url || ''}
+                      onChange={(e) => {
+                        const currentSources = form.inputSources.value || []
+                        const newSources = [...currentSources]
+                        if (e.target.value.trim()) {
+                          newSources[index] = createInputSourceFromUrl(e.target.value.trim())
+                        } else {
+                          newSources[index] = { ...source, url: e.target.value }
+                        }
+                        createFormFieldChangeHandler(form.inputSources)(newSources)
+                      }}
+                      className="bg-primary-50 border-primary-200 focus:border-primary-500"
+                    />
+                    <div className="mt-1 flex gap-2">
+                      <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                        {source.sourceType === sourceTypeEnum.OUR_S3 ? '📁' : '🌐'}
+                        {source.sourceType === sourceTypeEnum.OUR_S3
+                          ? 'Uploaded File'
+                          : 'Public URL'}
+                      </span>
+                      {source.filename && (
+                        <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600">
+                          📄 {source.filename}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"
                     onClick={() => {
-                      const currentUrls = form.inputUrls.value || []
-                      const newUrls = currentUrls.filter((_, i) => i !== index)
-                      createFormFieldChangeHandler(form.inputUrls)(newUrls)
+                      const currentSources = form.inputSources.value || []
+                      const newSources = currentSources.filter((_, i) => i !== index)
+                      createFormFieldChangeHandler(form.inputSources)(newSources)
                     }}
                     className="text-red-600 hover:bg-red-50 hover:text-red-700"
                   >
@@ -305,8 +340,16 @@ const CreateEditAgentTaskInner = ({
                 type="button"
                 variant="ghost"
                 onClick={() => {
-                  const currentUrls = form.inputUrls.value || []
-                  createFormFieldChangeHandler(form.inputUrls)([...currentUrls, ''])
+                  const currentSources = form.inputSources.value || []
+                  const newInputSource: InputSource = {
+                    url: '',
+                    sourceType: sourceTypeEnum.PUBLIC_URL,
+                    filename: '',
+                  }
+                  createFormFieldChangeHandler(form.inputSources)([
+                    ...currentSources,
+                    newInputSource,
+                  ])
                 }}
                 className="hover:bg-primary-50 text-primary-600 hover:text-primary-700"
               >
@@ -314,10 +357,11 @@ const CreateEditAgentTaskInner = ({
               </Button>
             </div>
           </div>
-          
-          <ErrorsList errors={form.inputUrls.errors} />
+
+          <ErrorsList errors={form.inputSources.errors} />
           <p className="mt-2 text-xs text-primary-400">
-            Upload files or add URLs to documents, images, or other resources for the agent to process
+            Upload files or add URLs to documents, images, or other resources for the agent to
+            process
           </p>
         </div>
 

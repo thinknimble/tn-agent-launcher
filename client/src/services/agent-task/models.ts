@@ -25,10 +25,10 @@ export const sourceTypeLabelMap = {
 
 export const inputSourceShape = {
   url: z.string().url(),
-  source_type: z.nativeEnum(sourceTypeEnum),
+  sourceType: z.nativeEnum(sourceTypeEnum),
   filename: z.string().optional(),
   size: z.number().optional(),
-  content_type: z.string().optional(),
+  contentType: z.string().optional(),
 }
 
 export const scheduleTypeEnum = {
@@ -125,3 +125,21 @@ export type InputSource = GetInferredFromRaw<typeof inputSourceShape>
 export type AgentTask = GetInferredFromRaw<typeof agentTaskShape>
 export type CreateAgentTask = GetInferredFromRaw<typeof createAgentTaskShape>
 export type AgentTaskFilter = GetInferredFromRaw<typeof agentTaskFilterShape>
+
+export const presignedUrlRequestShape = {
+  filename: z.string(),
+  contentType: z.string().optional(),
+}
+
+export const presignedUrlResponseShape = {
+  presignedPost: z.object({
+    url: z.string(),
+    fields: z.record(z.string()),
+  }),
+  publicUrl: z.string(),
+  filename: z.string(),
+  key: z.string(),
+}
+
+export type PresignedUrlRequest = GetInferredFromRaw<typeof presignedUrlRequestShape>
+export type PresignedUrlResponse = GetInferredFromRaw<typeof presignedUrlResponseShape>
