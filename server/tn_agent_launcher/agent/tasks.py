@@ -46,11 +46,13 @@ def execute_agent_task(task_execution_id: int):
                 except Exception as e:
                     logger.error(f"Failed to process input source {url}: {e}")
                     # Continue with other URLs even if one fails
-                    input_sources_content.append({
-                        'source_url': url,
-                        'error': str(e),
-                        'processed_content': f"[Error processing URL: {url}]"
-                    })
+                    input_sources_content.append(
+                        {
+                            "source_url": url,
+                            "error": str(e),
+                            "processed_content": f"[Error processing URL: {url}]",
+                        }
+                    )
 
         # Prepare the instruction with input sources
         enhanced_instruction = task.instruction
@@ -58,7 +60,31 @@ def execute_agent_task(task_execution_id: int):
             sources_text = "\n\n--- INPUT SOURCES ---\n"
             for i, source in enumerate(input_sources_content, 1):
                 sources_text += f"\nSource {i}: {source.get('source_url', 'Unknown')}\n"
-                sources_text += f"Content: {source.get('processed_content', '[No content]')}\n"
+                if source.get("error"):
+                    sources_text += f"Error: {source.get('error')}\n"
+                else:
+                    content_type = source.get("content_type", "unknown")
+                    file_type = source.get("file_type", "unknown")
+                    filename = source.get("filename", "unknown")
+
+                    sources_text += f"File Type: {file_type} ({content_type})\n"
+                    sources_text += f"Filename: {filename}\n"
+
+                    # Include the full content for text files
+                    if file_type in ("text", "json"):
+                        sources_text += (
+                            f"Content:\n{source.get('processed_content', '[No content]')}\n"
+                        )
+                    else:
+                        # For binary files, provide metadata and description
+                        sources_text += (
+                            f"Description: {source.get('processed_content', '[Binary file]')}\n"
+                        )
+                        if "size_bytes" in source:
+                            size_mb = source["size_bytes"] / (1024 * 1024)
+                            sources_text += f"File Size: {size_mb:.2f} MB\n"
+
+                sources_text += "\n" + "-" * 50 + "\n"
             enhanced_instruction = f"{task.instruction}\n{sources_text}"
 
         input_data = {

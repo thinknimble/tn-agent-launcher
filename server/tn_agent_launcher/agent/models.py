@@ -1,6 +1,6 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
-from django.contrib.postgres.fields import ArrayField
 from pydantic_ai import Agent
 
 from tn_agent_launcher.common.models import AbstractBaseModel
@@ -101,13 +101,13 @@ class AgentTask(AbstractBaseModel):
         limit_choices_to={"agent_type": AgentInstance.AgentTypeChoices.ONE_SHOT},
     )
     instruction = models.TextField(help_text="The prompt/instruction to send to the agent")
-    
+
     # Input sources
     input_urls = ArrayField(
         models.URLField(),
         default=list,
         blank=True,
-        help_text="List of URLs to download and include as input sources"
+        help_text="List of URLs to download and include as input sources",
     )
 
     schedule_type = models.CharField(max_length=20, choices=ScheduleTypeChoices.choices)

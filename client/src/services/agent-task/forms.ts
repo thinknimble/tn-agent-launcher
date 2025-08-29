@@ -1,11 +1,38 @@
-import { Form, IFormField, FormField } from '@thinknimble/tn-forms'
+import { Form, IFormField, FormField, UrlValidator, PatternValidator, notNullOrUndefined} from '@thinknimble/tn-forms'
 import { SelectOption } from '../base-model'
+
+
+export class UrlValidatorList extends PatternValidator {
+  constructor({
+    message = 'Please enter a valid url',
+    code = 'invalidUrl',
+    isRequired = true,
+  } = {}) {
+    let pattern =
+      /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-/]))?$/
+    super({ message, code, isRequired, pattern })
+  }
+    call(value: any) {
+    if (!notNullOrUndefined(value)) {
+      throw new Error(JSON.stringify({ code: this.code, message: this.message }))
+    } 
+    if (!Array.isArray(value)) {
+      throw new Error(JSON.stringify({ code: this.code, message: this.message }))
+    }
+    for (let url of value) {
+      if (typeof url !== 'string' || !this.pattern.test(url)) {
+        throw new Error(JSON.stringify({ code: this.code, message: this.message }))
+      }
+    }
+  }
+}
 
 export type AgentTaskFormInputs = {
   _name: IFormField<string>
   description: IFormField<string>
   agentInstance: IFormField<SelectOption | null>
   instruction: IFormField<string>
+  inputUrls: IFormField<string[]>
   scheduleType: IFormField<SelectOption | null>
   scheduledAt: IFormField<string>
   intervalMinutes: IFormField<number | null>
@@ -39,6 +66,14 @@ export class AgentTaskForm extends Form<AgentTaskFormInputs> {
     placeholder: 'Write the prompt/instruction for the agent...',
     type: 'textarea',
     value: '',
+  })
+
+  static inputUrls = FormField.create({
+    label: 'Input URLs',
+    placeholder: 'Add URLs to include as input sources...',
+    type: 'array',
+    value: [],
+    validators: [new UrlValidatorList({isRequired: false})],
   })
 
   static scheduleType = FormField.create({

@@ -16,21 +16,33 @@
             "autoStartBrowser": false,
             "program": "${workspaceFolder}/server/manage.py"
         },
-    {
-      "name": "Python: Attach to Docker",
-      "type": "debugpy",
-      "request": "attach",
-      "connect": {
-        "host": "localhost",
-        "port": 5678
-      },
-      "pathMappings": [
         {
-          "localRoot": "${workspaceFolder}",
-          "remoteRoot": "/app"
-        }
-      ],
-      "justMyCode": true
-    }
+          "name": "Python: Attach to Docker",
+          "type": "debugpy",
+          "request": "attach",
+          "connect": {
+            "host": "localhost",
+            "port": 5678
+          },
+          "pathMappings": [
+            {
+              "localRoot": "${workspaceFolder}",
+              "remoteRoot": "/app"
+            }
+          ],
+          "justMyCode": true
+        },
+        {
+            "name": "Python Debugger: Django process_tasks",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "process_tasks"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/server/manage.py"
+        },
+
     ]
 }

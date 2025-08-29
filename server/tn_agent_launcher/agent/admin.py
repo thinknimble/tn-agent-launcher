@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from tn_agent_launcher.chat.models import PromptTemplate
 
-from .models import AgentInstance
+from .models import AgentInstance, AgentTask, AgentTaskExecution
 
 # Register your models here.
 
@@ -25,3 +25,7 @@ class AgentInstanceAdmin(admin.ModelAdmin):
         ("Metadata", {"fields": ("created", "last_edited"), "classes": ("collapse",)}),
     )
     inlines = [PromptTemplateInline]
+
+
+admin.site.register(AgentTask)
+admin.site.register(AgentTaskExecution)

@@ -79,6 +79,7 @@ const CreateEditAgentTaskInner = ({
       updatedForm._name.value = initialData.name
       updatedForm.description.value = initialData.description || ''
       updatedForm.instruction.value = initialData.instruction
+      updatedForm.inputUrls.value = initialData.inputUrls || []
       updatedForm.scheduledAt.value = initialData.scheduledAt || ''
       updatedForm.intervalMinutes.value = initialData.intervalMinutes
       updatedForm.maxExecutions.value = initialData.maxExecutions
@@ -125,6 +126,7 @@ const CreateEditAgentTaskInner = ({
         description: formValue.description || '',
         agentInstance: formValue.agentInstance?.value || '',
         instruction: formValue.instruction || '',
+        inputUrls: (formValue.inputUrls || []).filter(url => url.trim() !== ''),
         scheduleType: (formValue.scheduleType?.value || '') as ScheduleTypeValues,
         scheduledAt: formValue.scheduledAt || undefined,
         intervalMinutes: formValue.intervalMinutes || undefined,
@@ -203,6 +205,57 @@ const CreateEditAgentTaskInner = ({
             onChange={(e) => createFormFieldChangeHandler(form.instruction)(e.target.value)}
           />
           <ErrorsList errors={form.instruction.errors} />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-primary-600">Input URLs</label>
+          <div className="space-y-2">
+            {(form.inputUrls.value || []).map((url, index) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  type="url"
+                  placeholder="https://example.com/document.pdf"
+                  value={url}
+                  onChange={(e) => {
+                    const currentUrls = form.inputUrls.value || []
+                    const newUrls = [...currentUrls]
+                    newUrls[index] = e.target.value
+                    createFormFieldChangeHandler(form.inputUrls)(newUrls)
+                  }}
+                  className="bg-primary-50 border-primary-200 focus:border-primary-500 flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const currentUrls = form.inputUrls.value || []
+                    const newUrls = currentUrls.filter((_, i) => i !== index)
+                    createFormFieldChangeHandler(form.inputUrls)(newUrls)
+                  }}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const currentUrls = form.inputUrls.value || []
+                createFormFieldChangeHandler(form.inputUrls)([...currentUrls, ''])
+              }}
+              className="text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+            >
+              Add URL
+            </Button>
+          </div>
+          <ErrorsList errors={form.inputUrls.errors} />
+          <p className="mt-1 text-xs text-primary-400">
+            Add URLs to documents, images, or other resources that the agent should process
+          </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
