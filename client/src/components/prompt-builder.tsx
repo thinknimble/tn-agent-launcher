@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Button } from './button'
+import { Textarea } from './textarea'
 
 interface PromptBuilderProps {
   value: string
@@ -197,7 +199,8 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
   const [stanceContents, setStanceContents] = useState<Record<string, string>>({})
   const [expandedHelpers, setExpandedHelpers] = useState<Set<string>>(new Set())
 
-  const toggleImprovePrompt = () => {
+  const toggleImprovePrompt = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
     setIsImprovePromptActive(!isImprovePromptActive)
     if (isImprovePromptActive) {
       setSelectedStances(new Set())
@@ -267,15 +270,22 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
               Create better agent prompts with systematic design principles
             </p>
           </div>
-          <Link
-            to="/prompt-stance"
-            className="flex items-center text-xs font-medium text-accent-600 hover:text-accent-700"
+          <Button
+            link={{ to: '/prompt-stance' }}
+            variant="unstyled"
+            icon={
+              <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            }
           >
             Our stance on prompts
-            <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
+          </Button>
         </div>
       </div>
 
@@ -285,25 +295,24 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
         </div>
 
         <div className="mb-6 flex gap-2">
-          <button
+          <Button
             onClick={toggleImprovePrompt}
-            className={`inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all ${
-              isImprovePromptActive
-                ? 'border-neutral-900 bg-neutral-900 text-white'
-                : 'border-gray-200 bg-transparent text-neutral-900 hover:border-neutral-400 hover:bg-neutral-50'
-            }`}
+            variant={isImprovePromptActive ? 'primary' : 'neutral'}
+            className={isImprovePromptActive ? 'bg-neutral-900' : ''}
+            icon={
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M12 2L13.09 8.26L19 7L15.45 11.82L21 16L14.5 16L12 22L9.5 16L3 16L8.55 11.82L5 7L10.91 8.26L12 2Z" />
+              </svg>
+            }
           >
-            <svg
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M12 2L13.09 8.26L19 7L15.45 11.82L21 16L14.5 16L12 22L9.5 16L3 16L8.55 11.82L5 7L10.91 8.26L12 2Z" />
-            </svg>
             Improve Prompt
-          </button>
+          </Button>
         </div>
 
         {isImprovePromptActive && (
@@ -367,12 +376,13 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
                       Suggested: {stance.length}
                     </div>
                   </div>
-                  <button
+                  <Button
                     onClick={() => toggleHelper(stance.id)}
-                    className="rounded border border-gray-200 bg-transparent px-2 py-1 text-xs text-neutral-600 transition-all hover:bg-white hover:text-neutral-900"
+                    variant="neutral"
+                    className="bg-transparent px-2 py-1 text-xs text-neutral-600 hover:bg-white hover:text-neutral-900"
                   >
                     {expandedHelpers.has(stance.id) ? 'Hide tips' : 'Show tips'}
-                  </button>
+                  </Button>
                 </div>
 
                 {expandedHelpers.has(stance.id) && (
@@ -394,7 +404,7 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
                   </div>
                 )}
 
-                <textarea
+                <Textarea
                   placeholder={stance.placeholder}
                   value={stanceContents[stance.id] || ''}
                   onChange={(e) => updateStanceContent(stance.id, e.target.value)}
@@ -406,7 +416,7 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
         )}
 
         {!isImprovePromptActive && (
-          <textarea
+          <Textarea
             placeholder={placeholder || 'Enter the system prompt for this agent...'}
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -416,18 +426,16 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
 
         {(isImprovePromptActive || selectedStancesArray.length > 0) && (
           <div className="flex justify-end gap-2 border-t border-gray-200 pt-5">
-            <button
-              onClick={clearAll}
-              className="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-neutral-900 transition-all hover:border-neutral-400 hover:bg-neutral-50"
-            >
+            <Button onClick={clearAll} variant="neutral">
               Clear
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={generatePrompt}
-              className="rounded-md border border-neutral-900 bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-all hover:border-neutral-700 hover:bg-neutral-700"
+              variant="primary"
+              className="border border-neutral-900 bg-neutral-900"
             >
               Generate Prompt
-            </button>
+            </Button>
           </div>
         )}
 
