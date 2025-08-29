@@ -1,4 +1,3 @@
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
 from pydantic_ai import Agent
@@ -103,11 +102,10 @@ class AgentTask(AbstractBaseModel):
     instruction = models.TextField(help_text="The prompt/instruction to send to the agent")
 
     # Input sources
-    input_urls = ArrayField(
-        models.URLField(),
+    input_sources = models.JSONField(
         default=list,
         blank=True,
-        help_text="List of URLs to download and include as input sources",
+        help_text="List of input source objects with metadata (url, source_type, etc.)",
     )
 
     schedule_type = models.CharField(max_length=20, choices=ScheduleTypeChoices.choices)

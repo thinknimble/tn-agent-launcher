@@ -36,21 +36,51 @@ def execute_agent_task(task_execution_id: int):
 
         # Process input sources if any
         input_sources_content = []
-        if task.input_urls:
-            logger.info(f"Processing {len(task.input_urls)} input URLs for task {task.name}")
-            for url in task.input_urls:
+        if task.input_sources:
+            logger.info(f"Processing {len(task.input_sources)} input sources for task {task.name}")
+            for source in task.input_sources:
+                if isinstance(source, dict):
+                    url = source.get('url')
+                    source_type = source.get('source_type', 'unknown')
+                    filename = source.get('filename')
+                    content_type = source.get('content_type')
+                    size = source.get('size')
+                else:
+                    # Backward compatibility for simple URL strings
+                    url = source
+                    source_type = 'public_url'
+                    filename = None
+                    content_type = None
+                    size = None
+
+                if not url:
+                    logger.warning(f"Skipping input source with missing URL: {source}")
+                    continue
+
                 try:
                     processed_content = download_and_process_url(url)
+                    
+                    # Enhance with original metadata
+                    if filename:
+                        processed_content['original_filename'] = filename
+                    if content_type:
+                        processed_content['original_content_type'] = content_type
+                    if size:
+                        processed_content['original_size'] = size
+                    processed_content['source_type'] = source_type
+                    
                     input_sources_content.append(processed_content)
-                    logger.info(f"Successfully processed input source: {url}")
+                    logger.info(f"Successfully processed {source_type} input source: {url}")
                 except Exception as e:
                     logger.error(f"Failed to process input source {url}: {e}")
-                    # Continue with other URLs even if one fails
+                    # Continue with other sources even if one fails
                     input_sources_content.append(
                         {
                             "source_url": url,
+                            "source_type": source_type,
                             "error": str(e),
-                            "processed_content": f"[Error processing URL: {url}]",
+                            "processed_content": f"[Error processing {source_type} URL: {url}]",
+                            "original_filename": filename,
                         }
                     )
 
@@ -59,13 +89,18 @@ def execute_agent_task(task_execution_id: int):
         if input_sources_content:
             sources_text = "\n\n--- INPUT SOURCES ---\n"
             for i, source in enumerate(input_sources_content, 1):
-                sources_text += f"\nSource {i}: {source.get('source_url', 'Unknown')}\n"
+                source_url = source.get('source_url', 'Unknown')
+                source_type = source.get('source_type', 'unknown')
+                
+                sources_text += f"\nSource {i}: {source_url}\n"
+                sources_text += f"Source Type: {source_type}\n"
+                
                 if source.get("error"):
                     sources_text += f"Error: {source.get('error')}\n"
                 else:
                     content_type = source.get("content_type", "unknown")
                     file_type = source.get("file_type", "unknown")
-                    filename = source.get("filename", "unknown")
+                    filename = source.get("filename", source.get("original_filename", "unknown"))
 
                     sources_text += f"File Type: {file_type} ({content_type})\n"
                     sources_text += f"Filename: {filename}\n"
@@ -83,6 +118,9 @@ def execute_agent_task(task_execution_id: int):
                         if "size_bytes" in source:
                             size_mb = source["size_bytes"] / (1024 * 1024)
                             sources_text += f"File Size: {size_mb:.2f} MB\n"
+                        elif source.get("original_size"):
+                            size_mb = source["original_size"] / (1024 * 1024)
+                            sources_text += f"Original File Size: {size_mb:.2f} MB\n"
 
                 sources_text += "\n" + "-" * 50 + "\n"
             enhanced_instruction = f"{task.instruction}\n{sources_text}"

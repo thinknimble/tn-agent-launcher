@@ -1,6 +1,36 @@
 import { GetInferredFromRaw } from '@thinknimble/tn-models'
 import { z } from 'zod'
 
+export const sourceTypeEnum = {
+  PUBLIC_URL: 'public_url',
+  OUR_S3: 'our_s3',
+  USER_S3: 'user_s3',
+  GOOGLE_DRIVE_PUBLIC: 'google_drive_public',
+  GOOGLE_DRIVE_PRIVATE: 'google_drive_private',
+  DROPBOX_PUBLIC: 'dropbox_public',
+  UNKNOWN: 'unknown',
+} as const
+
+export type SourceTypeValues = (typeof sourceTypeEnum)[keyof typeof sourceTypeEnum]
+
+export const sourceTypeLabelMap = {
+  [sourceTypeEnum.PUBLIC_URL]: 'Public URL',
+  [sourceTypeEnum.OUR_S3]: 'Our Storage',
+  [sourceTypeEnum.USER_S3]: 'Your S3',
+  [sourceTypeEnum.GOOGLE_DRIVE_PUBLIC]: 'Google Drive (Public)',
+  [sourceTypeEnum.GOOGLE_DRIVE_PRIVATE]: 'Google Drive (Private)',
+  [sourceTypeEnum.DROPBOX_PUBLIC]: 'Dropbox (Public)',
+  [sourceTypeEnum.UNKNOWN]: 'Unknown',
+}
+
+export const inputSourceShape = {
+  url: z.string().url(),
+  source_type: z.nativeEnum(sourceTypeEnum),
+  filename: z.string().optional(),
+  size: z.number().optional(),
+  content_type: z.string().optional(),
+}
+
 export const scheduleTypeEnum = {
   ONCE: 'once',
   DAILY: 'daily',
@@ -60,7 +90,7 @@ export const agentTaskShape = {
   agentInstance: z.string().uuid(),
   agentInstanceName: z.string().optional(),
   instruction: z.string(),
-  inputUrls: z.array(z.string().url()).optional().nullable(),
+  inputSources: z.array(z.object(inputSourceShape)).optional().nullable(),
   scheduleType: z.nativeEnum(scheduleTypeEnum),
   scheduledAt: z.string().datetime().optional().nullable(),
   intervalMinutes: z.number().positive().optional().nullable(),
@@ -80,7 +110,7 @@ export const createAgentTaskShape = {
   description: agentTaskShape.description,
   agentInstance: agentTaskShape.agentInstance,
   instruction: agentTaskShape.instruction,
-  inputUrls: agentTaskShape.inputUrls,
+  inputSources: agentTaskShape.inputSources,
   scheduleType: agentTaskShape.scheduleType,
   scheduledAt: agentTaskShape.scheduledAt,
   intervalMinutes: agentTaskShape.intervalMinutes,
@@ -91,6 +121,7 @@ export const agentTaskFilterShape = {
   agentInstance: z.string(),
 }
 
+export type InputSource = GetInferredFromRaw<typeof inputSourceShape>
 export type AgentTask = GetInferredFromRaw<typeof agentTaskShape>
 export type CreateAgentTask = GetInferredFromRaw<typeof createAgentTaskShape>
 export type AgentTaskFilter = GetInferredFromRaw<typeof agentTaskFilterShape>

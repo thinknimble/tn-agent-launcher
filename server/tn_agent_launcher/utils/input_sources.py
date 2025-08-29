@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import httpx
 import pandas as pd
 from django.conf import settings
-from docling import DocumentConverter
+from docling.document_converter import DocumentConverter
 
 from .sandbox import SandboxManager
 

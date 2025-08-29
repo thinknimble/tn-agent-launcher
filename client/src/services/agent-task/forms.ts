@@ -1,27 +1,70 @@
-import { Form, IFormField, FormField, UrlValidator, PatternValidator, notNullOrUndefined} from '@thinknimble/tn-forms'
+import {
+  Form,
+  IFormField,
+  FormField,
+  PatternValidator,
+  notNullOrUndefined,
+} from '@thinknimble/tn-forms'
 import { SelectOption } from '../base-model'
+import { InputSource } from './models'
 
-
-export class UrlValidatorList extends PatternValidator {
+export class InputSourceValidator extends PatternValidator {
   constructor({
-    message = 'Please enter a valid url',
-    code = 'invalidUrl',
-    isRequired = true,
+    message = 'Please provide valid input sources',
+    code = 'invalidInputSource',
+    isRequired = false,
   } = {}) {
+    // URL pattern for validating URLs within input source objects
     let pattern =
       /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-/]))?$/
     super({ message, code, isRequired, pattern })
   }
-    call(value: any) {
-    if (!notNullOrUndefined(value)) {
-      throw new Error(JSON.stringify({ code: this.code, message: this.message }))
-    } 
-    if (!Array.isArray(value)) {
-      throw new Error(JSON.stringify({ code: this.code, message: this.message }))
+
+  call(value: any) {
+    // Allow empty arrays
+    if (!value || (Array.isArray(value) && value.length === 0)) {
+      if (this.isRequired) {
+        throw new Error(JSON.stringify({ code: this.code, message: 'At least one input source is required' }))
+      }
+      return
     }
-    for (let url of value) {
-      if (typeof url !== 'string' || !this.pattern.test(url)) {
-        throw new Error(JSON.stringify({ code: this.code, message: this.message }))
+
+    if (!Array.isArray(value)) {
+      throw new Error(JSON.stringify({ code: this.code, message: 'Input sources must be an array' }))
+    }
+
+    for (let source of value) {
+      // Validate each input source object
+      if (typeof source !== 'object' || source === null) {
+        throw new Error(JSON.stringify({ code: this.code, message: 'Each input source must be an object' }))
+      }
+
+      // Check required fields
+      if (!source.url || typeof source.url !== 'string') {
+        throw new Error(JSON.stringify({ code: this.code, message: 'Each input source must have a valid URL' }))
+      }
+
+      // Validate URL format
+      if (!this.pattern.test(source.url)) {
+        throw new Error(JSON.stringify({ code: this.code, message: `Invalid URL format: ${source.url}` }))
+      }
+
+      // Validate source_type if present
+      if (source.source_type && typeof source.source_type !== 'string') {
+        throw new Error(JSON.stringify({ code: this.code, message: 'Source type must be a string' }))
+      }
+
+      // Validate optional fields
+      if (source.filename && typeof source.filename !== 'string') {
+        throw new Error(JSON.stringify({ code: this.code, message: 'Filename must be a string' }))
+      }
+
+      if (source.size && (typeof source.size !== 'number' || source.size < 0)) {
+        throw new Error(JSON.stringify({ code: this.code, message: 'File size must be a positive number' }))
+      }
+
+      if (source.content_type && typeof source.content_type !== 'string') {
+        throw new Error(JSON.stringify({ code: this.code, message: 'Content type must be a string' }))
       }
     }
   }
@@ -32,7 +75,7 @@ export type AgentTaskFormInputs = {
   description: IFormField<string>
   agentInstance: IFormField<SelectOption | null>
   instruction: IFormField<string>
-  inputUrls: IFormField<string[]>
+  inputSources: IFormField<InputSource[]>
   scheduleType: IFormField<SelectOption | null>
   scheduledAt: IFormField<string>
   intervalMinutes: IFormField<number | null>
@@ -68,12 +111,12 @@ export class AgentTaskForm extends Form<AgentTaskFormInputs> {
     value: '',
   })
 
-  static inputUrls = FormField.create({
-    label: 'Input URLs',
-    placeholder: 'Add URLs to include as input sources...',
+  static inputSources = FormField.create({
+    label: 'Input Sources',
+    placeholder: 'Add files or URLs as input sources...',
     type: 'array',
     value: [],
-    validators: [new UrlValidatorList({isRequired: false})],
+    validators: [new InputSourceValidator({ isRequired: false })],
   })
 
   static scheduleType = FormField.create({
