@@ -32,7 +32,8 @@ def execute_agent_task(task_execution_id: int):
 
     try:
         agent_instance = task.agent_instance
-        use_lambda = getattr(settings, "USE_LAMBDA_FOR_AGENT_EXECUTION", False)
+        # Check both global setting and per-agent setting
+        use_lambda = settings.USE_LAMBDA_FOR_AGENT_EXECUTION and agent_instance.use_lambda
 
         input_data = {
             "instruction": task.instruction,

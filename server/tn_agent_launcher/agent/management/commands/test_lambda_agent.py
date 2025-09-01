@@ -5,6 +5,7 @@ Creates a test agent instance and task, then executes it via Lambda
 
 import logging
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
@@ -92,6 +93,9 @@ class Command(BaseCommand):
 
         config = model_configs[provider]
 
+        # Set use_lambda for Bedrock provider or if Lambda is enabled globally
+        use_lambda = provider == "BEDROCK" or settings.USE_LAMBDA_FOR_AGENT_EXECUTION
+
         agent, created = AgentInstance.objects.get_or_create(
             friendly_name=agent_name,
             user=user,
@@ -101,6 +105,7 @@ class Command(BaseCommand):
                 "api_key": config["api_key"],
                 "target_url": config["target_url"],
                 "agent_type": AgentInstance.AgentTypeChoices.ONE_SHOT,
+                "use_lambda": use_lambda,
             },
         )
 
@@ -112,12 +117,14 @@ class Command(BaseCommand):
             agent.model_name = config["model_name"]
             agent.api_key = config["api_key"]
             agent.target_url = config["target_url"]
+            agent.use_lambda = use_lambda
             agent.save()
             self.stdout.write(f"✓ Using existing agent: {agent_name}")
 
         self.stdout.write(f"  Provider: {agent.provider}")
         self.stdout.write(f"  Model: {agent.model_name}")
         self.stdout.write(f"  Type: {agent.agent_type}")
+        self.stdout.write(f"  Use Lambda: {agent.use_lambda}")
 
         # Create a one-shot task
         task_name = f"Test Lambda Task - {provider}"
