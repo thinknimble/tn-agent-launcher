@@ -2,21 +2,22 @@
 Multi-provider agent implementation for AWS Lambda
 Supports Anthropic, OpenAI, Gemini, and Ollama providers
 """
+
 import logging
 import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Literal, Optional
 
+import boto3
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
 from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.models.bedrock import BedrockConverseModel
 from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.models.bedrock import BedrockConverseModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 from pydantic_ai.providers.google_gla import GoogleGLAProvider
 from pydantic_ai.providers.openai import OpenAIProvider
-import boto3
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -28,30 +29,38 @@ AgentType = Literal["chat", "one-shot"]
 
 class MultiProviderRequest(BaseModel):
     """Request model for multi-provider agent execution"""
-    model_config = ConfigDict(extra='forbid')
-    
+
+    model_config = ConfigDict(extra="forbid")
+
     # Provider configuration
     provider: ProviderType = Field(..., description="AI provider to use")
     model_name: str = Field(..., description="Model name/ID for the provider")
-    api_key: Optional[str] = Field(None, description="API key for the provider (not needed for Bedrock)")
-    target_url: Optional[str] = Field(None, description="Optional base URL for self-hosted models (Ollama)")
-    
+    api_key: Optional[str] = Field(
+        None, description="API key for the provider (not needed for Bedrock)"
+    )
+    target_url: Optional[str] = Field(
+        None, description="Optional base URL for self-hosted models (Ollama)"
+    )
+
     # Agent configuration
     agent_type: AgentType = Field(default="one-shot", description="Type of agent interaction")
     agent_name: str = Field(default="Lambda Agent", description="Friendly name for the agent")
-    
+
     # Request data
     prompt: str = Field(..., description="The prompt or instruction for the agent")
     system_prompt: Optional[str] = Field(None, description="System prompt to guide the agent")
     context: Optional[Dict[str, Any]] = Field(default=None, description="Additional context")
     max_tokens: int = Field(default=2000, description="Maximum tokens for response")
-    temperature: float = Field(default=0.7, ge=0, le=1, description="Temperature for response generation")
+    temperature: float = Field(
+        default=0.7, ge=0, le=1, description="Temperature for response generation"
+    )
 
 
 class MultiProviderResponse(BaseModel):
     """Response model for multi-provider agent execution"""
-    model_config = ConfigDict(extra='forbid')
-    
+
+    model_config = ConfigDict(extra="forbid")
+
     response: str = Field(..., description="The agent's response")
     provider: str = Field(..., description="Provider used for this response")
     model: str = Field(..., description="Model used for this response")
@@ -63,23 +72,23 @@ class MultiProviderResponse(BaseModel):
 
 class ProviderFactory:
     """Factory for creating provider-specific models"""
-    
+
     @staticmethod
     def create_model(
         provider: ProviderType,
         model_name: str,
         api_key: Optional[str] = None,
-        target_url: Optional[str] = None
+        target_url: Optional[str] = None,
     ):
         """
         Create a PydanticAI model instance based on provider type
-        
+
         Args:
             provider: The AI provider type
             model_name: The model name/ID
             api_key: API key for the provider
             target_url: Optional base URL for self-hosted models
-            
+
         Returns:
             PydanticAI model instance
         """
@@ -87,19 +96,13 @@ class ProviderFactory:
             case "GEMINI":
                 if not api_key:
                     raise ValueError("API key required for Gemini provider")
-                return GeminiModel(
-                    model_name,
-                    provider=GoogleGLAProvider(api_key=api_key)
-                )
-            
+                return GeminiModel(model_name, provider=GoogleGLAProvider(api_key=api_key))
+
             case "OPENAI":
                 if not api_key:
                     raise ValueError("API key required for OpenAI provider")
-                return OpenAIModel(
-                    model_name=model_name,
-                    provider=OpenAIProvider(api_key=api_key)
-                )
-            
+                return OpenAIModel(model_name=model_name, provider=OpenAIProvider(api_key=api_key))
+
             case "OLLAMA":
                 if not target_url:
                     target_url = "http://localhost:11434"  # Default Ollama URL
@@ -108,25 +111,24 @@ class ProviderFactory:
                     model_name=model_name,
                     provider=OpenAIProvider(
                         base_url=target_url,
-                        api_key=api_key or "ollama"  # Dummy key if not provided
-                    )
+                        api_key=api_key or "ollama",  # Dummy key if not provided
+                    ),
                 )
-            
+
             case "ANTHROPIC":
                 if not api_key:
                     raise ValueError("API key required for Anthropic provider")
                 return AnthropicModel(
-                    model_name=model_name,
-                    provider=AnthropicProvider(api_key=api_key)
+                    model_name=model_name, provider=AnthropicProvider(api_key=api_key)
                 )
-            
+
             case "BEDROCK":
                 # Use AWS credentials from Lambda execution role
                 region = os.environ.get("BEDROCK_REGION", "us-east-1")
-                
+
                 # Set AWS_DEFAULT_REGION for pydantic-ai
                 os.environ["AWS_DEFAULT_REGION"] = region
-                
+
                 # Initialize AWS session for proper region config
                 if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
                     # Running in Lambda - use IAM role
@@ -135,51 +137,52 @@ class ProviderFactory:
                     # Running locally - use profile
                     profile = os.environ.get("AWS_PROFILE", "default")
                     boto3.Session(profile_name=profile, region_name=region)
-                
+
                 return BedrockConverseModel(model_name=model_name)
-            
+
             case _:
                 raise ValueError(f"Unsupported provider: {provider}")
 
 
 class MultiProviderAgent:
     """Multi-provider agent implementation"""
-    
+
     def __init__(self, request: MultiProviderRequest):
         self.request = request
         self.model = ProviderFactory.create_model(
             provider=request.provider,
             model_name=request.model_name,
             api_key=request.api_key,
-            target_url=request.target_url
+            target_url=request.target_url,
         )
-        
+
         # Default system prompt if not provided
         system_prompt = request.system_prompt or (
             f"You are a helpful AI assistant named {request.agent_name}. "
             "Provide clear, accurate, and helpful responses."
         )
-        
+
         self.agent = Agent(
             name=request.agent_name,
             model=self.model,
             output_type=str,
             system_prompt=system_prompt,
         )
-    
+
     async def execute(self) -> MultiProviderResponse:
         """
         Execute the agent request and return a response
         """
         import time
+
         start_time = time.time()
-        
+
         try:
             # Prepare context
             agent_context = {}
             if self.request.context:
                 agent_context.update(self.request.context)
-            
+
             # Run the agent
             result = await self.agent.run(
                 self.request.prompt,
@@ -187,20 +190,20 @@ class MultiProviderAgent:
                 model_settings={
                     "max_tokens": self.request.max_tokens,
                     "temperature": self.request.temperature,
-                }
+                },
             )
-            
+
             # Extract token usage if available
             token_usage = None
-            if hasattr(result, '_usage') and result._usage:
+            if hasattr(result, "_usage") and result._usage:
                 token_usage = {
                     "input_tokens": result._usage.input_tokens,
                     "output_tokens": result._usage.output_tokens,
                     "total_tokens": result._usage.total_tokens,
                 }
-            
+
             execution_time = time.time() - start_time
-            
+
             # Create response
             response = MultiProviderResponse(
                 response=result.output,
@@ -215,9 +218,9 @@ class MultiProviderAgent:
                 execution_time_seconds=execution_time,
                 token_usage=token_usage,
             )
-            
+
             return response
-            
+
         except Exception as e:
             logger.error(f"Error executing agent: {str(e)}")
             raise
@@ -226,10 +229,10 @@ class MultiProviderAgent:
 async def execute_multi_provider_agent(request_data: dict) -> dict:
     """
     Convenience function to execute a multi-provider agent request
-    
+
     Args:
         request_data: Dictionary containing request parameters
-        
+
     Returns:
         Dictionary containing response data
     """
