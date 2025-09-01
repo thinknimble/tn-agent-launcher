@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 from background_task import background
+from django.conf import settings
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ def execute_agent_task(task_execution_id: int):
 
     try:
         agent_instance = task.agent_instance
+        use_lambda = getattr(settings, "USE_LAMBDA_FOR_AGENT_EXECUTION", False)
 
         input_data = {
             "instruction": task.instruction,
@@ -45,12 +47,41 @@ def execute_agent_task(task_execution_id: int):
             f"Executing agent {agent_instance.friendly_name} with instruction: {task.instruction[:100]}..."
         )
 
-        # Run the async agent in a new event loop
-        async def run_agent():
-            agent = await agent_instance.agent()
-            return await agent.run(task.instruction)
+        if use_lambda:
+            # Use Lambda for execution
+            from tn_agent_launcher.chat.models import PromptTemplate
 
-        result = asyncio.run(run_agent())
+            from .lambda_service import lambda_agent_service
+            
+            # Get the system prompt
+            system_prompt = PromptTemplate.objects.get_assembled_prompt(agent_instance=agent_instance.id)
+            
+            # Invoke Lambda with provider configuration
+            response = lambda_agent_service.invoke_agent(
+                provider=agent_instance.provider,
+                model_name=agent_instance.model_name,
+                api_key=agent_instance.api_key,
+                prompt=task.instruction,
+                system_prompt=system_prompt,
+                agent_type=agent_instance.agent_type,
+                agent_name=agent_instance.friendly_name,
+                target_url=agent_instance.target_url,
+                context=input_data,
+            )
+            
+            # Create a result object similar to PydanticAI response
+            class LambdaResult:
+                def __init__(self, output):
+                    self.output = output
+            
+            result = LambdaResult(response.get("response", ""))
+        else:
+            # Run locally with async agent
+            async def run_agent():
+                agent = await agent_instance.agent()
+                return await agent.run(task.instruction)
+
+            result = asyncio.run(run_agent())
 
         end_time = timezone.now()
         duration = (end_time - start_time).total_seconds()

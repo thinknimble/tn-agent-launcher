@@ -108,6 +108,11 @@ django-runserver:
     cd server && python manage.py runserver 0.0.0.0:8000
     @echo "🚀 Backend ready at http://localhost:8000"
 
+[group('django')]
+process-tasks:
+    cd server && python manage.py process_tasks
+    @echo "📋 Processing background tasks..."
+
 # Combined commands
 [group('all')]
 format: server-format client-format

@@ -268,15 +268,35 @@ else:
 USE_EMAIL_ALLOWLIST = config("USE_EMAIL_ALLOWLIST", cast=bool, default=False)
 EMAIL_ALLOWLIST = json.loads(config("EMAIL_ALLOWLIST", default="[]"))
 
-# STORAGES
+# AWS CONFIGURATION
 # ----------------------------------------------------------------------------
+#
+# AWS Service Flags
+#
+USE_AWS_STORAGE = config("USE_AWS_STORAGE", cast=bool, default=False)
+USE_LAMBDA_FOR_AGENT_EXECUTION = config("USE_LAMBDA_FOR_AGENT_EXECUTION", default=False, cast=bool)
 
+#
+# Shared AWS Credentials
+# These credentials are used for all AWS services (S3 Storage, Lambda, etc.)
+# Only loaded when at least one AWS service is enabled
+#
+if USE_AWS_STORAGE or USE_LAMBDA_FOR_AGENT_EXECUTION:
+    AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default=None)
+    AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default=None)
+else:
+    # AWS credentials not needed when no AWS services are enabled
+    AWS_ACCESS_KEY_ID = None
+    AWS_SECRET_ACCESS_KEY = None
+
+#
+# AWS S3 Storage Configuration
+#
 PRIVATE_MEDIAFILES_LOCATION = ""
-# Django Storages configuration
-if config("USE_AWS_STORAGE", cast=bool, default=False):
-    AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
+
+if USE_AWS_STORAGE:
+    # S3-specific settings (only loaded when S3 is enabled)
     AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
-    AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
     AWS_LOCATION = config("AWS_LOCATION")  # production, staging, etc
     AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME")
@@ -289,6 +309,25 @@ if config("USE_AWS_STORAGE", cast=bool, default=False):
     COLLECTFAST_STRATEGY = "collectfast.strategies.boto3.Boto3Strategy"
     # STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/static/"
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
+
+#
+# AWS Lambda Agent Configuration
+#
+if USE_LAMBDA_FOR_AGENT_EXECUTION:
+    # Lambda-specific settings (only loaded when Lambda is enabled)
+    AWS_LAMBDA_REGION = config("AWS_LAMBDA_REGION", default="us-east-1")
+    LAMBDA_AGENT_FUNCTION_NAME = config("LAMBDA_AGENT_FUNCTION_NAME", default="bedrock-agent-staging")
+    
+    # Bedrock specific configuration (when using BEDROCK provider)
+    # TODO: In the future, allow the model name to be passed to Lambda at runtime
+    #       instead of using a fixed default. This will enable dynamic model selection
+    #       based on task requirements, cost optimization, or user preferences.
+    BEDROCK_MODEL_ID = config("BEDROCK_MODEL_ID", default="us.anthropic.claude-3-7-sonnet-20250219-v1:0")
+else:
+    # Provide None values when Lambda is not enabled
+    AWS_LAMBDA_REGION = None
+    LAMBDA_AGENT_FUNCTION_NAME = None
+    BEDROCK_MODEL_ID = None
 
 #
 # STATIC

@@ -1,5 +1,6 @@
 """
 AWS Lambda handler for the Bedrock Agent
+Supports both legacy Bedrock-only mode and new multi-provider mode
 """
 import asyncio
 import json
@@ -7,6 +8,7 @@ import logging
 from typing import Any, Dict
 
 from agent import AgentContext, AgentRequest, default_agent, tool_agent
+from multi_provider_agent import execute_multi_provider_agent
 
 # Configure logging
 logger = logging.getLogger()
@@ -16,6 +18,10 @@ logger.setLevel(logging.INFO)
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Main Lambda handler function
+    
+    Supports two modes:
+    1. Legacy mode: Uses Bedrock directly (for backward compatibility)
+    2. Multi-provider mode: When "provider" field is present in request
     
     Args:
         event: Lambda event containing the request
@@ -30,6 +36,24 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             body = json.loads(event["body"])
         else:
             body = event.get("body", event)
+        
+        # Check if this is a multi-provider request
+        if "provider" in body:
+            # Multi-provider mode
+            logger.info(f"Processing multi-provider request with provider: {body['provider']}")
+            response_data = asyncio.run(execute_multi_provider_agent(body))
+            
+            return {
+                "statusCode": 200,
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                },
+                "body": json.dumps(response_data),
+            }
+        
+        # Legacy Bedrock-only mode
+        logger.info("Processing legacy Bedrock request")
         
         # Determine which agent to use
         use_tools = body.pop("use_tools", False)
