@@ -52,10 +52,12 @@ def execute_agent_task(task_execution_id: int):
             from tn_agent_launcher.chat.models import PromptTemplate
 
             from .lambda_service import lambda_agent_service
-            
+
             # Get the system prompt
-            system_prompt = PromptTemplate.objects.get_assembled_prompt(agent_instance=agent_instance.id)
-            
+            system_prompt = PromptTemplate.objects.get_assembled_prompt(
+                agent_instance=agent_instance.id
+            )
+
             # Invoke Lambda with provider configuration
             response = lambda_agent_service.invoke_agent(
                 provider=agent_instance.provider,
@@ -68,12 +70,12 @@ def execute_agent_task(task_execution_id: int):
                 target_url=agent_instance.target_url,
                 context=input_data,
             )
-            
+
             # Create a result object similar to PydanticAI response
             class LambdaResult:
                 def __init__(self, output):
                     self.output = output
-            
+
             result = LambdaResult(response.get("response", ""))
         else:
             # Run locally with async agent

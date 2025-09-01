@@ -44,9 +44,9 @@ class Command(BaseCommand):
         email = options["email"]
         prompt = options["prompt"]
 
-        self.stdout.write(self.style.NOTICE(f"\n{'='*60}"))
+        self.stdout.write(self.style.NOTICE(f"\n{'=' * 60}"))
         self.stdout.write(self.style.NOTICE("Lambda Agent Test"))
-        self.stdout.write(self.style.NOTICE(f"{'='*60}\n"))
+        self.stdout.write(self.style.NOTICE(f"{'=' * 60}\n"))
 
         # Get or create user
         try:
@@ -188,6 +188,6 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"\n❌ Error: {str(e)}"))
             logger.exception("Error during Lambda test")
 
-        self.stdout.write(self.style.NOTICE(f"\n{'='*60}"))
+        self.stdout.write(self.style.NOTICE(f"\n{'=' * 60}"))
         self.stdout.write(self.style.NOTICE("Test Complete"))
-        self.stdout.write(self.style.NOTICE(f"{'='*60}\n"))
+        self.stdout.write(self.style.NOTICE(f"{'=' * 60}\n"))

@@ -316,13 +316,17 @@ if USE_AWS_STORAGE:
 if USE_LAMBDA_FOR_AGENT_EXECUTION:
     # Lambda-specific settings (only loaded when Lambda is enabled)
     AWS_LAMBDA_REGION = config("AWS_LAMBDA_REGION", default="us-east-1")
-    LAMBDA_AGENT_FUNCTION_NAME = config("LAMBDA_AGENT_FUNCTION_NAME", default="bedrock-agent-staging")
-    
+    LAMBDA_AGENT_FUNCTION_NAME = config(
+        "LAMBDA_AGENT_FUNCTION_NAME", default="bedrock-agent-staging"
+    )
+
     # Bedrock specific configuration (when using BEDROCK provider)
     # TODO: In the future, allow the model name to be passed to Lambda at runtime
     #       instead of using a fixed default. This will enable dynamic model selection
     #       based on task requirements, cost optimization, or user preferences.
-    BEDROCK_MODEL_ID = config("BEDROCK_MODEL_ID", default="us.anthropic.claude-3-7-sonnet-20250219-v1:0")
+    BEDROCK_MODEL_ID = config(
+        "BEDROCK_MODEL_ID", default="us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+    )
 else:
     # Provide None values when Lambda is not enabled
     AWS_LAMBDA_REGION = None
