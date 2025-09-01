@@ -3,9 +3,9 @@
 Call the Bedrock Agent Lambda with IAM authentication using AWS Signature V4
 """
 
+import argparse
 import json
 import os
-import sys
 from pathlib import Path
 
 import boto3
@@ -19,7 +19,7 @@ env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
 
 
-def call_agent_with_iam(prompt, profile_name="william-tn-staging", region="us-east-1"):
+def call_agent_with_iam(prompt, profile_name="default", region="us-east-1"):
     """
     Call the agent endpoint with IAM authentication
 
@@ -69,14 +69,31 @@ def call_agent_with_iam(prompt, profile_name="william-tn-staging", region="us-ea
 
 
 def main():
-    # Get prompt from command line or use default
-    prompt = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "What is 2+2?"
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Call the Bedrock Agent Lambda with IAM authentication"
+    )
+    parser.add_argument(
+        "prompt", nargs="*", help="The prompt to send to the agent", default=["What", "is", "2+2?"]
+    )
+    parser.add_argument(
+        "--profile", "-p", default="default", help="AWS profile name (default: 'default')"
+    )
+    parser.add_argument(
+        "--region", "-r", default="us-east-1", help="AWS region (default: 'us-east-1')"
+    )
+
+    args = parser.parse_args()
+
+    # Join prompt words if provided as separate arguments
+    prompt = " ".join(args.prompt) if args.prompt else "What is 2+2?"
 
     print(f"🤖 Sending prompt: {prompt}")
+    print(f"📍 Using AWS profile: {args.profile}")
     print("-" * 50)
 
     try:
-        response = call_agent_with_iam(prompt)
+        response = call_agent_with_iam(prompt, profile_name=args.profile, region=args.region)
 
         if response is None:
             return

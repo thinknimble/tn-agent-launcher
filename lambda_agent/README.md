@@ -13,7 +13,7 @@ A serverless AWS Lambda function that provides an AI agent powered by AWS Bedroc
 ## Prerequisites
 
 - Python 3.12+
-- AWS CLI configured with the `william-tn-staging` profile
+- AWS CLI configured with the `default` profile
 - AWS SAM CLI (`pip install aws-sam-cli`)
 - AWS Bedrock access in your account
 
@@ -37,12 +37,14 @@ lambda/
 ## Installation
 
 1. Install dependencies for local testing:
+
 ```bash
 cd lambda
 pip install -r requirements.txt
 ```
 
 2. Install AWS SAM CLI if not already installed:
+
 ```bash
 pip install aws-sam-cli
 ```
@@ -81,6 +83,7 @@ cd lambda/scripts
 ```
 
 This will:
+
 1. Validate your AWS credentials
 2. Create an S3 bucket for deployments (if needed)
 3. Build the Lambda function
@@ -149,6 +152,7 @@ cd lambda/scripts
 ### POST /agent
 
 Request body:
+
 ```json
 {
   "prompt": "Your question here",
@@ -165,6 +169,7 @@ Request body:
 ```
 
 Response:
+
 ```json
 {
   "response": "Agent's response",
@@ -185,6 +190,7 @@ Response:
 ### GET /health
 
 Response:
+
 ```json
 {
   "status": "healthy",
@@ -195,7 +201,7 @@ Response:
 ## Environment Variables
 
 - `AWS_REGION`: AWS region (default: us-east-1)
-- `AWS_PROFILE`: AWS profile for local testing (default: william-tn-staging)
+- `AWS_PROFILE`: AWS profile for local testing (default: default)
 - `BEDROCK_MODEL_ID`: Bedrock model to use (default: anthropic.claude-3-5-sonnet-20241022-v2:0)
 - `ENVIRONMENT`: Deployment environment (staging/production)
 
@@ -222,12 +228,14 @@ async def my_custom_tool(param: str) -> str:
 ### Changing the model:
 
 Update the `BEDROCK_MODEL_ID` environment variable in:
+
 - `template.yaml` for deployments
 - `src/agent.py` for local testing
 
 ## Monitoring
 
 Logs are available in CloudWatch under:
+
 - Log Group: `/aws/lambda/bedrock-agent-{environment}`
 - Retention: 7 days
 
@@ -240,7 +248,7 @@ Logs are available in CloudWatch under:
 
 ## Troubleshooting
 
-1. **Authentication errors**: Ensure AWS profile `william-tn-staging` is configured
+1. **Authentication errors**: Ensure AWS profile `default` is configured
 2. **Bedrock access denied**: Verify Bedrock is enabled in your region
 3. **Timeout errors**: Increase Lambda timeout in `template.yaml`
 4. **Module not found**: Install dependencies with `pip install -r requirements.txt`

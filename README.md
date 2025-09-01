@@ -84,3 +84,106 @@ The pre-commit configuration includes:
 1. `npx playwright install-deps` - Install system-level dependencies
 1. `npx playwright test`
 1. `npx playwright codegen localhost:8080` - Generate your tests through manual testing
+
+## AWS IAM Configuration for Lambda and Bedrock
+
+### IAM User Setup for Review Apps and Staging
+
+The application uses an IAM user (`default-user-tn-agent-launcher`) with the following access:
+
+- **Access Key ID**: `AKIAWVJFOFUY7YAH4GLO`
+- **Attached Policies**:
+  1. `user-bucket-policy-tn-agent-launcher` - S3 bucket access
+  2. `lambda-bedrock-access-tn-agent-launcher` - Lambda invocation and Bedrock model access
+
+### Adding Lambda and Bedrock Permissions
+
+To grant Lambda invocation and Bedrock access permissions to the IAM user:
+
+1. **Create the policy document** (`lambda-bedrock-policy.json`):
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "LambdaInvokePermissions",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:InvokeFunction",
+        "lambda:InvokeAsync"
+      ],
+      "Resource": [
+        "arn:aws:lambda:us-east-1:458029411633:function:bedrock-agent-staging",
+        "arn:aws:lambda:us-east-1:458029411633:function:bedrock-agent-production"
+      ]
+    },
+    {
+      "Sid": "BedrockModelAccess",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/*",
+        "arn:aws:bedrock:*:458029411633:inference-profile/*"
+      ]
+    },
+    {
+      "Sid": "BedrockListPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:ListFoundationModels",
+        "bedrock:GetFoundationModel"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+2. **Create the IAM policy**:
+```bash
+aws iam create-policy \
+  --policy-name lambda-bedrock-access-tn-agent-launcher \
+  --policy-document file://lambda-bedrock-policy.json \
+  --description "Allows Lambda invocation and Bedrock model access for TN Agent Launcher" \
+  --profile william-tn-production
+```
+
+3. **Attach the policy to the IAM user**:
+```bash
+aws iam attach-user-policy \
+  --user-name default-user-tn-agent-launcher \
+  --policy-arn arn:aws:iam::458029411633:policy/lambda-bedrock-access-tn-agent-launcher \
+  --profile william-tn-production
+```
+
+4. **Verify the configuration**:
+```bash
+aws iam list-attached-user-policies \
+  --user-name default-user-tn-agent-launcher \
+  --profile william-tn-production
+```
+
+### Environment Variables
+
+Configure the following environment variables in your review apps and staging environment:
+
+```bash
+# Existing AWS credentials (already configured)
+AWS_ACCESS_KEY_ID=AKIAWVJFOFUY7YAH4GLO
+AWS_SECRET_ACCESS_KEY=<secret_key>
+
+# Lambda configuration
+USE_LAMBDA_FOR_AGENT_EXECUTION=True
+AWS_LAMBDA_REGION=us-east-1
+LAMBDA_AGENT_FUNCTION_NAME=bedrock-agent-staging  # or bedrock-agent-production
+BEDROCK_MODEL_ID=us.anthropic.claude-3-7-sonnet-20250219-v1:0
+```
+
+The IAM user now has permissions to:
+- Invoke Lambda functions for agent execution
+- Access Bedrock foundation models
+- List and retrieve Bedrock model information
+- Access the S3 bucket for file storage

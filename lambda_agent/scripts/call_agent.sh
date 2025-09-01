@@ -3,7 +3,7 @@
 # Simple wrapper script for calling the agent with AWS CLI
 
 API_URL="${BEDROCK_AGENT_API_URL:-https://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/Prod/agent}"
-PROFILE="${AWS_PROFILE:-william-tn-staging}"
+PROFILE="${AWS_PROFILE:-default}"
 REGION="${AWS_REGION:-us-east-1}"
 
 # Get prompt from arguments or use default

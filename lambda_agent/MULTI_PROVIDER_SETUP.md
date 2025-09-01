@@ -186,6 +186,7 @@ case "COHERE":
 ## Cost Optimization
 
 1. **Lambda Advantages**:
+
    - Pay only for execution time
    - Auto-scaling without infrastructure
    - No idle costs
@@ -202,7 +203,7 @@ case "COHERE":
 
 ```bash
 aws logs tail /aws/lambda/bedrock-agent-staging \
-  --profile william-tn-staging \
+  --profile default \
   --region us-east-1 \
   --since 5m
 ```
@@ -210,6 +211,7 @@ aws logs tail /aws/lambda/bedrock-agent-staging \
 ### Django Logs
 
 Agent task executions are logged with:
+
 - Provider used
 - Execution time
 - Success/failure status

@@ -18,7 +18,7 @@ logger.setLevel(logging.INFO)
 
 # AWS Configuration
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
-AWS_PROFILE = os.environ.get("AWS_PROFILE", "william-tn-staging")
+AWS_PROFILE = os.environ.get("AWS_PROFILE", "default")
 # Using Claude 3.7 Sonnet with cross-region inference profile
 MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
 

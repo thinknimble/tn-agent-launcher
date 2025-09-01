@@ -5,7 +5,7 @@
 set -e
 
 # Configuration
-AWS_PROFILE="${AWS_PROFILE:-william-tn-staging}"
+AWS_PROFILE="${AWS_PROFILE:-default}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 ENVIRONMENT="${ENVIRONMENT:-staging}"
 FUNCTION_NAME="bedrock-agent-${ENVIRONMENT}"

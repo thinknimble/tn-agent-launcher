@@ -3,7 +3,7 @@
 
 import boto3
 
-session = boto3.Session(profile_name="william-tn-staging", region_name="us-east-1")
+session = boto3.Session(profile_name="default", region_name="us-east-1")
 bedrock = session.client("bedrock")
 
 try:
