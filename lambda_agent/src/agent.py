@@ -162,13 +162,13 @@ class ToolCallingAgent(BedrockAgent):
     def _setup_tools(self):
         """Setup available tools for the agent"""
 
-        @self.agent.tool
-        async def get_current_time() -> str:
+        @self.agent.tool_plain
+        def get_current_time() -> str:
             """Get the current UTC time"""
             return datetime.utcnow().isoformat()
 
-        @self.agent.tool
-        async def calculate(expression: str) -> float:
+        @self.agent.tool_plain
+        def calculate(expression: str) -> float:
             """Evaluate a mathematical expression"""
             try:
                 # Safe evaluation of mathematical expressions
@@ -200,10 +200,10 @@ class ToolCallingAgent(BedrockAgent):
 
                 return eval_expr(expression)
             except Exception as e:
-                return f"Error evaluating expression: {str(e)}"
+                raise ValueError(f"Error evaluating expression: {str(e)}")
 
-        @self.agent.tool
-        async def search_knowledge_base(query: str, top_k: int = 3) -> List[str]:
+        @self.agent.tool_plain
+        def search_knowledge_base(query: str, top_k: int = 3) -> List[str]:
             """Search a knowledge base (mock implementation)"""
             # This would connect to your actual knowledge base
             return [
@@ -215,5 +215,5 @@ class ToolCallingAgent(BedrockAgent):
 
 # Create a singleton instance
 default_agent = BedrockAgent()
-# Disable tool agent for now due to schema generation issues
-tool_agent = BedrockAgent()  # ToolCallingAgent()
+# Tool agent now works with tool_plain decorator
+tool_agent = ToolCallingAgent()
