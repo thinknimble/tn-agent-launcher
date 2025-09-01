@@ -26,12 +26,12 @@ if ! command -v aws &> /dev/null; then
 fi
 
 # Check if SAM CLI is installed
-SAM_PATH="/Users/william/Library/Python/3.9/bin/sam"
-if [ ! -f "$SAM_PATH" ]; then
+if ! command -v sam &> /dev/null; then
     echo "❌ SAM CLI is not installed. Please install it first."
-    echo "Run: pip install --user aws-sam-cli"
+    echo "Run: pip install aws-sam-cli"
     exit 1
 fi
+SAM_PATH=$(command -v sam)
 echo "Using SAM CLI at: $SAM_PATH"
 
 # Validate AWS credentials

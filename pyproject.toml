@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "boto3==1.37.15",
+    "boto3>=1.37.15",
     "channels==4.2.*",
     "channels-redis==4.2",
     "daphne>=4.1.2",
@@ -30,12 +30,15 @@ dependencies = [
     "pre-commit==2.13.*",
     "premailer>=3.10.0",
     "psycopg2-binary==2.9.*",
+    "pydantic>=2.10.0",
     "pydantic-ai>=0.2.20",
+    "pydantic-ai-bedrock>=0.1.0",
     "pytest-cov>=6.0.0",
     "pytest-django==4.5.*",
     "pytest-factoryboy==2.7.*",
     "pytest-mccabe>=2.0",
     "python-decouple>=3.8",
+    "python-dotenv>=1.0.0",
     "python-slugify==5.0.2",
     "pytz==2021.1",
     "requests==2.*",
@@ -50,6 +53,13 @@ dev = [
     "pytest==7.1.*",
     "factory-boy==3.2.*",
     "debugpy>=1.8.16",
+]
+lambda-dev = [
+    # Lambda-specific development dependencies
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "mypy>=1.0.0",
+    "types-boto3>=1.0.0",
 ]
 
 [tool.ruff]
