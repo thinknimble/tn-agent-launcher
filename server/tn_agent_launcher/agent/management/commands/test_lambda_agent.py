@@ -39,15 +39,40 @@ class Command(BaseCommand):
             default="What is 2+2? Answer in one word.",
             help="Prompt to send to the agent",
         )
+        parser.add_argument(
+            "--validate",
+            action="store_true",
+            help="Run validation tests for Lambda configuration",
+        )
+        parser.add_argument(
+            "--check-config",
+            action="store_true",
+            help="Only check configuration without running tests",
+        )
 
     def handle(self, *args, **options):
         provider = options["provider"]
         email = options["email"]
         prompt = options["prompt"]
+        validate = options["validate"]
+        check_config_only = options["check_config"]
 
         self.stdout.write(self.style.NOTICE(f"\n{'=' * 60}"))
         self.stdout.write(self.style.NOTICE("Lambda Agent Test"))
         self.stdout.write(self.style.NOTICE(f"{'=' * 60}\n"))
+
+        # Configuration check
+        if check_config_only or validate:
+            if not self._check_configuration():
+                return
+
+            if check_config_only:
+                return
+
+        # Run validation tests if requested
+        if validate:
+            self._run_validation_tests(email)
+            return
 
         # Get or create user
         try:
@@ -198,3 +223,136 @@ class Command(BaseCommand):
         self.stdout.write(self.style.NOTICE(f"\n{'=' * 60}"))
         self.stdout.write(self.style.NOTICE("Test Complete"))
         self.stdout.write(self.style.NOTICE(f"{'=' * 60}\n"))
+
+    def _check_configuration(self):
+        """Check Lambda configuration"""
+        self.stdout.write("\n📋 Configuration Check:")
+        self.stdout.write("-" * 40)
+
+        lambda_enabled = settings.USE_LAMBDA_FOR_AGENT_EXECUTION
+        self.stdout.write(f"✓ USE_LAMBDA_FOR_AGENT_EXECUTION: {lambda_enabled}")
+
+        if not lambda_enabled:
+            self.stdout.write(
+                self.style.ERROR(
+                    "❌ Lambda is not enabled. Please set USE_LAMBDA_FOR_AGENT_EXECUTION=True"
+                )
+            )
+            return False
+
+        self.stdout.write(f"✓ AWS_LAMBDA_REGION: {settings.AWS_LAMBDA_REGION}")
+        self.stdout.write(f"✓ LAMBDA_AGENT_FUNCTION_NAME: {settings.LAMBDA_AGENT_FUNCTION_NAME}")
+        self.stdout.write(f"✓ BEDROCK_MODEL_ID: {settings.BEDROCK_MODEL_ID}")
+
+        has_credentials = bool(settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY)
+        self.stdout.write(f"✓ AWS Credentials configured: {has_credentials}")
+
+        if not has_credentials:
+            self.stdout.write(
+                self.style.ERROR(
+                    "❌ AWS credentials not configured. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
+                )
+            )
+            return False
+
+        self.stdout.write(self.style.SUCCESS("\n✅ Configuration check passed!\n"))
+        return True
+
+    def _run_validation_tests(self, email):
+        """Run validation tests for Lambda configuration"""
+        from django.core.exceptions import ValidationError
+
+        self.stdout.write("\n🧪 Running Validation Tests:")
+        self.stdout.write("-" * 40)
+
+        # Get or create test user
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                "is_staff": True,
+                "is_superuser": True,
+                "first_name": "Lambda",
+                "last_name": "Test",
+            },
+        )
+
+        if created:
+            self.stdout.write(f"✓ Created test user: {email}")
+        else:
+            self.stdout.write(f"✓ Using existing user: {email}")
+
+        # Test 1: BEDROCK without use_lambda should fail
+        self.stdout.write("\n1. Testing BEDROCK provider without use_lambda (should fail):")
+        try:
+            invalid_agent = AgentInstance(
+                friendly_name="Invalid Bedrock Agent",
+                provider=AgentInstance.ProviderChoices.BEDROCK,
+                model_name=settings.BEDROCK_MODEL_ID
+                or "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+                api_key="",
+                agent_type=AgentInstance.AgentTypeChoices.ONE_SHOT,
+                use_lambda=False,  # This should fail
+                user=user,
+            )
+            invalid_agent.full_clean()
+            self.stdout.write(self.style.ERROR("   ❌ FAILED: Should have raised ValidationError"))
+        except ValidationError as e:
+            self.stdout.write(self.style.SUCCESS(f"   ✓ Correctly raised error: {e}"))
+
+        # Test 2: BEDROCK with use_lambda=True should work
+        self.stdout.write("\n2. Testing BEDROCK provider with use_lambda=True:")
+        try:
+            valid_agent = AgentInstance(
+                friendly_name="Valid Bedrock Agent",
+                provider=AgentInstance.ProviderChoices.BEDROCK,
+                model_name=settings.BEDROCK_MODEL_ID
+                or "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+                api_key="",  # Bedrock uses IAM
+                agent_type=AgentInstance.AgentTypeChoices.ONE_SHOT,
+                use_lambda=True,
+                user=user,
+            )
+            valid_agent.full_clean()
+            self.stdout.write(
+                self.style.SUCCESS("   ✓ Validation passed for BEDROCK with use_lambda=True")
+            )
+        except ValidationError as e:
+            self.stdout.write(self.style.ERROR(f"   ❌ FAILED: {e}"))
+
+        # Test 3: Non-BEDROCK without API key should fail
+        self.stdout.write("\n3. Testing OpenAI provider without API key (should fail):")
+        try:
+            invalid_openai = AgentInstance(
+                friendly_name="Invalid OpenAI Agent",
+                provider=AgentInstance.ProviderChoices.OPENAI,
+                model_name="gpt-4",
+                api_key="",  # This should fail for non-BEDROCK
+                agent_type=AgentInstance.AgentTypeChoices.ONE_SHOT,
+                use_lambda=False,
+                user=user,
+            )
+            invalid_openai.full_clean()
+            self.stdout.write(self.style.ERROR("   ❌ FAILED: Should have raised ValidationError"))
+        except ValidationError as e:
+            self.stdout.write(self.style.SUCCESS(f"   ✓ Correctly raised error: {e}"))
+
+        # Test 4: OpenAI with use_lambda (optional) should work
+        self.stdout.write("\n4. Testing OpenAI provider with use_lambda=True (optional):")
+        try:
+            openai_lambda = AgentInstance(
+                friendly_name="OpenAI Lambda Agent",
+                provider=AgentInstance.ProviderChoices.OPENAI,
+                model_name="gpt-4",
+                api_key="test-key",
+                agent_type=AgentInstance.AgentTypeChoices.ONE_SHOT,
+                use_lambda=True,  # Optional for non-BEDROCK
+                user=user,
+            )
+            openai_lambda.full_clean()
+            self.stdout.write(
+                self.style.SUCCESS("   ✓ Validation passed for OpenAI with use_lambda=True")
+            )
+        except ValidationError as e:
+            self.stdout.write(self.style.ERROR(f"   ❌ FAILED: {e}"))
+
+        self.stdout.write(self.style.SUCCESS("\n✅ All validation tests completed!"))

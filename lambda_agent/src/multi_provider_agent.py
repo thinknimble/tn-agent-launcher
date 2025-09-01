@@ -6,7 +6,7 @@ Supports Anthropic, OpenAI, Gemini, and Ollama providers
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import boto3
 from pydantic import BaseModel, ConfigDict, Field
@@ -45,6 +45,7 @@ class MultiProviderRequest(BaseModel):
     # Agent configuration
     agent_type: AgentType = Field(default="one-shot", description="Type of agent interaction")
     agent_name: str = Field(default="Lambda Agent", description="Friendly name for the agent")
+    enable_tools: bool = Field(default=False, description="Enable tool calling capabilities")
 
     # Request data
     prompt: str = Field(..., description="The prompt or instruction for the agent")
@@ -226,6 +227,116 @@ class MultiProviderAgent:
             raise
 
 
+class ToolEnabledMultiProviderAgent(MultiProviderAgent):
+    """Multi-provider agent with tool calling capabilities"""
+
+    def __init__(self, request: MultiProviderRequest):
+        # For now, just use the base class without tools due to PydanticAI schema issues
+        # Tools are temporarily disabled but the structure is in place
+        super().__init__(request)
+        if request.enable_tools:
+            logger.info(
+                "Note: Tool calling is temporarily disabled due to PydanticAI schema generation issues. "
+                "The agent will use its built-in capabilities instead."
+            )
+            # self._setup_tools()  # Commented out until schema issues are resolved
+
+    def _setup_tools_disabled(self):
+        """Setup available tools for the agent - currently disabled due to schema issues"""
+
+        @self.agent.tool
+        async def get_current_time() -> str:
+            """Get the current UTC time"""
+            return datetime.now(timezone.utc).isoformat()
+
+        @self.agent.tool
+        async def calculate(expression: str) -> float:
+            """Evaluate a mathematical expression safely"""
+            try:
+                # Safe evaluation of mathematical expressions
+                import ast
+                import operator as op
+
+                # Supported operators
+                ops = {
+                    ast.Add: op.add,
+                    ast.Sub: op.sub,
+                    ast.Mult: op.mul,
+                    ast.Div: op.truediv,
+                    ast.Pow: op.pow,
+                    ast.USub: op.neg,
+                    ast.Mod: op.mod,
+                    ast.FloorDiv: op.floordiv,
+                }
+
+                def eval_expr(expr):
+                    return eval_node(ast.parse(expr, mode="eval").body)
+
+                def eval_node(node):
+                    if isinstance(node, ast.Constant):  # Python 3.8+
+                        return node.value
+                    elif isinstance(node, ast.Num):  # Backwards compatibility
+                        return node.n
+                    elif isinstance(node, ast.BinOp):
+                        return ops[type(node.op)](eval_node(node.left), eval_node(node.right))
+                    elif isinstance(node, ast.UnaryOp):
+                        return ops[type(node.op)](eval_node(node.operand))
+                    else:
+                        raise TypeError(f"Unsupported node type: {type(node)}")
+
+                result = eval_expr(expression)
+                return float(result)
+            except Exception as e:
+                logger.error(f"Error evaluating expression '{expression}': {str(e)}")
+                raise ValueError(f"Error evaluating expression: {str(e)}")
+
+        @self.agent.tool
+        async def search_knowledge_base(query: str, top_k: int = 3) -> List[str]:
+            """
+            Search a knowledge base (mock implementation for demo).
+            In production, this would connect to your actual knowledge base.
+            """
+            # Mock results for demonstration
+            results = [
+                f"Knowledge Result 1 for '{query}': This is a sample knowledge base entry demonstrating search capability",
+                f"Knowledge Result 2 for '{query}': Another relevant entry that would contain domain-specific information",
+                f"Knowledge Result 3 for '{query}': Additional contextual information related to the query",
+            ]
+            return results[:top_k]
+
+        @self.agent.tool
+        async def convert_units(value: float, from_unit: str, to_unit: str) -> float:
+            """
+            Convert between common units (demo implementation).
+            Supports: meters/feet, celsius/fahrenheit, kg/pounds
+            """
+            conversions = {
+                ("meters", "feet"): 3.28084,
+                ("feet", "meters"): 0.3048,
+                ("celsius", "fahrenheit"): lambda c: (c * 9 / 5) + 32,
+                ("fahrenheit", "celsius"): lambda f: (f - 32) * 5 / 9,
+                ("kg", "pounds"): 2.20462,
+                ("pounds", "kg"): 0.453592,
+                ("km", "miles"): 0.621371,
+                ("miles", "km"): 1.60934,
+            }
+
+            key = (from_unit.lower(), to_unit.lower())
+            if key in conversions:
+                converter = conversions[key]
+                if callable(converter):
+                    return converter(value)
+                else:
+                    return value * converter
+            else:
+                raise ValueError(
+                    f"Conversion from {from_unit} to {to_unit} not supported. "
+                    f"Supported conversions: meters/feet, celsius/fahrenheit, kg/pounds, km/miles"
+                )
+
+        logger.info(f"Tools would be enabled for agent '{self.request.agent_name}'")
+
+
 async def execute_multi_provider_agent(request_data: dict) -> dict:
     """
     Convenience function to execute a multi-provider agent request
@@ -237,6 +348,12 @@ async def execute_multi_provider_agent(request_data: dict) -> dict:
         Dictionary containing response data
     """
     request = MultiProviderRequest(**request_data)
-    agent = MultiProviderAgent(request)
+
+    # Use tool-enabled agent if tools are requested
+    if request.enable_tools:
+        agent = ToolEnabledMultiProviderAgent(request)
+    else:
+        agent = MultiProviderAgent(request)
+
     response = await agent.execute()
     return response.model_dump(mode="json")

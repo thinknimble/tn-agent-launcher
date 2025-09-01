@@ -65,6 +65,7 @@ This project uses pre-commit hooks to ensure code quality and consistency. The h
 2. (Optional) Run hooks manually on all files: `uv run pre-commit run --all-files`
 
 The pre-commit configuration includes:
+
 - Python linting and formatting with Ruff
 - Frontend linting with ESLint and Prettier
 - TypeScript type checking
@@ -91,7 +92,7 @@ The pre-commit configuration includes:
 
 The application uses an IAM user (`default-user-tn-agent-launcher`) with the following access:
 
-- **Access Key ID**: `AKIAWVJFOFUY7YAH4GLO`
+- **Access Key ID**: `your-access-key-id`
 - **Attached Policies**:
   1. `user-bucket-policy-tn-agent-launcher` - S3 bucket access
   2. `lambda-bedrock-access-tn-agent-launcher` - Lambda invocation and Bedrock model access
@@ -101,6 +102,7 @@ The application uses an IAM user (`default-user-tn-agent-launcher`) with the fol
 To grant Lambda invocation and Bedrock access permissions to the IAM user:
 
 1. **Create the policy document** (`lambda-bedrock-policy.json`):
+
 ```json
 {
   "Version": "2012-10-17",
@@ -108,10 +110,7 @@ To grant Lambda invocation and Bedrock access permissions to the IAM user:
     {
       "Sid": "LambdaInvokePermissions",
       "Effect": "Allow",
-      "Action": [
-        "lambda:InvokeFunction",
-        "lambda:InvokeAsync"
-      ],
+      "Action": ["lambda:InvokeFunction", "lambda:InvokeAsync"],
       "Resource": [
         "arn:aws:lambda:us-east-1:458029411633:function:bedrock-agent-staging",
         "arn:aws:lambda:us-east-1:458029411633:function:bedrock-agent-production"
@@ -132,10 +131,7 @@ To grant Lambda invocation and Bedrock access permissions to the IAM user:
     {
       "Sid": "BedrockListPermissions",
       "Effect": "Allow",
-      "Action": [
-        "bedrock:ListFoundationModels",
-        "bedrock:GetFoundationModel"
-      ],
+      "Action": ["bedrock:ListFoundationModels", "bedrock:GetFoundationModel"],
       "Resource": "*"
     }
   ]
@@ -143,6 +139,7 @@ To grant Lambda invocation and Bedrock access permissions to the IAM user:
 ```
 
 2. **Create the IAM policy**:
+
 ```bash
 aws iam create-policy \
   --policy-name lambda-bedrock-access-tn-agent-launcher \
@@ -152,6 +149,7 @@ aws iam create-policy \
 ```
 
 3. **Attach the policy to the IAM user**:
+
 ```bash
 aws iam attach-user-policy \
   --user-name default-user-tn-agent-launcher \
@@ -160,6 +158,7 @@ aws iam attach-user-policy \
 ```
 
 4. **Verify the configuration**:
+
 ```bash
 aws iam list-attached-user-policies \
   --user-name default-user-tn-agent-launcher \
@@ -172,7 +171,7 @@ Configure the following environment variables in your review apps and staging en
 
 ```bash
 # Existing AWS credentials (already configured)
-AWS_ACCESS_KEY_ID=AKIAWVJFOFUY7YAH4GLO
+AWS_ACCESS_KEY_ID=<access_key_id>
 AWS_SECRET_ACCESS_KEY=<secret_key>
 
 # Lambda configuration
@@ -183,6 +182,7 @@ BEDROCK_MODEL_ID=us.anthropic.claude-3-7-sonnet-20250219-v1:0
 ```
 
 The IAM user now has permissions to:
+
 - Invoke Lambda functions for agent execution
 - Access Bedrock foundation models
 - List and retrieve Bedrock model information

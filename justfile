@@ -130,3 +130,14 @@ test: server-test client-test
 [group('setup')]
 setup-dev: docker-postgres-redis django-migrate create-test-data
     @echo "✅ Development environment ready"
+
+# Lambda commands
+[group('lambda')]
+lambda-deploy environment="staging":
+    cd lambda_agent && ./scripts/deploy.sh
+    @echo "✅ Lambda deployment complete for {{environment}}"
+
+[group('lambda')]
+lambda-deploy-prod:
+    ENVIRONMENT=production cd lambda_agent && ./scripts/deploy.sh
+    @echo "✅ Lambda production deployment complete"
