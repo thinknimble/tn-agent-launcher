@@ -3,7 +3,18 @@ from factory.django import DjangoModelFactory
 
 from tn_agent_launcher.core.factories import UserFactory
 
-from .models import AgentInstance, AgentProject
+from .models import AgentInstance, AgentProject, AgentTask
+
+
+class AgentProjectFactory(DjangoModelFactory):
+    class Meta:
+        model = AgentProject
+
+    @factory.lazy_attribute
+    def user(self, *args, **kwargs):
+        user = UserFactory()
+        user.save()
+        return user
 
 
 class AgentInstanceFactory(DjangoModelFactory):
@@ -16,13 +27,20 @@ class AgentInstanceFactory(DjangoModelFactory):
         user.save()
         return user
 
+    @factory.post_generation
+    def projects(self, *args, **kwargs):
+        project = AgentProjectFactory()
+        project.save()
+        self.projects.set([project.id])
+        return
 
-class AgentProjectFactory(DjangoModelFactory):
+
+class AgentTaskFactory(DjangoModelFactory):
     class Meta:
-        model = AgentProject
+        model = AgentTask
 
     @factory.lazy_attribute
-    def user(self, *args, **kwargs):
-        user = UserFactory()
-        user.save()
-        return user
+    def agent_instance(self, *args, **kwargs):
+        agent_instance = AgentInstanceFactory()
+        agent_instance.save()
+        return agent_instance
