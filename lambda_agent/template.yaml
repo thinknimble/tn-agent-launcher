@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS Bedrock Agent Lambda Function
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 1024
+    Runtime: python3.12
+    Environment:
+      Variables:
+        BEDROCK_REGION: !Ref AWS::Region
+        BEDROCK_MODEL_ID: us.anthropic.claude-3-7-sonnet-20250219-v1:0
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: staging
+    Description: Environment name (staging, production)
+    AllowedValues:
+      - staging
+      - production
+
+Resources:
+  BedrockAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bedrock-agent-${EnvironmentName}
+      CodeUri: src/
+      Handler: lambda_handler.lambda_handler
+      Description: AWS Bedrock Agent using PydanticAI
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource: 
+                - 'arn:aws:bedrock:*::foundation-model/*'
+                - !Sub 'arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/*'
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Events:
+        ApiGateway:
+          Type: Api
+          Properties:
+            Path: /agent
+            Method: POST
+            Auth:
+              Authorizer: AWS_IAM
+        HealthCheck:
+          Type: Api
+          Properties:
+            Path: /health
+            Method: GET
+            Auth:
+              Authorizer: AWS_IAM
+
+  BedrockAgentLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/bedrock-agent-${EnvironmentName}
+      RetentionInDays: 7
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
+  FunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt BedrockAgentFunction.Arn
+  FunctionName:
+    Description: Lambda Function Name
+    Value: !Ref BedrockAgentFunction

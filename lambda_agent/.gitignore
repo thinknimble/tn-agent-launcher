@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# AWS SAM
+.aws-sam/
+samconfig.toml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Local files
+*.bak
+test_*.py
+response.json
+
+# Environment
+.env
+*.log
