@@ -29,6 +29,15 @@ export const inputSourceShape = {
   filename: z.string().optional(),
   size: z.number().optional(),
   contentType: z.string().optional(),
+  // Document processing configuration
+  skipPreprocessing: z.boolean().optional(),
+  // Image processing options (when skipPreprocessing is false)
+  preprocessImage: z.boolean().optional(),
+  isDocumentWithText: z.boolean().optional(),
+  replaceImagesWithDescriptions: z.boolean().optional(),
+  // PDF processing options (when skipPreprocessing is false)
+  containsImages: z.boolean().optional(),
+  extractImagesAsText: z.boolean().optional(),
 }
 
 export const scheduleTypeEnum = {

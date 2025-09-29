@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Button } from './button'
 import { agentTaskApi } from 'src/services/agent-task'
 import { InputSource, sourceTypeEnum } from 'src/services/agent-task/models'
+import { DocumentProcessingConfigModal } from './document-processing-config'
 
 interface InputSourceUploaderProps {
   onFilesSelected?: (inputSources: InputSource[]) => void
@@ -11,14 +12,27 @@ interface InputSourceUploaderProps {
   maxSize?: number // in MB
 }
 
+interface FileWithConfig extends File {
+  processingConfig?: {
+    skipPreprocessing: boolean
+    preprocessImage: boolean
+    isDocumentWithText: boolean
+    replaceImagesWithDescriptions: boolean
+    containsImages: boolean
+    extractImagesAsText: boolean
+  }
+}
+
 export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
   onFilesSelected,
   maxFiles = 5,
   maxSize = 50,
 }) => {
-  const [files, setFiles] = useState<File[]>([])
+  const [files, setFiles] = useState<FileWithConfig[]>([])
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [configModalOpen, setConfigModalOpen] = useState(false)
+  const [currentFileIndex, setCurrentFileIndex] = useState<number | null>(null)
 
   const onDrop = useCallback(
     (acceptedFiles: File[], rejectedFiles: any[]) => {
@@ -51,11 +65,21 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp'],
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp', '.tiff', '.bmp'],
       'application/pdf': ['.pdf'],
       'text/*': ['.txt', '.md'],
       'application/json': ['.json'],
       'text/csv': ['.csv'],
+      // Office documents
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-word': ['.doc'],
+      'application/vnd.ms-powerpoint': ['.ppt'],
+      'application/vnd.ms-excel': ['.xls'],
+      // HTML and other formats
+      'text/html': ['.html', '.htm'],
+      'text/markdown': ['.md'],
     },
     maxSize: maxSize * 1024 * 1024,
     maxFiles: maxFiles,
@@ -98,13 +122,20 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
           throw new Error(`Failed to upload ${file.name}`)
         }
 
-        // Create input source object
+        // Create input source object with processing configuration
         const inputSource: InputSource = {
           url: presignedData.publicUrl,
           sourceType: sourceTypeEnum.OUR_S3,
           filename: file.name,
           size: file.size,
           contentType: file.type || 'application/octet-stream',
+          // Add processing configuration
+          skipPreprocessing: file.processingConfig?.skipPreprocessing,
+          preprocessImage: file.processingConfig?.preprocessImage,
+          isDocumentWithText: file.processingConfig?.isDocumentWithText,
+          replaceImagesWithDescriptions: file.processingConfig?.replaceImagesWithDescriptions,
+          containsImages: file.processingConfig?.containsImages,
+          extractImagesAsText: file.processingConfig?.extractImagesAsText,
         }
 
         uploadedSources.push(inputSource)
@@ -125,6 +156,23 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+  }
+
+  const openConfigModal = (index: number) => {
+    setCurrentFileIndex(index)
+    setConfigModalOpen(true)
+  }
+
+  const handleConfigSave = (config: any) => {
+    if (currentFileIndex !== null) {
+      const updatedFiles = [...files]
+      updatedFiles[currentFileIndex] = {
+        ...updatedFiles[currentFileIndex],
+        processingConfig: config,
+      }
+      setFiles(updatedFiles)
+    }
+    setCurrentFileIndex(null)
   }
 
   return (
@@ -156,7 +204,7 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
           )}
 
           <p className="text-xs text-primary-400">
-            PDF, images, text, CSV, JSON (max {maxSize}MB each)
+            PDF, images, Office docs, text, CSV, JSON, HTML (max {maxSize}MB each)
           </p>
         </div>
       </div>
@@ -183,16 +231,32 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
                   <div>
                     <p className="text-sm font-medium text-primary-900">{file.name}</p>
                     <p className="text-xs text-primary-500">{formatFileSize(file.size)}</p>
+                    {file.processingConfig && (
+                      <p className="text-xs text-green-600">
+                        ✓ Processing configured
+                        {file.processingConfig.skipPreprocessing && ' (Skip preprocessing)'}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => removeFile(index)}
-                  className="text-red-500 hover:bg-red-50 hover:text-red-700"
-                >
-                  Remove
-                </Button>
+                <div className="flex space-x-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => openConfigModal(index)}
+                    className="text-primary-600 hover:bg-primary-50 hover:text-primary-700"
+                  >
+                    Configure
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => removeFile(index)}
+                    className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -208,6 +272,20 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
               : `Add ${files.length} File${files.length > 1 ? 's' : ''} to Input Sources`}
           </Button>
         </div>
+      )}
+
+      {/* Processing Configuration Modal */}
+      {currentFileIndex !== null && (
+        <DocumentProcessingConfigModal
+          isOpen={configModalOpen}
+          onClose={() => {
+            setConfigModalOpen(false)
+            setCurrentFileIndex(null)
+          }}
+          onConfirm={handleConfigSave}
+          filename={files[currentFileIndex]?.name || ''}
+          contentType={files[currentFileIndex]?.type}
+        />
       )}
     </div>
   )

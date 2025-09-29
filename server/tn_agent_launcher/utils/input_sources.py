@@ -8,9 +8,9 @@ from urllib.parse import urlparse
 import httpx
 import pandas as pd
 from django.conf import settings
-from docling.document_converter import DocumentConverter
 
 from .sandbox import SandboxManager
+from .document_pipeline import DocumentProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,16 @@ class InputSourceDownloader:
         "image/png",
         "image/gif",
         "image/webp",
+        "image/tiff",
+        "image/bmp",
+        # Office document types
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",  # .pptx
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
+        # Additional document types
+        "application/vnd.ms-word",  # .doc
+        "application/vnd.ms-powerpoint",  # .ppt
+        "application/vnd.ms-excel",  # .xls
     }
 
     # Maximum file size in MB
@@ -39,12 +49,13 @@ class InputSourceDownloader:
     # Request timeout in seconds
     REQUEST_TIMEOUT = 30
 
-    def __init__(self):
+    def __init__(self, processing_config: Dict[str, Any] = None):
         self.client = httpx.Client(
             timeout=self.REQUEST_TIMEOUT,
             limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
             headers={"User-Agent": "TN-Agent-Launcher/1.0 (Content Fetcher)"},
         )
+        self.processing_config = processing_config or {}
 
     def __enter__(self):
         return self
@@ -210,11 +221,19 @@ class InputSourceDownloader:
             raise
 
     def extract_pdf_content(self, file_path: Path) -> str:
-        """Extract content from PDF using docling."""
+        """Extract content from PDF using DocumentProcessor."""
         try:
-            converter = DocumentConverter()
-            result = converter.convert(file_path)
-            content = result.document.export_to_markdown()
+            processor = DocumentProcessor()
+            # Use configuration from processing_config or defaults
+            contains_images = self.processing_config.get('contains_images', True)
+            extract_images_as_text = self.processing_config.get('extract_images_as_text', True)
+            
+            processor.configure_for_pdfs(
+                contains_images=contains_images, 
+                extract_images_as_text=extract_images_as_text
+            )
+            result = processor.process_document(str(file_path))
+            content = result.markdown_content
             logger.info(f"Successfully extracted PDF content from {file_path}")
             return content
         except Exception as e:
@@ -223,11 +242,21 @@ class InputSourceDownloader:
             return f"[PDF file: {file_path.name} - extraction failed: {e}]"
 
     def extract_image_content(self, file_path: Path) -> str:
-        """Extract content from images using docling."""
+        """Extract content from images using DocumentProcessor."""
         try:
-            converter = DocumentConverter()
-            result = converter.convert(file_path)
-            content = result.document.export_to_markdown()
+            processor = DocumentProcessor()
+            # Use configuration from processing_config or defaults
+            preprocess_image = self.processing_config.get('preprocess_image', True)
+            is_document_with_text = self.processing_config.get('is_document_with_text', True)
+            replace_images_with_descriptions = self.processing_config.get('replace_images_with_descriptions', True)
+            
+            processor.configure_for_images(
+                preprocess_image=preprocess_image,
+                is_document_with_text=is_document_with_text,
+                replace_images_with_descriptions=replace_images_with_descriptions
+            )
+            result = processor.process_document(str(file_path))
+            content = result.markdown_content
             logger.info(f"Successfully extracted image content from {file_path}")
             return (
                 content if content.strip() else f"[Image file: {file_path.name} - no text detected]"
@@ -314,11 +343,58 @@ class InputSourceDownloader:
             except Exception as e2:
                 return f"[JSON file: {file_path.name} - processing failed: {e} {e2}]"
 
+    def extract_document_content(self, file_path: Path) -> str:
+        """Extract content from various document types using DocumentProcessor."""
+        try:
+            processor = DocumentProcessor()
+            # Configure based on file extension and processing_config
+            file_ext = file_path.suffix.lower()
+            
+            if file_ext in ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp', '.webp']:
+                # Use configuration from processing_config or defaults for images
+                preprocess_image = self.processing_config.get('preprocess_image', True)
+                is_document_with_text = self.processing_config.get('is_document_with_text', True)
+                replace_images_with_descriptions = self.processing_config.get('replace_images_with_descriptions', True)
+                
+                processor.configure_for_images(
+                    preprocess_image=preprocess_image,
+                    is_document_with_text=is_document_with_text,
+                    replace_images_with_descriptions=replace_images_with_descriptions
+                )
+            elif file_ext == '.pdf':
+                # Use configuration from processing_config or defaults for PDFs
+                contains_images = self.processing_config.get('contains_images', True)
+                extract_images_as_text = self.processing_config.get('extract_images_as_text', True)
+                
+                processor.configure_for_pdfs(
+                    contains_images=contains_images, 
+                    extract_images_as_text=extract_images_as_text
+                )
+            
+            result = processor.process_document(str(file_path))
+            content = result.markdown_content
+            logger.info(f"Successfully extracted document content from {file_path}")
+            return content if content.strip() else f"[Document file: {file_path.name} - no content extracted]"
+        except Exception as e:
+            logger.error(f"Failed to extract document content from {file_path}: {e}")
+            return f"[Document file: {file_path.name} - extraction failed: {e}]"
+
     def process_downloaded_content(self, download_info: Dict[str, Any]) -> Dict[str, Any]:
         """Process downloaded content based on file type."""
         file_path = download_info["file_path"]
         file_type = download_info["file_type"]
         content_type = download_info.get("content_type", "")
+
+        # Check if user wants to skip preprocessing entirely
+        skip_preprocessing = self.processing_config.get('skip_preprocessing', False)
+        
+        if skip_preprocessing:
+            return {
+                **download_info,
+                "processed_content": f"[Raw file for multimodal processing: {file_path.name}]",
+                "content_preview": f"[File ready for direct agent processing: {download_info['filename']}]",
+                "raw_file_mode": True,
+            }
 
         try:
             if file_type == "pdf":
@@ -347,6 +423,15 @@ class InputSourceDownloader:
 
             elif content_type == "text/csv" or file_path.suffix.lower() == ".csv":
                 content = self.process_csv_content(file_path)
+                return {
+                    **download_info,
+                    "processed_content": content,
+                    "content_preview": content[:500] + "..." if len(content) > 500 else content,
+                }
+
+            elif file_path.suffix.lower() in [".docx", ".dotx", ".docm", ".dotm", ".pptx", ".potx", ".ppsx", ".pptm", ".potm", ".ppsm", ".xlsx", ".xlsm", ".html", ".htm", ".xhtml", ".md", ".adoc", ".asciidoc", ".asc"]:
+                # Handle Office documents, HTML, Markdown, and AsciiDoc using DocumentProcessor
+                content = self.extract_document_content(file_path)
                 return {
                     **download_info,
                     "processed_content": content,
@@ -382,14 +467,27 @@ class InputSourceDownloader:
             raise
 
 
-def download_and_process_url(url: str) -> Dict[str, Any]:
+def download_and_process_url(url: str, processing_config: Dict[str, Any] = None) -> Dict[str, Any]:
     """
     Convenience function to download and process a URL in a sandbox environment.
+
+    Args:
+        url: The URL to download and process
+        processing_config: Configuration dict with processing options:
+            General:
+                - skip_preprocessing: bool (default: False) - Skip all processing and send raw file to multimodal agent
+            For images (when preprocessing enabled): 
+                - preprocess_image: bool (default: True)
+                - is_document_with_text: bool (default: True)
+                - replace_images_with_descriptions: bool (default: True)
+            For PDFs (when preprocessing enabled):
+                - contains_images: bool (default: True)
+                - extract_images_as_text: bool (default: True)
 
     Returns processed content information that can be fed to the LLM.
     """
     with SandboxManager() as sandbox_dir:
-        with InputSourceDownloader() as downloader:
+        with InputSourceDownloader(processing_config) as downloader:
             # Download the content
             download_info = downloader.download_from_url(url, sandbox_dir)
 

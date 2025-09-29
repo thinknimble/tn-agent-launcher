@@ -9,6 +9,7 @@ import { Button } from 'src/components/button'
 import { Input } from 'src/components/input'
 import { ErrorsList } from 'src/components/errors'
 import { InputSourceUploader } from 'src/components/input-source-uploader'
+import { DocumentProcessingConfigModal } from 'src/components/document-processing-config'
 import {
   AgentTask,
   AgentTaskForm,
@@ -41,6 +42,8 @@ const CreateEditAgentTaskInner = ({
 }) => {
   const { form, createFormFieldChangeHandler, overrideForm } = useTnForm<TAgentTaskForm>()
   const queryClient = useQueryClient()
+  const [urlConfigModalOpen, setUrlConfigModalOpen] = useState(false)
+  const [currentUrlIndex, setCurrentUrlIndex] = useState<number | null>(null)
 
   const { data: agentInstances } = useQuery(
     agentInstanceQueries.list(new Pagination(), {
@@ -163,6 +166,29 @@ const CreateEditAgentTaskInner = ({
       sourceType: sourceTypeEnum.PUBLIC_URL,
       filename,
     }
+  }
+
+  const openUrlConfigModal = (index: number) => {
+    setCurrentUrlIndex(index)
+    setUrlConfigModalOpen(true)
+  }
+
+  const handleUrlConfigSave = (config: any) => {
+    if (currentUrlIndex !== null) {
+      const currentSources = form.inputSources.value || []
+      const newSources = [...currentSources]
+      newSources[currentUrlIndex] = {
+        ...newSources[currentUrlIndex],
+        skipPreprocessing: config.skipPreprocessing,
+        preprocessImage: config.preprocessImage,
+        isDocumentWithText: config.isDocumentWithText,
+        replaceImagesWithDescriptions: config.replaceImagesWithDescriptions,
+        containsImages: config.containsImages,
+        extractImagesAsText: config.extractImagesAsText,
+      }
+      createFormFieldChangeHandler(form.inputSources)(newSources)
+    }
+    setCurrentUrlIndex(null)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -320,20 +346,40 @@ const CreateEditAgentTaskInner = ({
                           📄 {source.filename}
                         </span>
                       )}
+                      {(source.skipPreprocessing !== undefined || 
+                        source.preprocessImage !== undefined ||
+                        source.containsImages !== undefined) && (
+                        <span className="rounded bg-green-50 px-2 py-1 text-xs text-green-600">
+                          ✓ Configured
+                          {source.skipPreprocessing && ' (Skip preprocessing)'}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      const currentSources = form.inputSources.value || []
-                      const newSources = currentSources.filter((_, i) => i !== index)
-                      createFormFieldChangeHandler(form.inputSources)(newSources)
-                    }}
-                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                  >
-                    Remove
-                  </Button>
+                  <div className="flex space-x-2">
+                    {source.sourceType === sourceTypeEnum.PUBLIC_URL && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => openUrlConfigModal(index)}
+                        className="text-primary-600 hover:bg-primary-50 hover:text-primary-700"
+                      >
+                        Configure
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        const currentSources = form.inputSources.value || []
+                        const newSources = currentSources.filter((_, i) => i !== index)
+                        createFormFieldChangeHandler(form.inputSources)(newSources)
+                      }}
+                      className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      Remove
+                    </Button>
+                  </div>
                 </div>
               ))}
               <Button
@@ -451,6 +497,20 @@ const CreateEditAgentTaskInner = ({
           </Button>
         </div>
       </form>
+
+      {/* URL Processing Configuration Modal */}
+      {currentUrlIndex !== null && (
+        <DocumentProcessingConfigModal
+          isOpen={urlConfigModalOpen}
+          onClose={() => {
+            setUrlConfigModalOpen(false)
+            setCurrentUrlIndex(null)
+          }}
+          onConfirm={handleUrlConfigSave}
+          filename={form.inputSources.value?.[currentUrlIndex]?.filename || 'URL'}
+          contentType={undefined} // We don't know content type for URLs until download
+        />
+      )}
     </div>
   )
 }
