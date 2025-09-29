@@ -108,6 +108,11 @@ django-runserver:
     cd server && python manage.py runserver 0.0.0.0:8000
     @echo "🚀 Backend ready at http://localhost:8000"
 
+[group('django')]
+process-tasks:
+    cd server && python manage.py process_tasks
+    @echo "📋 Processing background tasks..."
+
 # Combined commands
 [group('all')]
 format: server-format client-format
@@ -125,3 +130,14 @@ test: server-test client-test
 [group('setup')]
 setup-dev: docker-postgres-redis django-migrate create-test-data
     @echo "✅ Development environment ready"
+
+# Lambda commands
+[group('lambda')]
+lambda-deploy environment="staging":
+    cd lambda_agent && ./scripts/deploy.sh
+    @echo "✅ Lambda deployment complete for {{environment}}"
+
+[group('lambda')]
+lambda-deploy-prod:
+    ENVIRONMENT=production cd lambda_agent && ./scripts/deploy.sh
+    @echo "✅ Lambda production deployment complete"

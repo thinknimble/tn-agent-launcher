@@ -27,19 +27,22 @@ jobs:
           path: |
             ~/.cache/uv
             .venv
-          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          key: ${{ runner.os }}-uv-v2-${{ hashFiles('**/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-uv-
+            ${{ runner.os }}-uv-v2-
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: Install dependencies
         run: |
+          # Clean install to ensure no stale dependencies
+          rm -rf .venv
           uv sync
           uv sync --group dev
       - name: "Create env file"
         run: |
           touch .env
           cat .env.example > .env
+          echo "CI=true" >> .env
           cat .env
       - run: mkdir -p client/dist/static
       - name: Run tests and checks

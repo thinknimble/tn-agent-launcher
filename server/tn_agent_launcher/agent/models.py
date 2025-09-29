@@ -11,6 +11,7 @@ class AgentInstance(AbstractBaseModel):
         OPENAI = "OPENAI", "OpenAI"
         OLLAMA = "OLLAMA", "Ollama"
         ANTHROPIC = "ANTHROPIC", "Anthropic"
+        BEDROCK = "BEDROCK", "AWS Bedrock"
 
     class AgentTypeChoices(models.TextChoices):
         CHAT = "chat", "Chat"
@@ -27,7 +28,7 @@ class AgentInstance(AbstractBaseModel):
     friendly_name = models.CharField(max_length=255)
     provider = models.CharField(max_length=50, choices=ProviderChoices.choices)
     model_name = models.CharField(max_length=100)
-    api_key = models.TextField()
+    api_key = models.TextField(blank=True, default="")
     target_url = models.URLField(
         null=True, blank=True, help_text="Optional base URL for the model API, if applicable"
     )
@@ -37,6 +38,10 @@ class AgentInstance(AbstractBaseModel):
         choices=AgentTypeChoices.choices,
         help_text="Type of agent, e.g., 'chat', 'one-shot', etc.",
     )
+    use_lambda = models.BooleanField(
+        default=False,
+        help_text="Execute this agent using AWS Lambda (admin only). Auto-enabled for Bedrock providers.",
+    )
     user = models.ForeignKey("core.User", on_delete=models.CASCADE, related_name="agent_instances")
 
     def __str__(self):
@@ -44,6 +49,32 @@ class AgentInstance(AbstractBaseModel):
 
     class Meta:
         ordering = ["friendly_name"]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        errors = {}
+
+        # Validate that BEDROCK provider requires use_lambda
+        if self.provider == self.ProviderChoices.BEDROCK and not self.use_lambda:
+            errors["use_lambda"] = "Lambda execution must be enabled for Bedrock providers."
+
+        # Validate that non-BEDROCK providers require an API key
+        if self.provider != self.ProviderChoices.BEDROCK and not self.api_key:
+            errors["api_key"] = f"API key is required for {self.get_provider_display()} provider."
+
+        # Validate that use_lambda requires Lambda to be enabled globally
+        from django.conf import settings
+
+        if self.use_lambda and not settings.USE_LAMBDA_FOR_AGENT_EXECUTION:
+            errors["use_lambda"] = (
+                "Lambda execution is not enabled globally. Please configure AWS Lambda settings."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+        super().clean()
 
     @property
     def raw_agent(self):

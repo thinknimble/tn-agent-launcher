@@ -1,3 +1,42 @@
+## 🔒 IMPORTANT SECURITY NOTICE - OPEN SOURCE PROJECT
+
+**THIS IS AN OPEN SOURCE PROJECT** - All code is publicly visible on GitHub.
+
+### Security Guidelines for Contributors:
+
+1. **NEVER commit sensitive information:**
+   - API keys (OpenAI, Anthropic, AWS, Google, etc.)
+   - Passwords or authentication tokens
+   - AWS credentials or secret keys
+   - Database passwords
+   - Private URLs or internal endpoints
+   - Personal identifying information
+
+2. **Always use environment variables:**
+   - Store secrets in `.env` files (already gitignored)
+   - Use `.env.example` for documentation with dummy values
+   - Never use real-looking values in example files
+
+3. **Before committing, always check:**
+   - No hardcoded API keys or secrets
+   - No accidental `.env` file commits
+   - No logs containing sensitive data
+   - No test files with real credentials
+
+4. **Current security measures in place:**
+   - `.env` files are properly gitignored
+   - Django settings use `config()` for all sensitive values
+   - AWS credentials are loaded conditionally
+   - Lambda uses IAM roles, not hardcoded credentials
+
+5. **When adding new features:**
+   - Always use environment variables for configuration
+   - Document required env vars in `.env.example` with fake values
+   - Never log sensitive information
+   - Sanitize error messages before displaying
+
+---
+
 When finishing writing code:
 You do not need to push to github do not ask me.
 
