@@ -36,12 +36,12 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
   contentType,
 }) => {
   const [config, setConfig] = useState<DocumentProcessingConfig>({
-    skipPreprocessing: false,
-    // Image processing defaults
+    skipPreprocessing: true, // Default to skip preprocessing for multimodal models
+    // Image processing defaults (used when preprocessing is enabled)
     preprocessImage: true,
     isDocumentWithText: true,
     replaceImagesWithDescriptions: true,
-    // PDF processing defaults
+    // PDF processing defaults (used when preprocessing is enabled)
     containsImages: true,
     extractImagesAsText: true,
   })
@@ -59,10 +59,8 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h3 className="mb-4 text-lg font-semibold text-primary-600">
-          Document Processing Options
-        </h3>
-        
+        <h3 className="mb-4 text-lg font-semibold text-primary-600">Document Processing Options</h3>
+
         <p className="mb-4 text-sm text-primary-500">
           Configure how <strong>{filename}</strong> should be processed for the agent.
         </p>
@@ -74,17 +72,16 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
               <input
                 type="checkbox"
                 checked={config.skipPreprocessing}
-                onChange={(e) =>
-                  setConfig({ ...config, skipPreprocessing: e.target.checked })
-                }
+                onChange={(e) => setConfig({ ...config, skipPreprocessing: e.target.checked })}
                 className="mt-1 h-4 w-4 rounded border-primary-300 text-primary-600 focus:ring-primary-500"
               />
               <div>
                 <span className="font-medium text-primary-700">
-                  Send file directly to agent (recommended for multimodal models)
+                  Send file directly to agent (recommended)
                 </span>
                 <p className="text-sm text-primary-500">
-                  Skip all preprocessing and let the agent handle the raw file directly.
+                  Skip all preprocessing and let the multimodal agent handle the raw file directly.
+                  Use preprocessing only for non-multimodal models or cost optimization.
                 </p>
               </div>
             </label>
@@ -94,7 +91,7 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
           {!config.skipPreprocessing && (
             <div className="space-y-4">
               {isImage && (
-                <div className="rounded-lg border border-blue-200 bg-blue-25 p-4">
+                <div className="bg-blue-25 rounded-lg border border-blue-200 p-4">
                   <h4 className="mb-3 font-medium text-blue-700">Image Processing Options</h4>
                   <div className="space-y-3">
                     <label className="flex items-start space-x-3">
@@ -158,16 +155,14 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
               )}
 
               {isPdf && (
-                <div className="rounded-lg border border-green-200 bg-green-25 p-4">
+                <div className="bg-green-25 rounded-lg border border-green-200 p-4">
                   <h4 className="mb-3 font-medium text-green-700">PDF Processing Options</h4>
                   <div className="space-y-3">
                     <label className="flex items-start space-x-3">
                       <input
                         type="checkbox"
                         checked={config.containsImages}
-                        onChange={(e) =>
-                          setConfig({ ...config, containsImages: e.target.checked })
-                        }
+                        onChange={(e) => setConfig({ ...config, containsImages: e.target.checked })}
                         className="mt-1 h-4 w-4 rounded border-green-300 text-green-600 focus:ring-green-500"
                       />
                       <div>

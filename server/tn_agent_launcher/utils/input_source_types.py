@@ -14,6 +14,7 @@ class SourceType(str, Enum):
     GOOGLE_DRIVE_PUBLIC = "google_drive_public"
     GOOGLE_DRIVE_PRIVATE = "google_drive_private"
     DROPBOX_PUBLIC = "dropbox_public"
+    AGENT_OUTPUT = "agent_output"
     UNKNOWN = "unknown"
 
 
@@ -136,6 +137,10 @@ def detect_source_type(url: str, user=None) -> SourceType:
         SourceType enum value
     """
     try:
+        # Check for agent-output URLs
+        if url.startswith("agent-output://"):
+            return SourceType.AGENT_OUTPUT
+
         # Check for S3 URLs
         s3_info = parse_s3_url(url)
         if s3_info:

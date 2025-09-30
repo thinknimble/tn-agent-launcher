@@ -115,6 +115,7 @@ class AgentTask(AbstractBaseModel):
         MONTHLY = "monthly", "Monthly"
         HOURLY = "hourly", "Hourly"
         CUSTOM_INTERVAL = "custom_interval", "Custom Interval"
+        AGENT = "agent", "Agent Execution"
 
     class StatusChoices(models.TextChoices):
         ACTIVE = "active", "Active"
@@ -163,6 +164,16 @@ class AgentTask(AbstractBaseModel):
     )
     execution_count = models.PositiveIntegerField(default=0)
 
+    # For AGENT schedule type - which agent to trigger on completion
+    trigger_agent_task = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="triggered_by_tasks",
+        help_text="Agent task to trigger on completion (for AGENT schedule type)",
+    )
+
     class Meta:
         ordering = ["-created"]
 
@@ -172,6 +183,9 @@ class AgentTask(AbstractBaseModel):
     def save(self, *args, **kwargs):
         if self.pk is None:
             self._set_next_execution()
+        else:
+            # Handle state transitions for existing tasks
+            self._handle_state_transitions()
         super().save(*args, **kwargs)
 
     def _set_next_execution(self):
@@ -188,6 +202,9 @@ class AgentTask(AbstractBaseModel):
 
     def calculate_next_execution(self):
         if self.schedule_type == self.ScheduleTypeChoices.ONCE:
+            return None
+        elif self.schedule_type == self.ScheduleTypeChoices.AGENT:
+            # Agent executions are triggered by other agents, not scheduled
             return None
 
         from datetime import timedelta
@@ -208,6 +225,48 @@ class AgentTask(AbstractBaseModel):
             return base_time + timedelta(minutes=self.interval_minutes)
 
         return None
+
+    def _handle_state_transitions(self):
+        """Handle task state transitions when task is updated."""
+        # Get the original state from the database
+        if self.pk:
+            try:
+                original = AgentTask.objects.get(pk=self.pk)
+
+                # If task was FAILED or COMPLETED and is being updated, consider reactivating
+                if original.status in [self.StatusChoices.FAILED, self.StatusChoices.COMPLETED]:
+                    # Check if task can be reactivated
+                    can_reactivate = True
+
+                    # Check max executions constraint
+                    if self.max_executions and self.execution_count >= self.max_executions:
+                        can_reactivate = False
+
+                    # If task can be reactivated, set it to ACTIVE and calculate next execution
+                    if can_reactivate and self.status != self.StatusChoices.PAUSED:
+                        self.status = self.StatusChoices.ACTIVE
+                        self.next_execution_at = self.calculate_next_execution()
+
+                # If max_executions was increased and task was completed due to reaching max, reactivate
+                if (
+                    original.status == self.StatusChoices.COMPLETED
+                    and original.max_executions
+                    and self.max_executions
+                    and self.max_executions > original.max_executions
+                    and self.execution_count < self.max_executions
+                ):
+                    self.status = self.StatusChoices.ACTIVE
+                    self.next_execution_at = self.calculate_next_execution()
+
+            except AgentTask.DoesNotExist:
+                pass
+
+    def reset_to_active(self):
+        """Reset a failed or completed task back to active status."""
+        if self.status in [self.StatusChoices.FAILED, self.StatusChoices.COMPLETED]:
+            self.status = self.StatusChoices.ACTIVE
+            self.next_execution_at = self.calculate_next_execution()
+            self.save()
 
     @property
     def is_ready_for_execution(self):

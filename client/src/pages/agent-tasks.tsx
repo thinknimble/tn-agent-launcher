@@ -327,7 +327,7 @@ export const AgentTasks = () => {
       </div>
       {editing || creating ? (
         <CreateAgentTask
-          agent={agentInstance!}
+          agent={agentInstance}
           task={editing || undefined}
           onSuccess={() => {
             setEditing(null)

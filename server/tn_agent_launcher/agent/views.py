@@ -1,8 +1,8 @@
 import uuid
 
-import boto3
 from botocore.exceptions import ClientError
 from django.conf import settings
+from django.core.files.storage import get_storage_class
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
@@ -45,6 +45,8 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
     queryset = AgentTask.objects.all()
     serializer_class = AgentTaskSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    filterset_fields = ["agent_instance", "status"]
 
     def get_queryset(self):
         return self.queryset.filter(agent_instance__user=self.request.user)
@@ -91,21 +93,22 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
             return Response({"error": "filename is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Initialize S3 client
-            s3_client = boto3.client(
-                "s3",
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                region_name=getattr(settings, "AWS_S3_REGION_NAME", "us-east-1"),
-            )
+            # Use django-storages for consistency with the rest of the app
+            storage_class = get_storage_class(settings.DEFAULT_FILE_STORAGE)
+            storage = storage_class()
 
             # Generate unique key for the file
-            unique_filename = f"input-sources/{uuid.uuid4()}/{filename}"
+            # Use AWS_LOCATION directly instead of storage.location to avoid /media/ duplication
+            aws_location = getattr(settings, "AWS_LOCATION", "")
+            if aws_location:
+                file_key = f"{storage.location}/input-sources/{uuid.uuid4()}/{filename}"
+            else:
+                file_key = f"input-sources/{uuid.uuid4()}/{filename}"
 
-            # Generate presigned POST (better for CORS)
-            presigned_post = s3_client.generate_presigned_post(
-                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-                Key=unique_filename,
+            # Generate presigned POST using django-storages
+            presigned_post = storage.connection.meta.client.generate_presigned_post(
+                Bucket=storage.bucket_name,
+                Key=file_key,
                 Fields={"Content-Type": content_type},
                 Conditions=[
                     {"Content-Type": content_type},
@@ -114,17 +117,15 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
                 ExpiresIn=3600,
             )
 
-            # Generate the public URL that will be used to access the file
-            public_url = (
-                f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{unique_filename}"
-            )
+            # Generate the public URL manually to avoid storage.url() adding extra paths
+            public_url = f"https://{storage.bucket_name}.s3.amazonaws.com/{file_key}"
 
             return Response(
                 {
                     "presigned_post": presigned_post,
                     "public_url": public_url,
                     "filename": filename,
-                    "key": unique_filename,
+                    "key": file_key,
                 }
             )
 

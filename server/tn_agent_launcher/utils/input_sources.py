@@ -8,9 +8,10 @@ from urllib.parse import urlparse
 import httpx
 import pandas as pd
 from django.conf import settings
+from django.core.files.storage import get_storage_class
 
-from .sandbox import SandboxManager
 from .document_pipeline import DocumentProcessor
+from .sandbox import SandboxManager
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +74,8 @@ class InputSourceDownloader:
                 logger.warning(f"Invalid URL format: {url}")
                 return False
 
-            # Only allow http/https
-            if parsed.scheme not in ("http", "https"):
+            # Only allow http/https and special agent-output scheme
+            if parsed.scheme not in ("http", "https", "agent-output"):
                 logger.warning(f"Unsupported URL scheme: {parsed.scheme}")
                 return False
 
@@ -97,6 +98,134 @@ class InputSourceDownloader:
             logger.error(f"URL validation failed for {url}: {e}")
             return False
 
+    def is_s3_url(self, url: str) -> bool:
+        """Check if URL is an S3 URL that we can access with our credentials."""
+        try:
+            parsed = urlparse(url)
+            # Check if it's our S3 bucket
+            bucket_name = getattr(settings, "AWS_STORAGE_BUCKET_NAME", "")
+            if bucket_name and parsed.hostname == f"{bucket_name}.s3.amazonaws.com":
+                return True
+            # Also check for s3:// scheme
+            if parsed.scheme == "s3":
+                return True
+            return False
+        except Exception:
+            return False
+
+    def download_from_s3(self, url: str, sandbox_dir: Path) -> Dict[str, Any]:
+        """
+        Download content from S3 using django-storages credentials.
+        This handles cases where presigned URLs have expired.
+        """
+        try:
+            logger.info(f"Downloading S3 content from: {url}")
+
+            # Parse S3 URL to get key
+            parsed = urlparse(url)
+            if parsed.scheme == "s3":
+                # s3://bucket/key format
+                bucket = parsed.netloc
+                key = parsed.path.lstrip("/")
+            else:
+                # https://bucket.s3.amazonaws.com/key format
+                parsed.hostname.split(".")[0]
+                key = parsed.path.lstrip("/")
+
+            # Use django-storages to access the file
+            storage_class = get_storage_class(settings.DEFAULT_FILE_STORAGE)
+            storage = storage_class()
+
+            # Open the file from S3
+            file_obj = storage.open(key.replace(f"{storage.location}/", ""))
+
+            # Generate safe filename
+            sandbox_manager = SandboxManager()
+            filename = sandbox_manager.get_safe_filename(key)
+            file_path = sandbox_dir / filename
+
+            # Download the file
+            with open(file_path, "wb") as f:
+                for chunk in file_obj.chunks():
+                    f.write(chunk)
+
+            file_obj.close()
+
+            # Get file info
+            file_size = file_path.stat().st_size
+            content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+            file_type = self._determine_file_type(file_path, content_type)
+
+            logger.info(f"Successfully downloaded {file_size} bytes from S3 to {file_path}")
+
+            return {
+                "file_path": file_path,
+                "content_type": content_type,
+                "file_type": file_type,
+                "size_bytes": file_size,
+                "filename": filename,
+                "source_url": url,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to download from S3 {url}: {e}")
+            raise ValueError(f"Failed to download from S3: {e}")
+
+    def download_from_agent_output(self, url: str, sandbox_dir: Path) -> Dict[str, Any]:
+        """
+        Handle agent-output:// URLs by retrieving content from agent execution results.
+
+        Args:
+            url: agent-output:// URL with execution ID
+            sandbox_dir: Directory to save the content to
+
+        Returns:
+            Dict containing file_path, content_type, file_type, and metadata
+        """
+        try:
+            # Extract execution ID from agent-output://123 format
+            parsed = urlparse(url)
+            execution_id = parsed.netloc or parsed.path.lstrip("/")
+
+            if not execution_id:
+                raise ValueError(f"Invalid agent-output URL format: {url}")
+
+            # Import here to avoid circular imports
+            from tn_agent_launcher.agent.models import AgentTaskExecution
+
+            # Get the execution and its output
+            execution = AgentTaskExecution.objects.get(id=execution_id)
+            if not execution.output_data or "result" not in execution.output_data:
+                raise ValueError(f"No output data found for execution {execution_id}")
+
+            output_content = execution.output_data["result"]
+
+            # Create a text file with the agent output
+            filename = f"agent_output_{execution_id}.txt"
+            file_path = sandbox_dir / filename
+
+            # Write the content to file
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(output_content)
+
+            file_size = file_path.stat().st_size
+
+            logger.info(f"Retrieved agent output from execution {execution_id}: {file_size} bytes")
+
+            return {
+                "file_path": file_path,
+                "content_type": "text/plain",
+                "file_type": "text",
+                "size_bytes": file_size,
+                "filename": filename,
+                "source_url": url,
+                "agent_execution_id": execution_id,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to retrieve agent output from {url}: {e}")
+            raise ValueError(f"Failed to retrieve agent output: {e}")
+
     def download_from_url(self, url: str, sandbox_dir: Path) -> Dict[str, Any]:
         """
         Download content from a URL to the sandbox directory.
@@ -107,8 +236,20 @@ class InputSourceDownloader:
         if not self.validate_url(url):
             raise ValueError(f"Invalid or unsafe URL: {url}")
 
+        # Check if this is an agent-output URL
+        if url.startswith("agent-output://"):
+            return self.download_from_agent_output(url, sandbox_dir)
+
+        # Check if this is an S3 URL we can access directly
+        if self.is_s3_url(url):
+            try:
+                return self.download_from_s3(url, sandbox_dir)
+            except Exception as e:
+                logger.warning(f"S3 direct access failed for {url}, falling back to HTTP: {e}")
+                # Fall through to HTTP download if S3 access fails
+
         try:
-            logger.info(f"Downloading content from: {url}")
+            logger.info(f"Downloading content via HTTP from: {url}")
 
             # Make the request with streaming to handle large files
             with self.client.stream("GET", url) as response:
@@ -225,12 +366,11 @@ class InputSourceDownloader:
         try:
             processor = DocumentProcessor()
             # Use configuration from processing_config or defaults
-            contains_images = self.processing_config.get('contains_images', True)
-            extract_images_as_text = self.processing_config.get('extract_images_as_text', True)
-            
+            contains_images = self.processing_config.get("contains_images", True)
+            extract_images_as_text = self.processing_config.get("extract_images_as_text", True)
+
             processor.configure_for_pdfs(
-                contains_images=contains_images, 
-                extract_images_as_text=extract_images_as_text
+                contains_images=contains_images, extract_images_as_text=extract_images_as_text
             )
             result = processor.process_document(str(file_path))
             content = result.markdown_content
@@ -246,14 +386,16 @@ class InputSourceDownloader:
         try:
             processor = DocumentProcessor()
             # Use configuration from processing_config or defaults
-            preprocess_image = self.processing_config.get('preprocess_image', True)
-            is_document_with_text = self.processing_config.get('is_document_with_text', True)
-            replace_images_with_descriptions = self.processing_config.get('replace_images_with_descriptions', True)
-            
+            preprocess_image = self.processing_config.get("preprocess_image", True)
+            is_document_with_text = self.processing_config.get("is_document_with_text", True)
+            replace_images_with_descriptions = self.processing_config.get(
+                "replace_images_with_descriptions", True
+            )
+
             processor.configure_for_images(
                 preprocess_image=preprocess_image,
                 is_document_with_text=is_document_with_text,
-                replace_images_with_descriptions=replace_images_with_descriptions
+                replace_images_with_descriptions=replace_images_with_descriptions,
             )
             result = processor.process_document(str(file_path))
             content = result.markdown_content
@@ -349,32 +491,37 @@ class InputSourceDownloader:
             processor = DocumentProcessor()
             # Configure based on file extension and processing_config
             file_ext = file_path.suffix.lower()
-            
-            if file_ext in ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp', '.webp']:
+
+            if file_ext in [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp", ".webp"]:
                 # Use configuration from processing_config or defaults for images
-                preprocess_image = self.processing_config.get('preprocess_image', True)
-                is_document_with_text = self.processing_config.get('is_document_with_text', True)
-                replace_images_with_descriptions = self.processing_config.get('replace_images_with_descriptions', True)
-                
+                preprocess_image = self.processing_config.get("preprocess_image", True)
+                is_document_with_text = self.processing_config.get("is_document_with_text", True)
+                replace_images_with_descriptions = self.processing_config.get(
+                    "replace_images_with_descriptions", True
+                )
+
                 processor.configure_for_images(
                     preprocess_image=preprocess_image,
                     is_document_with_text=is_document_with_text,
-                    replace_images_with_descriptions=replace_images_with_descriptions
+                    replace_images_with_descriptions=replace_images_with_descriptions,
                 )
-            elif file_ext == '.pdf':
+            elif file_ext == ".pdf":
                 # Use configuration from processing_config or defaults for PDFs
-                contains_images = self.processing_config.get('contains_images', True)
-                extract_images_as_text = self.processing_config.get('extract_images_as_text', True)
-                
+                contains_images = self.processing_config.get("contains_images", True)
+                extract_images_as_text = self.processing_config.get("extract_images_as_text", True)
+
                 processor.configure_for_pdfs(
-                    contains_images=contains_images, 
-                    extract_images_as_text=extract_images_as_text
+                    contains_images=contains_images, extract_images_as_text=extract_images_as_text
                 )
-            
+
             result = processor.process_document(str(file_path))
             content = result.markdown_content
             logger.info(f"Successfully extracted document content from {file_path}")
-            return content if content.strip() else f"[Document file: {file_path.name} - no content extracted]"
+            return (
+                content
+                if content.strip()
+                else f"[Document file: {file_path.name} - no content extracted]"
+            )
         except Exception as e:
             logger.error(f"Failed to extract document content from {file_path}: {e}")
             return f"[Document file: {file_path.name} - extraction failed: {e}]"
@@ -386,15 +533,31 @@ class InputSourceDownloader:
         content_type = download_info.get("content_type", "")
 
         # Check if user wants to skip preprocessing entirely
-        skip_preprocessing = self.processing_config.get('skip_preprocessing', False)
-        
+        skip_preprocessing = self.processing_config.get("skip_preprocessing", False)
+
         if skip_preprocessing:
-            return {
-                **download_info,
-                "processed_content": f"[Raw file for multimodal processing: {file_path.name}]",
-                "content_preview": f"[File ready for direct agent processing: {download_info['filename']}]",
-                "raw_file_mode": True,
-            }
+            # For raw files, prepare BinaryContent for PydanticAI
+            try:
+                with open(file_path, "rb") as f:
+                    file_data = f.read()
+
+                return {
+                    **download_info,
+                    "processed_content": f"[Raw file for multimodal processing: {file_path.name}]",
+                    "content_preview": f"[File ready for direct agent processing: {download_info['filename']}]",
+                    "raw_file_mode": True,
+                    "binary_data": file_data,
+                    "media_type": content_type,
+                }
+            except Exception as e:
+                logger.error(f"Failed to read raw file {file_path}: {e}")
+                return {
+                    **download_info,
+                    "processed_content": f"[Error reading raw file: {file_path.name}]",
+                    "content_preview": f"[File processing failed: {download_info['filename']}]",
+                    "raw_file_mode": True,
+                    "error": str(e),
+                }
 
         try:
             if file_type == "pdf":
@@ -429,7 +592,27 @@ class InputSourceDownloader:
                     "content_preview": content[:500] + "..." if len(content) > 500 else content,
                 }
 
-            elif file_path.suffix.lower() in [".docx", ".dotx", ".docm", ".dotm", ".pptx", ".potx", ".ppsx", ".pptm", ".potm", ".ppsm", ".xlsx", ".xlsm", ".html", ".htm", ".xhtml", ".md", ".adoc", ".asciidoc", ".asc"]:
+            elif file_path.suffix.lower() in [
+                ".docx",
+                ".dotx",
+                ".docm",
+                ".dotm",
+                ".pptx",
+                ".potx",
+                ".ppsx",
+                ".pptm",
+                ".potm",
+                ".ppsm",
+                ".xlsx",
+                ".xlsm",
+                ".html",
+                ".htm",
+                ".xhtml",
+                ".md",
+                ".adoc",
+                ".asciidoc",
+                ".asc",
+            ]:
                 # Handle Office documents, HTML, Markdown, and AsciiDoc using DocumentProcessor
                 content = self.extract_document_content(file_path)
                 return {
@@ -467,6 +650,30 @@ class InputSourceDownloader:
             raise
 
 
+def create_pydantic_ai_content(processed_info: Dict[str, Any]) -> Any:
+    """
+    Convert processed input source to PydanticAI content.
+
+    Returns:
+        - BinaryContent for raw files (when skip_preprocessing=True)
+        - str for processed text content
+    """
+    if processed_info.get("raw_file_mode") and "binary_data" in processed_info:
+        try:
+            from pydantic_ai.messages import BinaryContent
+
+            return BinaryContent(
+                data=processed_info["binary_data"],
+                media_type=processed_info.get("media_type", "application/octet-stream"),
+            )
+        except ImportError:
+            logger.error("pydantic_ai not available for raw file processing")
+            return processed_info.get("processed_content", "")
+    else:
+        # Return processed text content for traditional preprocessing
+        return processed_info.get("processed_content", "")
+
+
 def download_and_process_url(url: str, processing_config: Dict[str, Any] = None) -> Dict[str, Any]:
     """
     Convenience function to download and process a URL in a sandbox environment.
@@ -476,7 +683,7 @@ def download_and_process_url(url: str, processing_config: Dict[str, Any] = None)
         processing_config: Configuration dict with processing options:
             General:
                 - skip_preprocessing: bool (default: False) - Skip all processing and send raw file to multimodal agent
-            For images (when preprocessing enabled): 
+            For images (when preprocessing enabled):
                 - preprocess_image: bool (default: True)
                 - is_document_with_text: bool (default: True)
                 - replace_images_with_descriptions: bool (default: True)

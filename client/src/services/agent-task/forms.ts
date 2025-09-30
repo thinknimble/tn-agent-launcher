@@ -95,6 +95,7 @@ export type AgentTaskFormInputs = {
   scheduleType: IFormField<SelectOption | null>
   scheduledAt: IFormField<string>
   intervalMinutes: IFormField<number | null>
+  triggerAgentTask: IFormField<SelectOption | null>
   maxExecutions: IFormField<number | null>
 }
 
@@ -153,6 +154,13 @@ export class AgentTaskForm extends Form<AgentTaskFormInputs> {
     label: 'Interval (Minutes)',
     placeholder: 'e.g., 60 for hourly',
     type: 'number',
+    value: null,
+  })
+
+  static triggerAgentTask = FormField.create({
+    label: 'Trigger Agent Task',
+    placeholder: 'Select agent task to trigger on completion',
+    type: 'select',
     value: null,
   })
 

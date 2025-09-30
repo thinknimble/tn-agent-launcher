@@ -8,6 +8,7 @@ export const sourceTypeEnum = {
   GOOGLE_DRIVE_PUBLIC: 'google_drive_public',
   GOOGLE_DRIVE_PRIVATE: 'google_drive_private',
   DROPBOX_PUBLIC: 'dropbox_public',
+  AGENT_OUTPUT: 'agent_output',
   UNKNOWN: 'unknown',
 } as const
 
@@ -20,13 +21,14 @@ export const sourceTypeLabelMap = {
   [sourceTypeEnum.GOOGLE_DRIVE_PUBLIC]: 'Google Drive (Public)',
   [sourceTypeEnum.GOOGLE_DRIVE_PRIVATE]: 'Google Drive (Private)',
   [sourceTypeEnum.DROPBOX_PUBLIC]: 'Dropbox (Public)',
+  [sourceTypeEnum.AGENT_OUTPUT]: 'Agent Output',
   [sourceTypeEnum.UNKNOWN]: 'Unknown',
 }
 
 export const inputSourceShape = {
   url: z.string().url(),
   sourceType: z.nativeEnum(sourceTypeEnum),
-  filename: z.string().optional(),
+  filename: z.string(), // Make filename required to match backend expectations
   size: z.number().optional(),
   contentType: z.string().optional(),
   // Document processing configuration
@@ -47,6 +49,7 @@ export const scheduleTypeEnum = {
   MONTHLY: 'monthly',
   HOURLY: 'hourly',
   CUSTOM_INTERVAL: 'custom_interval',
+  AGENT: 'agent',
 } as const
 
 export type ScheduleTypeValues = (typeof scheduleTypeEnum)[keyof typeof scheduleTypeEnum]
@@ -58,6 +61,7 @@ export const scheduleTypeLabelMap = {
   [scheduleTypeEnum.MONTHLY]: 'Monthly',
   [scheduleTypeEnum.HOURLY]: 'Hourly',
   [scheduleTypeEnum.CUSTOM_INTERVAL]: 'Custom Interval',
+  [scheduleTypeEnum.AGENT]: 'Agent Execution',
 }
 
 export const taskStatusEnum = {
@@ -101,8 +105,10 @@ export const agentTaskShape = {
   instruction: z.string(),
   inputSources: z.array(z.object(inputSourceShape)).optional().nullable(),
   scheduleType: z.nativeEnum(scheduleTypeEnum),
-  scheduledAt: z.string().datetime().optional().nullable(),
+  scheduledAt: z.string().datetime().or(z.string()).optional().nullable(),
   intervalMinutes: z.number().positive().optional().nullable(),
+  triggerAgentTask: z.string().uuid().optional().nullable(),
+  triggerAgentTaskName: z.string().optional().nullable(),
   status: z.nativeEnum(taskStatusEnum),
   lastExecutedAt: z.string().datetime().optional().nullable(),
   lastExecutionDisplay: z.string().optional().nullable(),
@@ -123,6 +129,7 @@ export const createAgentTaskShape = {
   scheduleType: agentTaskShape.scheduleType,
   scheduledAt: agentTaskShape.scheduledAt,
   intervalMinutes: agentTaskShape.intervalMinutes,
+  triggerAgentTask: agentTaskShape.triggerAgentTask,
   maxExecutions: agentTaskShape.maxExecutions,
 }
 

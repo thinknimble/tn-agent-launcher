@@ -31,7 +31,7 @@ class AgentInstanceFactory(DjangoModelFactory):
     target_url = factory.Faker("url")
     agent_type = factory.Iterator([choice[0] for choice in AgentInstance.AgentTypeChoices.choices])
     use_lambda = factory.Faker("boolean", False)
-    
+
     @factory.lazy_attribute
     def user(self):
         user = UserFactory()

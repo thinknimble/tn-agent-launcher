@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 
 from tn_agent_launcher.chat.models import PromptTemplate
 
-from .models import AgentInstance, AgentTask, AgentTaskExecution
+from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution
 
 # Register your models here.
 
@@ -53,8 +53,6 @@ class AgentInstanceAdmin(admin.ModelAdmin):
     ordering = ("friendly_name",)
     inlines = [PromptTemplateInline]
 
-
-
     def get_fieldsets(self, request, obj=None):
         """Dynamic fieldsets based on user permissions"""
         fieldsets = [
@@ -87,6 +85,6 @@ class AgentInstanceAdmin(admin.ModelAdmin):
         return fieldsets
 
 
-
 admin.site.register(AgentTask)
 admin.site.register(AgentTaskExecution)
+admin.site.register(AgentProject)

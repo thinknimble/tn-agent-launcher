@@ -12,7 +12,9 @@ interface InputSourceUploaderProps {
   maxSize?: number // in MB
 }
 
-interface FileWithConfig extends File {
+interface FileWithConfig {
+  file: File
+  id: string // Add unique ID for better React key handling
   processingConfig?: {
     skipPreprocessing: boolean
     preprocessImage: boolean
@@ -57,7 +59,12 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
         return
       }
 
-      setFiles((prev) => [...prev, ...acceptedFiles])
+      // Add unique IDs to files for better React key handling
+      const filesWithIds = acceptedFiles.map((file) => ({
+        file,
+        id: `${Date.now()}-${Math.random()}`, // Simple unique ID
+      }))
+      setFiles((prev) => [...prev, ...filesWithIds])
     },
     [files.length, maxFiles, maxSize],
   )
@@ -88,6 +95,15 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
   const removeFile = (index: number) => {
     setFiles(files.filter((_, i) => i !== index))
     setError(null)
+
+    // Close configuration modal if it's open for the file being removed
+    if (currentFileIndex === index) {
+      setConfigModalOpen(false)
+      setCurrentFileIndex(null)
+    } else if (currentFileIndex !== null && currentFileIndex > index) {
+      // Adjust the current file index if a file before it was removed
+      setCurrentFileIndex(currentFileIndex - 1)
+    }
   }
 
   const uploadFiles = async () => {
@@ -99,7 +115,8 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
     try {
       const uploadedSources: InputSource[] = []
 
-      for (const file of files) {
+      for (const fileWrapper of files) {
+        const file = fileWrapper.file
         // Get presigned URL
         const presignedData = await agentTaskApi.csc.generatePresignedUrl({
           filename: file.name,
@@ -129,13 +146,14 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
           filename: file.name,
           size: file.size,
           contentType: file.type || 'application/octet-stream',
-          // Add processing configuration
-          skipPreprocessing: file.processingConfig?.skipPreprocessing,
-          preprocessImage: file.processingConfig?.preprocessImage,
-          isDocumentWithText: file.processingConfig?.isDocumentWithText,
-          replaceImagesWithDescriptions: file.processingConfig?.replaceImagesWithDescriptions,
-          containsImages: file.processingConfig?.containsImages,
-          extractImagesAsText: file.processingConfig?.extractImagesAsText,
+          // Add processing configuration (default to skip preprocessing if not configured)
+          skipPreprocessing: fileWrapper.processingConfig?.skipPreprocessing ?? true,
+          preprocessImage: fileWrapper.processingConfig?.preprocessImage,
+          isDocumentWithText: fileWrapper.processingConfig?.isDocumentWithText,
+          replaceImagesWithDescriptions:
+            fileWrapper.processingConfig?.replaceImagesWithDescriptions,
+          containsImages: fileWrapper.processingConfig?.containsImages,
+          extractImagesAsText: fileWrapper.processingConfig?.extractImagesAsText,
         }
 
         uploadedSources.push(inputSource)
@@ -221,22 +239,30 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
         <div className="space-y-3">
           <h4 className="font-medium text-primary-600">Selected Files:</h4>
           <div className="space-y-2">
-            {files.map((file, index) => (
+            {files.map((fileWrapper, index) => (
               <div
-                key={index}
+                key={fileWrapper.id} // Use file ID as key
                 className="bg-primary-50 flex items-center justify-between rounded-lg p-3"
               >
                 <div className="flex items-center space-x-3">
                   <div className="text-primary-500">📄</div>
                   <div>
-                    <p className="text-sm font-medium text-primary-900">{file.name}</p>
-                    <p className="text-xs text-primary-500">{formatFileSize(file.size)}</p>
-                    {file.processingConfig && (
-                      <p className="text-xs text-green-600">
-                        ✓ Processing configured
-                        {file.processingConfig.skipPreprocessing && ' (Skip preprocessing)'}
-                      </p>
-                    )}
+                    <p className="text-sm font-medium text-primary-900">{fileWrapper.file.name}</p>
+                    <p className="text-xs text-primary-500">
+                      {formatFileSize(fileWrapper.file.size)}
+                    </p>
+                    <p className="text-xs text-green-600">
+                      {fileWrapper.processingConfig ? (
+                        <>
+                          ✓ Processing configured
+                          {fileWrapper.processingConfig.skipPreprocessing && ' (Direct to agent)'}
+                          {!fileWrapper.processingConfig.skipPreprocessing &&
+                            ' (Preprocessing enabled)'}
+                        </>
+                      ) : (
+                        '→ Will be sent directly to agent (default)'
+                      )}
+                    </p>
                   </div>
                 </div>
                 <div className="flex space-x-2">
@@ -244,7 +270,7 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
                     type="button"
                     variant="ghost"
                     onClick={() => openConfigModal(index)}
-                    className="text-primary-600 hover:bg-primary-50 hover:text-primary-700"
+                    className="hover:bg-primary-50 text-primary-600 hover:text-primary-700"
                   >
                     Configure
                   </Button>
@@ -275,7 +301,7 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
       )}
 
       {/* Processing Configuration Modal */}
-      {currentFileIndex !== null && (
+      {currentFileIndex !== null && files[currentFileIndex] && (
         <DocumentProcessingConfigModal
           isOpen={configModalOpen}
           onClose={() => {
@@ -283,8 +309,8 @@ export const InputSourceUploader: React.FC<InputSourceUploaderProps> = ({
             setCurrentFileIndex(null)
           }}
           onConfirm={handleConfigSave}
-          filename={files[currentFileIndex]?.name || ''}
-          contentType={files[currentFileIndex]?.type}
+          filename={files[currentFileIndex].file.name}
+          contentType={files[currentFileIndex].file.type}
         />
       )}
     </div>

@@ -85,7 +85,7 @@ export const AgentTaskCard = ({
               onClick={() => onExecute(task)}
               className="bg-accent-600 px-3 py-1 text-xs text-white hover:bg-accent-700"
             >
-              ▶️ Run Now
+              ▶Run Now
             </Button>
           )}
 

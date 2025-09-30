@@ -8,7 +8,10 @@ from background_task import background
 from django.conf import settings
 from django.utils import timezone
 
-from tn_agent_launcher.utils.input_sources import download_and_process_url
+from tn_agent_launcher.utils.input_sources import (
+    create_pydantic_ai_content,
+    download_and_process_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,18 @@ def execute_agent_task(task_execution_id: int):
                     filename = source.get("filename")
                     content_type = source.get("content_type")
                     size = source.get("size")
+
+                    # Extract processing configuration from source (tn-models converts camelCase to snake_case)
+                    processing_config = {
+                        "skip_preprocessing": source.get("skip_preprocessing", False),
+                        "preprocess_image": source.get("preprocess_image", True),
+                        "is_document_with_text": source.get("is_document_with_text", True),
+                        "replace_images_with_descriptions": source.get(
+                            "replace_images_with_descriptions", True
+                        ),
+                        "contains_images": source.get("contains_images", True),
+                        "extract_images_as_text": source.get("extract_images_as_text", True),
+                    }
                 else:
                     # Backward compatibility for simple URL strings
                     url = source
@@ -55,13 +70,14 @@ def execute_agent_task(task_execution_id: int):
                     filename = None
                     content_type = None
                     size = None
+                    processing_config = {}
 
                 if not url:
                     logger.warning(f"Skipping input source with missing URL: {source}")
                     continue
 
                 try:
-                    processed_content = download_and_process_url(url)
+                    processed_content = download_and_process_url(url, processing_config)
 
                     # Enhance with original metadata
                     if filename:
@@ -72,6 +88,7 @@ def execute_agent_task(task_execution_id: int):
                         processed_content["original_size"] = size
                     processed_content["source_type"] = source_type
 
+                    # Store original for multimodal processing and sanitized version for JSON storage
                     input_sources_content.append(processed_content)
                     logger.info(f"Successfully processed {source_type} input source: {url}")
                 except Exception as e:
@@ -128,12 +145,33 @@ def execute_agent_task(task_execution_id: int):
                 sources_text += "\n" + "-" * 50 + "\n"
             enhanced_instruction = f"{task.instruction}\n{sources_text}"
 
+        # Prepare multimodal content for PydanticAI (keep binary data for LLM execution)
+        multimodal_content = []
+        has_raw_files = False
+
+        for source in input_sources_content:
+            if source.get("raw_file_mode"):
+                has_raw_files = True
+                pydantic_content = create_pydantic_ai_content(source)
+                if pydantic_content:
+                    multimodal_content.append(pydantic_content)
+                    logger.info(
+                        f"Added multimodal content for {source.get('filename', 'unknown file')}"
+                    )
+
+        # Sanitize input sources for JSON storage by removing binary data
+        sanitized_input_sources = []
+        for source in input_sources_content:
+            sanitized_source = {k: v for k, v in source.items() if k != "binary_data"}
+            sanitized_input_sources.append(sanitized_source)
+
         input_data = {
             "instruction": task.instruction,
             "enhanced_instruction": enhanced_instruction,
             "task_name": task.name,
             "execution_id": str(execution.id),
-            "input_sources": input_sources_content,
+            "input_sources": sanitized_input_sources,
+            "has_raw_files": has_raw_files,
         }
 
         execution.input_data = input_data
@@ -142,6 +180,10 @@ def execute_agent_task(task_execution_id: int):
         logger.info(
             f"Executing agent {agent_instance.friendly_name} with instruction: {task.instruction[:100]}..."
         )
+        if has_raw_files:
+            logger.info(
+                f"Task includes {len(multimodal_content)} raw files for multimodal processing"
+            )
 
         if use_lambda:
             # Use Lambda for execution
@@ -155,11 +197,12 @@ def execute_agent_task(task_execution_id: int):
             )
 
             # Invoke Lambda with provider configuration
+            # Note: Lambda doesn't support multimodal content yet, so always use enhanced_instruction
             response = lambda_agent_service.invoke_agent(
                 provider=agent_instance.provider,
                 model_name=agent_instance.model_name,
                 api_key=agent_instance.api_key,
-                prompt=task.instruction,
+                prompt=enhanced_instruction,
                 system_prompt=system_prompt,
                 agent_type=agent_instance.agent_type,
                 agent_name=agent_instance.friendly_name,
@@ -177,9 +220,33 @@ def execute_agent_task(task_execution_id: int):
             # Run locally with async agent
             async def run_agent():
                 agent = await agent_instance.agent()
-                return await agent.run(task.instruction)
 
-            result = asyncio.run(run_agent())
+                # If we have raw files, use multimodal content with PydanticAI
+                if has_raw_files and multimodal_content:
+                    # For multimodal content, we pass the instruction along with the media
+                    # PydanticAI expects a list of content parts for multimodal messages
+                    message_content = [task.instruction] + multimodal_content
+                    return await agent.run(message_content)
+                else:
+                    # For text-only or preprocessed content, use enhanced instruction
+                    return await agent.run(enhanced_instruction)
+
+            # Handle existing event loop by creating a new one in a separate thread
+            import concurrent.futures
+
+            def run_in_new_loop():
+                # Create a new event loop for this thread
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    return new_loop.run_until_complete(run_agent())
+                finally:
+                    new_loop.close()
+
+            # Run the async function in a new thread with its own event loop
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(run_in_new_loop)
+                result = future.result()
 
         end_time = timezone.now()
         duration = (end_time - start_time).total_seconds()
@@ -204,6 +271,48 @@ def execute_agent_task(task_execution_id: int):
             task.status = AgentTask.StatusChoices.COMPLETED
 
         task.save()
+
+        # Check if this task should trigger another agent
+        if task.trigger_agent_task:
+            logger.info(f"Triggering next agent: {task.trigger_agent_task.name}")
+            try:
+                # Create input source from this task's output
+                trigger_input_source = {
+                    "url": f"agent-output://{execution.id}",
+                    "source_type": "agent_output",
+                    "filename": f"{task.name}_output.txt",
+                    "content_type": "text/plain",
+                    "agent_execution_id": execution.id,
+                    "processed_content": filtered_output,
+                }
+
+                # Add the output as input source to the trigger task's input sources
+                trigger_task = task.trigger_agent_task
+                trigger_task_input_sources = (
+                    list(trigger_task.input_sources) if trigger_task.input_sources else []
+                )
+                trigger_task_input_sources.append(trigger_input_source)
+
+                # Update the trigger task with the new input source
+                trigger_task.input_sources = trigger_task_input_sources
+                trigger_task.save()
+
+                # Schedule execution of the trigger task (force execute, ignore schedules/limits)
+                trigger_execution = schedule_agent_task_execution(
+                    str(trigger_task.id), force_execute=True
+                )
+
+                if trigger_execution:
+                    logger.info(
+                        f"Successfully scheduled trigger agent execution {trigger_execution.id}"
+                    )
+                else:
+                    logger.warning(
+                        f"Failed to schedule trigger agent execution for task {trigger_task.id}"
+                    )
+
+            except Exception as e:
+                logger.error(f"Failed to trigger next agent {task.trigger_agent_task.name}: {e}")
 
         logger.info(
             f"Agent task execution {task_execution_id} completed successfully in {duration:.2f} seconds"
