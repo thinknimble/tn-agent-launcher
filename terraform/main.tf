@@ -137,7 +137,7 @@ resource "aws_iam_role_policy_attachment" "ecs_tasks_execution_role" {
 
 
 resource "aws_lb" "ecs" {
-  name = local.alb_name
+  name               = local.alb_name
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.ecs_load_balancer.id]

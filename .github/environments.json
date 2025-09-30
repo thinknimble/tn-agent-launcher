@@ -6,15 +6,28 @@
       "region": "us-east-1",
       "role_arn": "arn:aws:iam::458029411633:role/github-actions-production",
       "secrets_bucket": "tn-agent-launcher-secrets-prod",
-      "description": "Production environment"
+      "description": "Production environment - isolated account",
+      "domain": {
+        "base_domain": "myapp.com",
+        "use_custom_domain": true,
+        "custom_domain": "myapp.com",
+        "route53_zone_id": "Z1D633PJN98FT9",
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/prod-cert-id"
+      }
     },
     "staging": {
-      "account": "staging", 
+      "account": "Staging", 
       "account_id": "319944611406",
       "region": "us-east-1",
       "role_arn": "arn:aws:iam::319944611406:role/github-actions-staging",
       "secrets_bucket": "tn-agent-launcher-secrets",
-      "description": "Staging environment"
+      "description": "Staging environment - staging account",
+      "domain": {
+        "base_domain": "myapp.com",
+        "use_custom_domain": false,
+        "route53_zone_id": "Z1D633PJN98FT9",
+        "certificate_arn": "arn:aws:acm:us-east-1:319944611406:certificate/wildcard-cert-id"
+      }
     },
     "development": {
       "account": "dev",
@@ -22,7 +35,13 @@
       "region": "us-east-1", 
       "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
       "secrets_bucket": "tn-agent-launcher-secrets",
-      "description": "Development environment"
+      "description": "Development environment - dev account",
+      "domain": {
+        "base_domain": "dev.myapp.com",
+        "use_custom_domain": false,
+        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "certificate_arn": "arn:aws:acm:us-east-1:319944611406:certificate/dev-wildcard-cert-id"
+      }
     }
   },
   "patterns": {
@@ -32,15 +51,27 @@
       "region": "us-east-1",
       "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
       "secrets_bucket": "tn-agent-launcher-secrets",
-      "description": "Pull request environments"
+      "description": "Pull request environments",
+      "domain": {
+        "base_domain": "dev.myapp.com",
+        "use_custom_domain": false,
+        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "certificate_arn": "arn:aws:acm:us-east-1:319944611406:certificate/dev-wildcard-cert-id"
+      }
     },
     "main": {
-      "account": "staging", 
+      "account": "dev", 
       "account_id": "319944611406",
       "region": "us-east-1",
-      "role_arn": "arn:aws:iam::319944611406:role/github-actions-staging",
+      "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
       "secrets_bucket": "tn-agent-launcher-secrets",
-      "description": "Main branch staging"
+      "description": "Main branch development",
+      "domain": {
+        "base_domain": "dev.myapp.com",
+        "use_custom_domain": false,
+        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "certificate_arn": "arn:aws:acm:us-east-1:319944611406:certificate/dev-wildcard-cert-id"
+      }
     }
   },
   "defaults": {
@@ -49,6 +80,12 @@
     "region": "us-east-1",
     "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
     "secrets_bucket": "tn-agent-launcher-secrets",
-    "description": "Default fallback configuration"
+    "description": "Default fallback configuration",
+    "domain": {
+      "base_domain": "dev.myapp.com",
+      "use_custom_domain": false,
+      "route53_zone_id": "Z06118351LUGXMN4X34BT",
+      "certificate_arn": "arn:aws:acm:us-east-1:319944611406:certificate/dev-wildcard-cert-id"
+    }
   }
 }

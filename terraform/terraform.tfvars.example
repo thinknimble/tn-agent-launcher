@@ -16,14 +16,14 @@ route53_zone_id               = ""               # Leave blank if you are part o
 
 # App Variables 
 
-secret_key                    = "PQadxxRXIrGwDIbTBaExNiXdFWJQJCPAXRAWkDlNdOCOqjYhdt"
+secret_key                    = "MtgNaawgvApJjDyzpCuONGunUEGcmtQlVOFHYnBiHyXqcMXcOT"
 debug                         = "True"
 current_domain                = "" # leave this blank to use the default created by the load balancer
 current_port                  = "8080"
 allowed_hosts                 = "server,localhost,127.0.0.1"
 db_name                       = "tn_agent_launcher_db"
 db_user                       = "tn_agent_launcher_user"
-db_pass                       = "IWnkwtlMwQUKBKapWnhZhwgJXoqGwYqVvJxOpnVYxInfvfYKsu"
+db_pass                       = "svgcGIqIAiBdfQpgIvigSEEshfUCiCPeDBJhwgepIbXwvjLLck"
 use_aws_storage               = "False"
 aws_storage_bucket_name       = ""
 aws_location                  = ""
@@ -32,8 +32,8 @@ aws_access_key_id             = ""
 aws_secret_access_key         = ""
 enable_emails                 = "False"
 staff_email                   = "hello@thinknimble.com"
-django_superuser_password     = "liNZewwhpwFumLROlRIXMPCAWYMaTqWLaWVTwOkrZnfoNeNESQ"
-playwright_test_user_pass     = "upluzciQcIbDARTnLUGASwXWBXfClWOTRCJpKYGvRsTACrdwec"
+django_superuser_password     = "gcMGmbqzknGvWQrDImACpmArSlbfGuidmjngeIrOFYVvvuJUru"
+playwright_test_user_pass     = "QISDXjDoffSCiblFrutkMJBkMhhiIxMszImalFKnpRhQTBEWBi"
 playwright_test_base_url      = "http://localhost:8080"
 rollbar_access_token          = "your_rollbar_token"
 

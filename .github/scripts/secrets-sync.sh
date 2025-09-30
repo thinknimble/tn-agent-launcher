@@ -72,7 +72,7 @@ get_env_config() {
     
     # Fallback for missing secrets_bucket
     if [[ -z "$SECRETS_BUCKET" ]]; then
-        local service_name=$(jq -r '.service // "{{cookiecutter.project_slug}}"' "$CONFIG_FILE" 2>/dev/null || echo "{{cookiecutter.project_slug}}")
+        local service_name=$(jq -r '.service // "tn_agent_launcher"' "$CONFIG_FILE" 2>/dev/null || echo "tn_agent_launcher")
         SECRETS_BUCKET="${service_name}-terraform-secrets"
         print_colored $YELLOW "⚠️  Using default secrets bucket: $SECRETS_BUCKET"
     fi
@@ -203,7 +203,7 @@ push_secrets() {
     
     # Add metadata before upload
     local temp_file=$(mktemp)
-    local service_name=$(jq -r '.service // "{{cookiecutter.project_slug}}"' "$CONFIG_FILE" 2>/dev/null || echo "{{cookiecutter.project_slug}}")
+    local service_name=$(jq -r '.service // "tn_agent_launcher"' "$CONFIG_FILE" 2>/dev/null || echo "tn_agent_launcher")
     
     jq --arg updated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
        --arg updated_by "$(git config user.email 2>/dev/null || whoami)" \
@@ -244,7 +244,7 @@ create_secrets_template() {
     local env_name=$1
     local local_file=$2
     
-    local service_name=$(jq -r '.service // "{{cookiecutter.project_slug}}"' "$CONFIG_FILE" 2>/dev/null || echo "{{cookiecutter.project_slug}}")
+    local service_name=$(jq -r '.service // "tn_agent_launcher"' "$CONFIG_FILE" 2>/dev/null || echo "tn_agent_launcher")
     
     cat > "$local_file" << EOF
 {
