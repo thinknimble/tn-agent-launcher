@@ -146,6 +146,56 @@ init_backend() {
     echo "  Region: $region"
     echo ""
     
+    # Test AWS credentials and access
+    print_colored $BLUE "🔍 Testing AWS access..."
+    local profile_flag=""
+    if [[ -n "$aws_profile" && "$aws_profile" != "default" ]]; then
+        profile_flag="--profile $aws_profile"
+    fi
+    
+    # Check AWS identity
+    local aws_identity=$(aws sts get-caller-identity $profile_flag 2>/dev/null || echo "FAILED")
+    if [[ "$aws_identity" == "FAILED" ]]; then
+        print_colored $RED "❌ Failed to get AWS caller identity"
+        print_colored $YELLOW "💡 Check AWS credentials and profile configuration"
+        exit 1
+    else
+        local account_id=$(echo "$aws_identity" | jq -r '.Account')
+        local user_arn=$(echo "$aws_identity" | jq -r '.Arn')
+        print_colored $GREEN "✅ AWS Identity verified:"
+        echo "    Account: $account_id"
+        echo "    ARN: $user_arn"
+    fi
+    
+    # Test S3 bucket access with the specific prefix
+    print_colored $BLUE "🗂️  Testing S3 bucket access for prefix: $environment/"
+    if aws s3 ls "s3://$bucket/$environment/" $profile_flag &>/dev/null; then
+        print_colored $GREEN "✅ S3 bucket prefix accessible: s3://$bucket/$environment/"
+    else
+        print_colored $YELLOW "⚠️  S3 bucket prefix not accessible or empty: s3://$bucket/$environment/"
+        print_colored $BLUE "💡 This is normal for new environments - the prefix will be created during terraform init"
+    fi
+    
+    # Test S3 bucket root access (for comparison)
+    print_colored $BLUE "🗂️  Testing S3 bucket root access..."
+    if aws s3 ls "s3://$bucket/" $profile_flag &>/dev/null; then
+        print_colored $GREEN "✅ S3 bucket root accessible"
+    else
+        print_colored $YELLOW "⚠️  S3 bucket root not accessible (this is expected with prefix-restricted policies)"
+    fi
+    
+    # Test DynamoDB table access
+    print_colored $BLUE "🗃️  Testing DynamoDB table access..."
+    if aws dynamodb describe-table --table-name "$table" --region "$region" $profile_flag &>/dev/null; then
+        print_colored $GREEN "✅ DynamoDB table accessible: $table"
+    else
+        print_colored $RED "❌ DynamoDB table not accessible: $table"
+        print_colored $YELLOW "💡 Check table exists and IAM permissions"
+        exit 1
+    fi
+    
+    echo ""
+    
     # Prepare backend config
     local backend_args=""
     backend_args+=" -backend-config=\"bucket=${bucket}\""
@@ -167,10 +217,16 @@ init_backend() {
     print_colored $BLUE "🔄 Running terraform init..."
     print_colored $YELLOW "Debug: Backend arguments: ${backend_args}"
     
-    # Execute terraform init
-    eval "terraform init ${backend_args}"
+    # Execute terraform init with detailed output
+    print_colored $BLUE "📝 Terraform init output:"
+    set +e  # Don't exit on error so we can capture and analyze it
+    terraform_output=$(eval "terraform init ${backend_args}" 2>&1)
+    terraform_exit_code=$?
+    set -e  # Re-enable exit on error
     
-    if [[ $? -eq 0 ]]; then
+    echo "$terraform_output"
+    
+    if [[ $terraform_exit_code -eq 0 ]]; then
         print_colored $GREEN "✅ Backend initialized successfully!"
         print_colored $BLUE "💡 Current workspace: $(terraform workspace show)"
         
@@ -179,8 +235,38 @@ init_backend() {
         echo "  State Location: s3://${bucket}/${state_key}"
         echo "  Lock Table: ${table}"
         echo "  Environment: ${environment}"
+        
+        # Verify state file was created/accessible
+        print_colored $BLUE "🔍 Verifying state file access..."
+        if aws s3 ls "s3://${bucket}/${state_key}" $profile_flag &>/dev/null; then
+            print_colored $GREEN "✅ State file accessible: s3://${bucket}/${state_key}"
+        else
+            print_colored $BLUE "📝 State file not yet created (normal for new environments)"
+        fi
     else
         print_colored $RED "❌ Backend initialization failed!"
+        print_colored $YELLOW "🔍 Analyzing terraform error..."
+        
+        # Check for common error patterns
+        if echo "$terraform_output" | grep -i "access denied" &>/dev/null; then
+            print_colored $RED "💡 Access Denied - Check IAM permissions for:"
+            echo "    - S3 bucket: $bucket"
+            echo "    - S3 prefix: $environment/"
+            echo "    - DynamoDB table: $table"
+        elif echo "$terraform_output" | grep -i "bucket.*not.*found\|NoSuchBucket" &>/dev/null; then
+            print_colored $RED "💡 Bucket Not Found - Check:"
+            echo "    - Bucket exists: $bucket"
+            echo "    - Correct AWS region: $region"
+            echo "    - IAM permissions to access bucket"
+        elif echo "$terraform_output" | grep -i "credentials" &>/dev/null; then
+            print_colored $RED "💡 Credentials Issue - Check:"
+            echo "    - AWS credentials are configured"
+            echo "    - Profile '$aws_profile' exists and is valid"
+            echo "    - OIDC token is valid (if running in GitHub Actions)"
+        else
+            print_colored $RED "💡 Unknown error - Full terraform output shown above"
+        fi
+        
         exit 1
     fi
 }
