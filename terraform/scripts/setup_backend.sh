@@ -180,12 +180,12 @@ dynamodb_table = "$table_name"
 encrypt        = true
 
 # Note: The 'key' parameter is dynamically set based on:
-# service/environment/terraform.tfstate
+# environment/terraform.tfstate
 # Examples:
-#   myapp/development/terraform.tfstate
-#   myapp/pr-123/terraform.tfstate  
-#   myapp/production/terraform.tfstate
-#   anotherapp/development/terraform.tfstate
+#   development/terraform.tfstate
+#   pr-123/terraform.tfstate  
+#   production/terraform.tfstate
+#   staging/terraform.tfstate
 EOF
 
     # Also create a generic backend.hcl that points to this account's config
@@ -197,6 +197,203 @@ EOF
 
     print_colored $GREEN "✅ Created backend config: $config_file"
     print_colored $BLUE "💡 Use ./scripts/init_backend.sh to initialize with environment-specific keys"
+}
+
+# Function to create IAM policies for OIDC role access to Terraform state
+create_oidc_terraform_state_policy() {
+    local bucket_name=$1
+    local table_name=$2
+    local region=$3
+    local service_name=$4
+    local aws_account_id=$5
+    local profile_flag=$6
+    
+    print_colored $BLUE "🔐 Creating environment-specific IAM policies for GitHub Actions OIDC access..."
+    
+    # Get environments from environments.json that use this account
+    local config_file="../../.github/environments.json"
+    if [[ ! -f "$config_file" ]]; then
+        print_colored $YELLOW "⚠️  environments.json not found - creating basic development policy"
+        create_single_environment_policy "development" "$bucket_name" "$table_name" "$region" "$aws_account_id" "$profile_flag"
+        return 0
+    fi
+    
+    # Find environments and patterns that match this account ID
+    local env_list=$(jq -r --arg account_id "$aws_account_id" '
+        (.environments // {}) as $envs |
+        (.patterns // {}) as $patterns |
+        (.defaults // {}) as $defaults |
+        [
+            ($envs | to_entries[] | select(.value.account_id == $account_id) | .key),
+            ($patterns | to_entries[] | select(.value.account_id == $account_id) | .key)
+        ] | .[]
+    ' "$config_file" 2>/dev/null | sort -u)
+    
+    # Convert patterns to representative environment names for policy creation
+    local environments=$(echo "$env_list" | while read env; do
+        if [[ -n "$env" ]]; then
+            if [[ "$env" == "pr-*" ]]; then
+                # Create a policy for PR pattern using a representative PR environment
+                echo "pr-123"
+            else
+                echo "$env"
+            fi
+        fi
+    done | sort -u)
+    
+    if [[ -z "$environments" ]]; then
+        print_colored $YELLOW "⚠️  No environments found for account $aws_account_id - creating basic development policy"
+        create_single_environment_policy "development" "$bucket_name" "$table_name" "$region" "$aws_account_id" "$profile_flag"
+        return 0
+    fi
+    
+    print_colored $BLUE "📋 Creating policies for environments: $(echo $environments | tr '\n' ' ')"
+    
+    # Create a policy for each environment
+    echo "$environments" | while read env; do
+        if [[ -n "$env" ]]; then
+            create_single_environment_policy "$env" "$bucket_name" "$table_name" "$region" "$aws_account_id" "$profile_flag"
+        fi
+    done
+}
+
+# Function to create a single environment-specific policy
+create_single_environment_policy() {
+    local environment=$1
+    local bucket_name=$2
+    local table_name=$3
+    local region=$4
+    local aws_account_id=$5
+    local profile_flag=$6
+    
+    # Get the role ARN from environments.json
+    local config_file="../../.github/environments.json"
+    local role_arn=""
+    
+    # First check exact environment match
+    role_arn=$(jq -r --arg env "$environment" '.environments[$env].role_arn // empty' "$config_file" 2>/dev/null)
+    
+    # If no exact match, check pattern matches
+    if [[ -z "$role_arn" || "$role_arn" == "null" ]]; then
+        if [[ "$environment" =~ ^pr-[0-9]+$ ]]; then
+            role_arn=$(jq -r '.patterns["pr-*"].role_arn // empty' "$config_file" 2>/dev/null)
+            environment="pr-*"  # Use the pattern for the S3 prefix
+        elif [[ "$environment" == "main" ]]; then
+            role_arn=$(jq -r '.patterns["main"].role_arn // empty' "$config_file" 2>/dev/null)
+        fi
+    fi
+    
+    # If still no role ARN found, skip
+    if [[ -z "$role_arn" || "$role_arn" == "null" ]]; then
+        print_colored $YELLOW "⚠️  No role_arn found for environment '$environment' - skipping"
+        return 0
+    fi
+    
+    # Extract role name from ARN (arn:aws:iam::123456789012:role/role-name)
+    local role_name=$(echo "$role_arn" | cut -d'/' -f2)
+    
+    # Check if role exists
+    if ! aws iam get-role --role-name "$role_name" $profile_flag &>/dev/null; then
+        print_colored $YELLOW "⚠️  OIDC role '$role_name' not found - skipping"
+        print_colored $BLUE "💡 Role ARN from environments.json: $role_arn"
+        return 0
+    fi
+    
+    print_colored $BLUE "🔐 Creating Terraform state policy for environment: $environment"
+    
+    # Create policy document with environment-specific prefixes
+    cat > /tmp/terraform-state-policy-$environment.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "TerraformStateS3ObjectAccess",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:GetObjectVersion"
+            ],
+            "Resource": [
+                "arn:aws:s3:::$bucket_name/$environment/*"
+            ]
+        },
+        {
+            "Sid": "TerraformStateS3ListAccess",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket"
+            ],
+            "Resource": "arn:aws:s3:::$bucket_name",
+            "Condition": {
+                "StringLike": {
+                    "s3:prefix": "$environment/*"
+                }
+            }
+        },
+        {
+            "Sid": "TerraformStateDynamoDBAccess",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:DescribeTable",
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:DeleteItem"
+            ],
+            "Resource": "arn:aws:dynamodb:$region:$aws_account_id:table/$table_name"
+        }
+    ]
+}
+EOF
+
+    local policy_name="$role_name-terraform-state-access"
+    local policy_arn="arn:aws:iam::$aws_account_id:policy/$policy_name"
+    
+    # Delete existing policy if it exists
+    if aws iam get-policy --policy-arn "$policy_arn" $profile_flag &>/dev/null; then
+        print_colored $YELLOW "🔄 Updating existing policy: $policy_name"
+        # Detach from role first
+        aws iam detach-role-policy --role-name "$role_name" --policy-arn "$policy_arn" $profile_flag || true
+        # Delete all policy versions except default
+        aws iam list-policy-versions --policy-arn "$policy_arn" $profile_flag --query 'Versions[?!IsDefaultVersion].[VersionId]' --output text | while read version; do
+            aws iam delete-policy-version --policy-arn "$policy_arn" --version-id "$version" $profile_flag 2>/dev/null || true
+        done
+        # Delete policy
+        aws iam delete-policy --policy-arn "$policy_arn" $profile_flag || true
+    fi
+    
+    # Create new policy
+    aws iam create-policy \
+        --policy-name "$policy_name" \
+        --policy-document file:///tmp/terraform-state-policy-$environment.json \
+        $profile_flag
+    
+    # Attach to role
+    print_colored $BLUE "🔗 Attaching policy to role: $role_name"
+    if aws iam attach-role-policy \
+        --role-name "$role_name" \
+        --policy-arn "$policy_arn" \
+        $profile_flag; then
+        print_colored $GREEN "✅ Successfully attached policy to role"
+    else
+        print_colored $RED "❌ Failed to attach policy to role"
+        return 1
+    fi
+    
+    # Verify attachment
+    print_colored $BLUE "🔍 Verifying policy attachment..."
+    local attached_policies=$(aws iam list-attached-role-policies --role-name "$role_name" $profile_flag --query 'AttachedPolicies[?PolicyName==`'$policy_name'`].PolicyName' --output text)
+    if [[ -n "$attached_policies" ]]; then
+        print_colored $GREEN "✅ Policy successfully attached and verified"
+    else
+        print_colored $YELLOW "⚠️  Policy attachment verification failed"
+    fi
+    
+    # Clean up temp file
+    rm -f /tmp/terraform-state-policy-$environment.json
+    
+    print_colored $GREEN "✅ Created policy for $environment: $policy_name"
 }
 
 # Function to show summary
@@ -325,6 +522,7 @@ main() {
     create_s3_bucket "$bucket_name" "$region" "$aws_profile"
     create_dynamodb_table "$table_name" "$region" "$aws_profile"
     create_backend_config_template "$bucket_name" "$table_name" "$region" "$aws_account_id"
+    create_oidc_terraform_state_policy "$bucket_name" "$table_name" "$region" "$service_name" "$aws_account_id" "$profile_flag"
     
     # Show summary
     show_summary "$bucket_name" "$table_name" "$region"

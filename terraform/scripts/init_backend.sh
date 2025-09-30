@@ -120,7 +120,7 @@ get_tfvar_value() {
 generate_state_key() {
     local service=$1
     local environment=$2
-    echo "${service}/${environment}/terraform.tfstate"
+    echo "${environment}/terraform.tfstate"
 }
 
 # Function to initialize backend
