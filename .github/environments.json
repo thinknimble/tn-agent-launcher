@@ -1,0 +1,54 @@
+{
+  "environments": {
+    "production": {
+      "account": "prod",
+      "account_id": "458029411633",
+      "region": "us-east-1",
+      "role_arn_var": "arn:aws:iam::458029411633:role/github-actions-production",
+      "secrets_bucket": "tn-agent-launcher-secrets-prod",
+      "description": "Production environment"
+    },
+    "staging": {
+      "account": "staging", 
+      "account_id": "319944611406",
+      "region": "us-east-1",
+      "role_arn_var": "arn:aws:iam::319944611406:role/github-actions-staging",
+      "secrets_bucket": "tn-agent-launcher-secrets",
+      "description": "Staging environment"
+    },
+    "development": {
+      "account": "dev",
+      "account_id": "319944611406", 
+      "region": "us-east-1", 
+      "role_arn_var": "arn:aws:iam::319944611406:role/github-actions-development",
+      "secrets_bucket": "tn-agent-launcher-secrets",
+      "description": "Development environment"
+    }
+  },
+  "patterns": {
+    "pr-*": {
+      "account": "dev",
+      "account_id": "319944611406",
+      "region": "us-east-1",
+      "role_arn_var": "arn:aws:iam::319944611406:role/github-actions-development",
+      "secrets_bucket": "tn-agent-launcher-secrets",
+      "description": "Pull request environments"
+    },
+    "main": {
+      "account": "staging", 
+      "account_id": "319944611406",
+      "region": "us-east-1",
+      "role_arn_var": "arn:aws:iam::319944611406:role/github-actions-staging",
+      "secrets_bucket": "tn-agent-launcher-secrets",
+      "description": "Main branch staging"
+    }
+  },
+  "defaults": {
+    "account": "dev",
+    "account_id": "319944611406",
+    "region": "us-east-1",
+    "role_arn_var": "arn:aws:iam::319944611406:role/github-actions-development",
+    "secrets_bucket": "tn-agent-launcher-secrets",
+    "description": "Default fallback configuration"
+  }
+}
