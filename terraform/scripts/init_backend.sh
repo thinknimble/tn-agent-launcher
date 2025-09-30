@@ -401,6 +401,21 @@ main() {
     # Select the appropriate backend configuration file
     local selected_backend=$(select_backend_config "$aws_profile" "$backend_file")
     
+    # Debug: Always show which backend file was selected and its contents
+    print_colored $BLUE "🔍 Selected backend file: $selected_backend"
+    if [[ -f "$selected_backend" ]]; then
+        print_colored $GREEN "✅ Backend file exists"
+        print_colored $YELLOW "📄 Backend file contents:"
+        echo "--- START OF FILE ---"
+        cat "$selected_backend"
+        echo "--- END OF FILE ---"
+    else
+        print_colored $RED "❌ Backend file does not exist: $selected_backend"
+        print_colored $YELLOW "💡 Available files in terraform directory:"
+        ls -la
+        exit 1
+    fi
+    
     # Read backend configuration from selected backend file
     local bucket=""
     local region="us-east-1"
