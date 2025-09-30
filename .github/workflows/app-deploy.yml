@@ -256,22 +256,17 @@ jobs:
       - name: Retrieve secrets from S3
         id: secrets
         run: |
-          # Build S3 path for secrets
           ENVIRONMENT="${{ steps.env-vars.outputs.environment }}"
-          SECRETS_BUCKET="${{ steps.env-vars.outputs.secrets_bucket }}"
-          S3_KEY="${ENVIRONMENT}/secrets.json"
           
-          echo "🔐 Retrieving secrets from S3..."
-          echo "   Bucket: $SECRETS_BUCKET"
-          echo "   Key: $S3_KEY"
+          echo "🔐 Retrieving secrets for environment: $ENVIRONMENT"
           
-          # Download secrets from S3
-          if aws s3 cp "s3://${SECRETS_BUCKET}/${S3_KEY}" secrets.json; then
-            echo "✅ Successfully downloaded secrets"
+          # Use our secrets-sync script which has fallback logic for PRs
+          if .github/scripts/secrets-sync.sh pull "$ENVIRONMENT" secrets.json; then
+            echo "✅ Successfully retrieved secrets"
             
             # Validate JSON
             if ! jq empty secrets.json 2>/dev/null; then
-              echo "❌ Invalid JSON in secrets file"
+              echo "❌ Retrieved file contains invalid JSON"
               exit 1
             fi
             
@@ -286,8 +281,8 @@ jobs:
             
             echo "✅ Secrets extracted and masked"
           else
-            echo "❌ Failed to download secrets from S3"
-            echo "💡 Make sure secrets exist: use '.github/scripts/secrets-sync.sh template $ENVIRONMENT' to create"
+            echo "❌ Failed to retrieve secrets"
+            echo "💡 Check secrets configuration for environment: $ENVIRONMENT"
             exit 1
           fi
           
