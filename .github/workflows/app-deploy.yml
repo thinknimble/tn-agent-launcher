@@ -261,7 +261,7 @@ jobs:
           echo "🔐 Retrieving secrets for environment: $ENVIRONMENT"
           
           # Use our secrets-sync script which has fallback logic for PRs
-          if .github/scripts/secrets-sync.sh pull "$ENVIRONMENT" secrets.json; then
+          if .github/scripts/secrets-sync.sh pull "$ENVIRONMENT" --file secrets.json; then
             echo "✅ Successfully retrieved secrets"
             
             # Validate JSON
