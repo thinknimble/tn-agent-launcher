@@ -272,31 +272,30 @@ create_role_policy() {
     
     print_colored $BLUE "🔐 Creating comprehensive Terraform state policy for role: $role_name"
     
-    # Convert environments to array and build S3 resources
-    local s3_resources=""
-    local s3_conditions=""
-    local env_list=""
+    # Convert newline-separated environments to space-separated
+    local env_list=$(echo "$environments" | tr '\n' ' ' | sed 's/  */ /g' | sed 's/^ *//g' | sed 's/ *$//g')
+    print_colored $BLUE "   S3 Prefixes: $env_list"
     
-    for env in $environments; do
+    # Build prefix array for JSON
+    local prefix_array=""
+    local first=true
+    for env in $env_list; do
         if [[ -n "$env" ]]; then
-            env_list="$env_list $env"
-            if [[ "$env" == "pr-*" ]]; then
-                # For pr-* pattern, allow access to any pr- prefixed path
-                s3_resources="${s3_resources}                \"arn:aws:s3:::$bucket_name/pr-*\",\n"
-                s3_conditions="${s3_conditions}                    \"pr-*\",\n"
+            if [[ "$first" == "true" ]]; then
+                first=false
             else
-                # For literal environments
-                s3_resources="${s3_resources}                \"arn:aws:s3:::$bucket_name/$env/*\",\n"
-                s3_conditions="${s3_conditions}                    \"$env/*\",\n"
+                prefix_array="${prefix_array}, "
+            fi
+            
+            if [[ "$env" == "pr-*" ]]; then
+                prefix_array="${prefix_array}\"pr-*\""
+            else
+                prefix_array="${prefix_array}\"$env/*\""
             fi
         fi
     done
     
-    # Remove trailing comma and newline
-    s3_resources=$(echo -e "$s3_resources" | sed 's/,$//')
-    s3_conditions=$(echo -e "$s3_conditions" | sed 's/,$//')
-    
-    print_colored $BLUE "   S3 Prefixes:$env_list"
+    print_colored $BLUE "   Generated prefix array: [$prefix_array]"
     
     # Create policy document
     cat > /tmp/terraform-state-policy-$role_name.json << EOF
@@ -312,9 +311,7 @@ create_role_policy() {
                 "s3:DeleteObject",
                 "s3:GetObjectVersion"
             ],
-            "Resource": [
-$s3_resources
-            ]
+            "Resource": "arn:aws:s3:::$bucket_name/*"
         },
         {
             "Sid": "TerraformStateS3ListAccess",
@@ -325,9 +322,7 @@ $s3_resources
             "Resource": "arn:aws:s3:::$bucket_name",
             "Condition": {
                 "StringLike": {
-                    "s3:prefix": [
-$s3_conditions
-                    ]
+                    "s3:prefix": [$prefix_array]
                 }
             }
         },
