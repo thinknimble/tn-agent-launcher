@@ -68,7 +68,7 @@ select_backend_config() {
     if [[ -n "$account_id" ]]; then
         local account_backend="backend-${account_id}.hcl"
         if [[ -f "$account_backend" ]]; then
-            print_colored $BLUE "🔍 Auto-detected backend config for account $account_id: $account_backend"
+            print_colored $BLUE "🔍 Auto-detected backend config for account $account_id: $account_backend" >&2
             echo "$account_backend"
             return 0
         fi
@@ -76,7 +76,7 @@ select_backend_config() {
     
     # Fall back to default backend.hcl
     if [[ -f "backend.hcl" ]]; then
-        print_colored $BLUE "📋 Using default backend config: backend.hcl"
+        print_colored $BLUE "📋 Using default backend config: backend.hcl" >&2
         echo "backend.hcl"
         return 0
     fi
