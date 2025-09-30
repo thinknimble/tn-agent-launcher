@@ -4,7 +4,7 @@
       "account": "prod",
       "account_id": "458029411633",
       "region": "us-east-1",
-      "role_arn_var": "arn:aws:iam::458029411633:role/github-actions-production",
+      "role_arn": "arn:aws:iam::458029411633:role/github-actions-production",
       "secrets_bucket": "tn-agent-launcher-secrets-prod",
       "description": "Production environment"
     },
@@ -12,7 +12,7 @@
       "account": "staging", 
       "account_id": "319944611406",
       "region": "us-east-1",
-      "role_arn_var": "arn:aws:iam::319944611406:role/github-actions-staging",
+      "role_arn": "arn:aws:iam::319944611406:role/github-actions-staging",
       "secrets_bucket": "tn-agent-launcher-secrets",
       "description": "Staging environment"
     },
@@ -20,7 +20,7 @@
       "account": "dev",
       "account_id": "319944611406", 
       "region": "us-east-1", 
-      "role_arn_var": "arn:aws:iam::319944611406:role/github-actions-development",
+      "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
       "secrets_bucket": "tn-agent-launcher-secrets",
       "description": "Development environment"
     }
@@ -30,7 +30,7 @@
       "account": "dev",
       "account_id": "319944611406",
       "region": "us-east-1",
-      "role_arn_var": "arn:aws:iam::319944611406:role/github-actions-development",
+      "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
       "secrets_bucket": "tn-agent-launcher-secrets",
       "description": "Pull request environments"
     },
@@ -38,7 +38,7 @@
       "account": "staging", 
       "account_id": "319944611406",
       "region": "us-east-1",
-      "role_arn_var": "arn:aws:iam::319944611406:role/github-actions-staging",
+      "role_arn": "arn:aws:iam::319944611406:role/github-actions-staging",
       "secrets_bucket": "tn-agent-launcher-secrets",
       "description": "Main branch staging"
     }
@@ -47,7 +47,7 @@
     "account": "dev",
     "account_id": "319944611406",
     "region": "us-east-1",
-    "role_arn_var": "arn:aws:iam::319944611406:role/github-actions-development",
+    "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
     "secrets_bucket": "tn-agent-launcher-secrets",
     "description": "Default fallback configuration"
   }
