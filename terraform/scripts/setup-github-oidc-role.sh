@@ -212,6 +212,9 @@ if run_aws iam get-role --role-name "$ROLE_NAME" &>/dev/null; then
     fi
 else
     # Create new role with initial trust policy
+    echo "📋 Creating trust policy for GitHub org: $GITHUB_ORG"
+    echo "   This will allow access from repositories: repo:$GITHUB_ORG/*:*"
+    
     cat > /tmp/github-actions-trust-policy.json << EOF
 {
     "Version": "2012-10-17",
@@ -234,11 +237,20 @@ else
     ]
 }
 EOF
+
+    echo "📄 Trust policy content:"
+    cat /tmp/github-actions-trust-policy.json | jq .
     
     run_aws iam create-role \
         --role-name "$ROLE_NAME" \
         --assume-role-policy-document file:///tmp/github-actions-trust-policy.json
     echo "✅ IAM role created: $ROLE_NAME"
+    
+    # Verify the trust policy was set correctly
+    echo "🔍 Verifying trust policy..."
+    ACTUAL_POLICY=$(run_aws iam get-role --role-name "$ROLE_NAME" --query 'Role.AssumeRolePolicyDocument' --output json)
+    echo "📄 Actual trust policy set:"
+    echo "$ACTUAL_POLICY" | jq .
 fi
 
 # 3. Create comprehensive GitHub Actions policy

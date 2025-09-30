@@ -28,6 +28,7 @@ show_usage() {
     echo "  -e, --environment ENV   Environment name (development, staging, production, pr-123)"
     echo "  -s, --service SERVICE   Service name (defaults to terraform.tfvars value)"
     echo "  -p, --profile PROFILE   AWS profile (defaults to terraform.tfvars value)"
+    echo "  -b, --backend FILE      Backend config file (defaults to auto-detect)"
     echo "  -f, --force             Force re-initialization (migrate state if needed)"
     echo ""
     echo "Examples:"
@@ -35,6 +36,67 @@ show_usage() {
     echo "  $0 -e development                    # Development environment"
     echo "  $0 -e pr-123 -s myapp               # PR review app"
     echo "  $0 -e production -p prod-profile     # Production with specific profile"
+    echo "  $0 -e production -b backend-345678901234.hcl  # Use specific backend config"
+}
+
+# Function to detect and select backend config file
+select_backend_config() {
+    local aws_profile=$1
+    local backend_file=$2
+    
+    # If backend file specified, use it
+    if [[ -n "$backend_file" ]]; then
+        if [[ -f "$backend_file" ]]; then
+            echo "$backend_file"
+            return 0
+        else
+            print_colored $RED "❌ Specified backend file not found: $backend_file"
+            exit 1
+        fi
+    fi
+    
+    # Try to detect account-specific backend file
+    if [[ -n "$aws_profile" && "$aws_profile" != "default" ]]; then
+        local profile_flag="--profile $aws_profile"
+    else
+        local profile_flag=""
+    fi
+    
+    # Get current AWS account ID
+    local account_id=$(aws sts get-caller-identity $profile_flag --query Account --output text 2>/dev/null || echo "")
+    
+    if [[ -n "$account_id" ]]; then
+        local account_backend="backend-${account_id}.hcl"
+        if [[ -f "$account_backend" ]]; then
+            print_colored $BLUE "🔍 Auto-detected backend config for account $account_id: $account_backend"
+            echo "$account_backend"
+            return 0
+        fi
+    fi
+    
+    # Fall back to default backend.hcl
+    if [[ -f "backend.hcl" ]]; then
+        print_colored $BLUE "📋 Using default backend config: backend.hcl"
+        echo "backend.hcl"
+        return 0
+    fi
+    
+    # No backend config found
+    print_colored $RED "❌ No backend configuration found!"
+    print_colored $YELLOW "💡 Run ./scripts/setup_backend.sh first to create backend configuration"
+    
+    # Show available backend files
+    local backend_files=(backend*.hcl)
+    if [[ ${#backend_files[@]} -gt 0 && -f "${backend_files[0]}" ]]; then
+        print_colored $BLUE "Available backend configs:"
+        for file in "${backend_files[@]}"; do
+            if [[ -f "$file" ]]; then
+                echo "  - $file"
+            fi
+        done
+    fi
+    
+    exit 1
 }
 
 # Function to get value from terraform.tfvars
@@ -125,23 +187,28 @@ init_backend() {
 
 # Function for interactive mode
 interactive_mode() {
+    local selected_backend_arg=$1
+    
     print_colored $BLUE "🚀 Dynamic Backend Initialization"
     print_colored $BLUE "=================================\n"
     
-    # Get current values from terraform.tfvars and backend.hcl
+    # Get current values from terraform.tfvars
     local current_service=$(get_tfvar_value "service" "myapp")
     local current_environment=$(get_tfvar_value "environment" "development")
     local current_profile=$(get_tfvar_value "aws_profile" "default")
     
-    # Read backend config from backend.hcl
+    # Select backend config if not provided
+    local selected_backend=${selected_backend_arg:-$(select_backend_config "$current_profile" "")}
+    
+    # Read backend config from selected backend file
     local current_bucket=""
     local current_region="us-east-1"
     local current_table="terraform-state-lock"
     
-    if [[ -f "backend.hcl" ]]; then
-        current_bucket=$(grep "^[[:space:]]*bucket[[:space:]]*=" backend.hcl | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
-        current_region=$(grep "^[[:space:]]*region[[:space:]]*=" backend.hcl | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1 || echo "us-east-1")
-        current_table=$(grep "^[[:space:]]*dynamodb_table[[:space:]]*=" backend.hcl | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1 || echo "terraform-state-lock")
+    if [[ -f "$selected_backend" ]]; then
+        current_bucket=$(grep "^[[:space:]]*bucket[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
+        current_region=$(grep "^[[:space:]]*region[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1 || echo "us-east-1")
+        current_table=$(grep "^[[:space:]]*dynamodb_table[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1 || echo "terraform-state-lock")
     fi
     
     echo -n "Service name [$current_service]: "
@@ -197,6 +264,7 @@ main() {
     local environment=""
     local service=""
     local aws_profile=""
+    local backend_file=""
     local force="false"
     
     while [[ $# -gt 0 ]]; do
@@ -215,6 +283,10 @@ main() {
                 ;;
             -p|--profile)
                 aws_profile="$2"
+                shift 2
+                ;;
+            -b|--backend)
+                backend_file="$2"
                 shift 2
                 ;;
             -f|--force)
@@ -240,20 +312,23 @@ main() {
     environment=${environment:-$(get_tfvar_value "environment" "development")}
     aws_profile=${aws_profile:-$(get_tfvar_value "aws_profile" "default")}
     
-    # Read backend configuration from backend.hcl
+    # Select the appropriate backend configuration file
+    local selected_backend=$(select_backend_config "$aws_profile" "$backend_file")
+    
+    # Read backend configuration from selected backend file
     local bucket=""
     local region="us-east-1"
     local table="terraform-state-lock"
     
-    if [[ -f "backend.hcl" ]]; then
-        bucket=$(grep "^[[:space:]]*bucket[[:space:]]*=" backend.hcl | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
-        region=$(grep "^[[:space:]]*region[[:space:]]*=" backend.hcl | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1 || echo "us-east-1")
-        table=$(grep "^[[:space:]]*dynamodb_table[[:space:]]*=" backend.hcl | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1 || echo "terraform-state-lock")
+    if [[ -f "$selected_backend" ]]; then
+        bucket=$(grep "^[[:space:]]*bucket[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
+        region=$(grep "^[[:space:]]*region[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1 || echo "us-east-1")
+        table=$(grep "^[[:space:]]*dynamodb_table[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1 || echo "terraform-state-lock")
     fi
     
     # Validate required values
     if [[ -z "$bucket" ]]; then
-        print_colored $RED "❌ Backend bucket not found in backend.hcl"
+        print_colored $RED "❌ Backend bucket not found in $selected_backend"
         print_colored $YELLOW "Run ./scripts/setup_backend.sh first to create backend resources"
         exit 1
     fi
