@@ -157,7 +157,7 @@ resource "aws_ecs_task_definition" "app" {
 
 
 resource "aws_lb_target_group" "app" {
-  name        = "http-${var.service}-${var.environment}"
+  name        = local.tg_name
   port        = 8000
   protocol    = "HTTP"
   target_type = "ip"
