@@ -24,7 +24,6 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
     echo "account_id="
     echo "region=us-east-1" 
     echo "role_arn="
-    echo "role_arn_var=TF_AWS_ROLE_ARN"
     echo "description=Fallback configuration - config file not found"
     echo "ecr_registry=.dkr.ecr.us-east-1.amazonaws.com"
     echo "⚠️  Using fallback config for '$ENV_NAME' - create .github/environments.json" >&2
@@ -40,7 +39,6 @@ if ! jq empty "$CONFIG_FILE" 2>/dev/null; then
     echo "account_id="
     echo "region=us-east-1"
     echo "role_arn="
-    echo "role_arn_var=TF_AWS_ROLE_ARN" 
     echo "description=Fallback configuration - invalid JSON"
     echo "ecr_registry=.dkr.ecr.us-east-1.amazonaws.com"
     echo "⚠️  Using fallback config for '$ENV_NAME' - fix JSON syntax" >&2
@@ -94,7 +92,6 @@ ACCOUNT=$(echo "$CONFIG" | jq -r '.account')
 ACCOUNT_ID=$(echo "$CONFIG" | jq -r '.account_id // empty')
 REGION=$(echo "$CONFIG" | jq -r '.region') 
 ROLE_ARN=$(echo "$CONFIG" | jq -r '.role_arn // empty')
-ROLE_ARN_VAR=$(echo "$CONFIG" | jq -r '.role_arn_var // empty')
 SECRETS_BUCKET=$(echo "$CONFIG" | jq -r '.secrets_bucket // empty')
 DESCRIPTION=$(echo "$CONFIG" | jq -r '.description')
 
@@ -107,11 +104,6 @@ fi
 if [[ -z "$REGION" || "$REGION" == "null" ]]; then
     echo "Error: No region specified in configuration" >&2
     REGION="us-east-1"
-fi
-
-if [[ -z "$ROLE_ARN_VAR" || "$ROLE_ARN_VAR" == "null" ]]; then
-    echo "Error: No role ARN variable specified in configuration" >&2
-    ROLE_ARN_VAR="TF_AWS_ROLE_ARN"
 fi
 
 if [[ -z "$ACCOUNT_ID" || "$ACCOUNT_ID" == "null" ]]; then
@@ -130,7 +122,6 @@ echo "account=$ACCOUNT"
 echo "account_id=$ACCOUNT_ID"
 echo "region=$REGION"
 echo "role_arn=$ROLE_ARN"
-echo "role_arn_var=$ROLE_ARN_VAR"
 echo "secrets_bucket=$SECRETS_BUCKET"
 echo "description=${DESCRIPTION:-"No description"}"
 

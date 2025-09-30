@@ -74,14 +74,11 @@ jobs:
           ACCOUNT_ID=$(echo "$ENV_CONFIG" | grep "^account_id=" | cut -d= -f2)
           REGION=$(echo "$ENV_CONFIG" | grep "^region=" | cut -d= -f2)  
           ROLE_ARN=$(echo "$ENV_CONFIG" | grep "^role_arn=" | cut -d= -f2)
-          ROLE_ARN_VAR=$(echo "$ENV_CONFIG" | grep "^role_arn_var=" | cut -d= -f2)
           SECRETS_BUCKET=$(echo "$ENV_CONFIG" | grep "^secrets_bucket=" | cut -d= -f2)
           
           # Set outputs
           echo "aws_region=$REGION" >> $GITHUB_OUTPUT
           echo "account=$ACCOUNT" >> $GITHUB_OUTPUT
-          echo "role_arn_from_config=$ROLE_ARN" >> $GITHUB_OUTPUT
-          echo "role_arn_var=$ROLE_ARN_VAR" >> $GITHUB_OUTPUT
           echo "secrets_bucket=$SECRETS_BUCKET" >> $GITHUB_OUTPUT
           # Use account_id from config, fallback to AWS_ACCOUNT_ID variable if empty
           if [[ -n "$ACCOUNT_ID" ]]; then
@@ -94,31 +91,14 @@ jobs:
             echo "⚠️  Using fallback AWS_ACCOUNT_ID repository variable: ${{ vars.AWS_ACCOUNT_ID }}"
           fi
           
-          # Use role_arn from config if available, otherwise fall back to repository variables
+          # Use role_arn from config
           if [[ -n "$ROLE_ARN" ]]; then
             echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "✅ Using role ARN from environment config: $ROLE_ARN"
           else
-            echo "🔍 No role_arn in config, looking up repository variable: $ROLE_ARN_VAR"
-            case "$ROLE_ARN_VAR" in
-              "PROD_AWS_ROLE_ARN")
-                FALLBACK_ROLE_ARN="${{ vars.PROD_AWS_ROLE_ARN }}"
-                echo "role_arn=$FALLBACK_ROLE_ARN" >> $GITHUB_OUTPUT
-                ;;
-              "STAGING_AWS_ROLE_ARN")
-                FALLBACK_ROLE_ARN="${{ vars.STAGING_AWS_ROLE_ARN }}"
-                echo "role_arn=$FALLBACK_ROLE_ARN" >> $GITHUB_OUTPUT
-                ;;
-              "DEV_AWS_ROLE_ARN")
-                FALLBACK_ROLE_ARN="${{ vars.DEV_AWS_ROLE_ARN }}"
-                echo "role_arn=$FALLBACK_ROLE_ARN" >> $GITHUB_OUTPUT
-                ;;
-              *)
-                FALLBACK_ROLE_ARN="${{ vars.TF_AWS_ROLE_ARN }}"
-                echo "role_arn=$FALLBACK_ROLE_ARN" >> $GITHUB_OUTPUT
-                ;;
-            esac
-            echo "⚠️  Using fallback repository variable '$ROLE_ARN_VAR': $FALLBACK_ROLE_ARN"
+            echo "❌ No role ARN found in configuration for environment: $ENV_NAME"
+            echo "💡 Please add 'role_arn' field to environments.json for this environment"
+            exit 1
           fi
           
           echo "✅ Environment '$ENV_NAME' configured for account '$ACCOUNT' in region '$REGION'"
@@ -532,30 +512,15 @@ jobs:
           # Extract values from config
           REGION=$(echo "$ENV_CONFIG" | grep "^region=" | cut -d= -f2)  
           ROLE_ARN=$(echo "$ENV_CONFIG" | grep "^role_arn=" | cut -d= -f2)
-          ROLE_ARN_VAR=$(echo "$ENV_CONFIG" | grep "^role_arn_var=" | cut -d= -f2)
           
           echo "aws_region=$REGION" >> $GITHUB_OUTPUT
-          echo "role_arn_var=$ROLE_ARN_VAR" >> $GITHUB_OUTPUT
           
-          # Use role_arn from config if available, otherwise fall back to repository variables
+          # Use role_arn from config
           if [[ -n "$ROLE_ARN" ]]; then
             echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
           else
-            # Resolve role ARN from the variable name
-            case "$ROLE_ARN_VAR" in
-              "PROD_AWS_ROLE_ARN")
-                echo "role_arn=${{ vars.PROD_AWS_ROLE_ARN }}" >> $GITHUB_OUTPUT
-                ;;
-              "STAGING_AWS_ROLE_ARN")
-                echo "role_arn=${{ vars.STAGING_AWS_ROLE_ARN }}" >> $GITHUB_OUTPUT
-                ;;
-              "DEV_AWS_ROLE_ARN")
-                echo "role_arn=${{ vars.DEV_AWS_ROLE_ARN }}" >> $GITHUB_OUTPUT
-                ;;
-              *)
-                echo "role_arn=${{ vars.TF_AWS_ROLE_ARN }}" >> $GITHUB_OUTPUT
-                ;;
-            esac
+            echo "❌ No role ARN found in configuration for environment: $PR_ENV_NAME"
+            exit 1
           fi
 
       - name: Configure AWS credentials
