@@ -407,14 +407,41 @@ main() {
     local table="terraform-state-lock"
     
     if [[ -f "$selected_backend" ]]; then
+        print_colored $BLUE "🔍 Parsing backend config: $selected_backend"
+        
+        # Debug: Show the file content
+        print_colored $YELLOW "📄 Backend file content:"
+        cat "$selected_backend"
+        echo ""
+        
+        # Extract values with debug output
         bucket=$(grep "^[[:space:]]*bucket[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
-        region=$(grep "^[[:space:]]*region[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1 || echo "us-east-1")
-        table=$(grep "^[[:space:]]*dynamodb_table[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1 || echo "terraform-state-lock")
+        region=$(grep "^[[:space:]]*region[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
+        table=$(grep "^[[:space:]]*dynamodb_table[[:space:]]*=" "$selected_backend" | sed 's/^[^=]*=[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
+        
+        print_colored $BLUE "🔍 Extracted values:"
+        echo "  Bucket: '$bucket'"
+        echo "  Region: '$region'"
+        echo "  Table: '$table'"
+        echo ""
+        
+        # Set defaults if empty
+        if [[ -z "$region" ]]; then
+            region="us-east-1"
+            print_colored $YELLOW "⚠️  Using default region: $region"
+        fi
+        
+        if [[ -z "$table" ]]; then
+            table="terraform-state-lock"
+            print_colored $YELLOW "⚠️  Using default table: $table"
+        fi
     fi
     
     # Validate required values
     if [[ -z "$bucket" ]]; then
         print_colored $RED "❌ Backend bucket not found in $selected_backend"
+        print_colored $YELLOW "💡 Check that the file contains a 'bucket' line with proper format"
+        print_colored $YELLOW "💡 Expected format: bucket = \"bucket-name\""
         print_colored $YELLOW "Run ./scripts/setup_backend.sh first to create backend resources"
         exit 1
     fi

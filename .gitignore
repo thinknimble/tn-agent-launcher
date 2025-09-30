@@ -112,6 +112,18 @@ secrets-*.json
 !.vscode/extensions.json
 
 
+### Terraform template
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Terraform dependency lock file
+.terraform.lock.hcl
+
+
 ### Windows template
 # Windows thumbnail cache files
 Thumbs.db
