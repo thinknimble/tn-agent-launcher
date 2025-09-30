@@ -72,7 +72,7 @@ get_env_config() {
     
     # Fallback for missing secrets_bucket
     if [[ -z "$SECRETS_BUCKET" ]]; then
-        local service_name=$(jq -r '.service // "tn_agent_launcher"' "$CONFIG_FILE" 2>/dev/null || echo "tn_agent_launcher")
+        local service_name=$(jq -r '.service // "{{cookiecutter.project_slug}}"' "$CONFIG_FILE" 2>/dev/null || echo "{{cookiecutter.project_slug}}")
         SECRETS_BUCKET="${service_name}-terraform-secrets"
         print_colored $YELLOW "⚠️  Using default secrets bucket: $SECRETS_BUCKET"
     fi
@@ -108,6 +108,41 @@ pull_secrets() {
     
     # Check if secrets exist in S3
     if ! aws s3api head-object --bucket "$SECRETS_BUCKET" --key "$s3_key" $profile_flag >/dev/null 2>&1; then
+        
+        # For PR environments, try to fall back to development secrets
+        if [[ "$env_name" =~ ^pr-[0-9]+$ ]]; then
+            print_colored $YELLOW "⚠️  PR secrets not found, trying development fallback..."
+            local dev_key="development/secrets.json"
+            local dev_path="s3://${SECRETS_BUCKET}/${dev_key}"
+            
+            if aws s3api head-object --bucket "$SECRETS_BUCKET" --key "$dev_key" $profile_flag >/dev/null 2>&1; then
+                print_colored $BLUE "📋 Using development secrets as fallback for PR environment"
+                print_colored $BLUE "   Development Path: $dev_path"
+                print_colored $BLUE "   Local File: $local_file"
+                
+                if aws s3 cp "$dev_path" "$local_file" $profile_flag; then
+                    print_colored $GREEN "✅ Successfully copied development secrets for PR environment"
+                    
+                    # Add a note to the file indicating it's from development
+                    local temp_file=$(mktemp)
+                    jq '. + {
+                        "pr_environment": "'$env_name'",
+                        "fallback_source": "development",
+                        "fallback_note": "This PR environment is using development secrets as a fallback. Customize as needed and push to create PR-specific secrets."
+                    }' "$local_file" > "$temp_file" && mv "$temp_file" "$local_file"
+                    
+                    print_colored $BLUE "💡 To customize secrets for this PR:"
+                    print_colored $BLUE "   1. Edit $local_file"
+                    print_colored $BLUE "   2. Run: $0 push $env_name"
+                    return 0
+                else
+                    print_colored $RED "❌ Failed to copy development secrets"
+                fi
+            else
+                print_colored $YELLOW "⚠️  Development secrets also not found"
+            fi
+        fi
+        
         print_colored $YELLOW "⚠️  Secrets not found in S3, creating template..."
         create_secrets_template "$env_name" "$local_file"
         return 0
@@ -168,7 +203,7 @@ push_secrets() {
     
     # Add metadata before upload
     local temp_file=$(mktemp)
-    local service_name=$(jq -r '.service // "tn_agent_launcher"' "$CONFIG_FILE" 2>/dev/null || echo "tn_agent_launcher")
+    local service_name=$(jq -r '.service // "{{cookiecutter.project_slug}}"' "$CONFIG_FILE" 2>/dev/null || echo "{{cookiecutter.project_slug}}")
     
     jq --arg updated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
        --arg updated_by "$(git config user.email 2>/dev/null || whoami)" \
@@ -209,7 +244,7 @@ create_secrets_template() {
     local env_name=$1
     local local_file=$2
     
-    local service_name=$(jq -r '.service // "tn_agent_launcher"' "$CONFIG_FILE" 2>/dev/null || echo "tn_agent_launcher")
+    local service_name=$(jq -r '.service // "{{cookiecutter.project_slug}}"' "$CONFIG_FILE" 2>/dev/null || echo "{{cookiecutter.project_slug}}")
     
     cat > "$local_file" << EOF
 {
