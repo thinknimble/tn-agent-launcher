@@ -38,7 +38,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
   const handleFiles = (selectedFiles: FileList | File[]) => {
     const fileArray = Array.from(selectedFiles)
-    let validFiles: File[] = []
+    const validFiles: File[] = []
     let errorMessage = ''
 
     for (const file of fileArray) {
@@ -76,7 +76,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         e.dataTransfer.clearData()
       }
     },
-    [files.length, maxFiles],
+    [files.length, maxFiles, handleFiles],
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {

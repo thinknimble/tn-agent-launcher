@@ -15,7 +15,7 @@ export class InputSourceValidator extends PatternValidator {
     isRequired = false,
   } = {}) {
     // URL pattern for validating URLs within input source objects
-    let pattern =
+    const pattern =
       /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-/]))?$/
     super({ message, code, isRequired, pattern })
   }
@@ -37,7 +37,7 @@ export class InputSourceValidator extends PatternValidator {
       )
     }
 
-    for (let source of value) {
+    for (const source of value) {
       // Validate each input source object
       if (typeof source !== 'object' || source === null) {
         throw new Error(

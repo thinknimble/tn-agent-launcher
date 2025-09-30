@@ -186,7 +186,7 @@ const CreateEditAgentTaskInner = ({
 
       overrideForm(updatedForm)
     }
-  }, [duplicateFrom, agentOptions, scheduleTypeOptions, overrideForm, isEditing])
+  }, [duplicateFrom, agentOptions, scheduleTypeOptions, agentTaskOptions, overrideForm, isEditing])
 
   // Pre-select agent for new tasks (only if not duplicating)
   useEffect(() => {
