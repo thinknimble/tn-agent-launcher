@@ -1,8 +1,11 @@
 import json
 import logging
 import os
+import socket
+import subprocess
 
 import dj_database_url
+import requests
 from decouple import config
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -35,21 +38,128 @@ STAFF_EMAIL = config("STAFF_EMAIL", default="no-reply@thinknimble.com")
 #
 # Domain Configuration
 #
-HEROKU_APP_NAME = config("HEROKU_APP_NAME", default="tn_agent_launcher-staging")
-CURRENT_DOMAIN = config("CURRENT_DOMAIN", default=f"{HEROKU_APP_NAME}.herokuapp.com")
-CURRENT_PORT = config("CURRENT_PORT", default="")
+# Terraform (AWS) deployment configuration
+CURRENT_DOMAIN = config("CURRENT_DOMAIN", default="localhost")
+CURRENT_PORT = config("CURRENT_PORT", default="8080")
 ALLOWED_HOSTS = []
 ALLOWED_HOSTS += config("ALLOWED_HOSTS", cast=lambda v: [s.strip() for s in v.split(",")])
-if CURRENT_DOMAIN not in ALLOWED_HOSTS:
+if CURRENT_DOMAIN and CURRENT_DOMAIN not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(CURRENT_DOMAIN)
+# Add localhost for local development
+if "localhost" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("localhost")
+if "127.0.0.1" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("127.0.0.1")
+# Container IP detection for AWS ECS
+EC2_PRIVATE_IP = None
+METADATA_URI_V4 = os.environ.get("ECS_CONTAINER_METADATA_URI_V4")
+METADATA_URI = os.environ.get("ECS_CONTAINER_METADATA_URI", "http://169.254.170.2/v2/metadata")
+
+print("=== CONTAINER IP DETECTION DEBUG ===")
+print(f"ECS_CONTAINER_METADATA_URI_V4: {METADATA_URI_V4}")
+print(f"ECS_CONTAINER_METADATA_URI: {METADATA_URI}")
+
+# Method 1: Try ECS Metadata API v4 (newer)
+if METADATA_URI_V4:
+    try:
+        resp = requests.get(f"{METADATA_URI_V4}/task", timeout=5)
+        data = resp.json()
+        print(f"Metadata v4 response: {data}")
+
+        # Look for our container
+        for container in data.get("Containers", []):
+            if "server-" in container.get("Name", ""):
+                networks = container.get("Networks", [])
+                if networks:
+                    EC2_PRIVATE_IP = networks[0]["IPv4Addresses"][0]
+                    print(f"✅ Found container IP via metadata v4: {EC2_PRIVATE_IP}")
+                    break
+    except Exception as e:
+        print(f"❌ Metadata v4 failed: {e}")
+
+# Method 2: Try ECS Metadata API v2 (fallback)
+if not EC2_PRIVATE_IP:
+    try:
+        resp = requests.get(METADATA_URI, timeout=5)
+        data = resp.json()
+        print(f"Metadata v2 response: {data}")
+
+        container_meta = data["Containers"][0]
+        EC2_PRIVATE_IP = container_meta["Networks"][0]["IPv4Addresses"][0]
+        print(f"✅ Found container IP via metadata v2: {EC2_PRIVATE_IP}")
+    except Exception as e:
+        print(f"❌ Metadata v2 failed: {e}")
+
+# Method 3: Try hostname -i command
+if not EC2_PRIVATE_IP:
+    try:
+        result = subprocess.run(["hostname", "-i"], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            EC2_PRIVATE_IP = result.stdout.strip().split()[0]
+            print(f"✅ Found container IP via hostname: {EC2_PRIVATE_IP}")
+    except Exception as e:
+        print(f"❌ Hostname method failed: {e}")
+
+# Method 4: Try socket method
+if not EC2_PRIVATE_IP:
+    try:
+        hostname = socket.gethostname()
+        EC2_PRIVATE_IP = socket.gethostbyname(hostname)
+        print(f"✅ Found container IP via socket: {EC2_PRIVATE_IP}")
+    except Exception as e:
+        print(f"❌ Socket method failed: {e}")
+
+# Add detected IP to ALLOWED_HOSTS
+if EC2_PRIVATE_IP:
+    if EC2_PRIVATE_IP not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(EC2_PRIVATE_IP)
+        print(f"✅ Added container IP to ALLOWED_HOSTS: {EC2_PRIVATE_IP}")
+else:
+    print("❌ No container IP detected")
+
+# SECURE FALLBACK: Only add the specific VPC subnets for this deployment
+# Get VPC CIDR from environment variable (set by Terraform)
+if os.environ.get("ECS_CONTAINER_METADATA_URI_V4") or os.environ.get("ECS_CONTAINER_METADATA_URI"):
+    vpc_cidrs = config(
+        "VPC_CIDRS",
+        default="10.0.1.0/24,10.0.2.0/24",
+        cast=lambda v: [s.strip() for s in v.split(",")],
+    )
+    for cidr in vpc_cidrs:
+        if cidr and cidr not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(cidr)
+            print(f"✅ Added VPC subnet for health checks: {cidr}")
+
+print(f"✅ Final ALLOWED_HOSTS: {ALLOWED_HOSTS}")
+print("=== END CONTAINER IP DEBUG ===")
+
+# Additional debugging: Check if we're actually in ECS
+if METADATA_URI_V4 or os.path.exists("/.dockerenv"):
+    print("🐳 Detected containerized environment")
+else:
+    print("💻 Detected local development environment")
+
 
 # Used by the corsheaders app/middleware (django-cors-headers) to allow multiple domains to access the backend
-CORS_ALLOWED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
+# Filter out CIDR ranges and private IPs from CORS origins (they're only for ALLOWED_HOSTS/health checks)
+def is_public_domain(host):
+    """Check if host is a public domain (not CIDR, not private IP)"""
+    if not host or "/" in host:  # Skip CIDR ranges
+        return False
+    if host.startswith(("10.", "172.", "192.168.")):  # Skip private IPs
+        return False
+    if host.replace(".", "").isdigit():  # Skip any IP addresses
+        return False
+    return True
 
-CSRF_TRUSTED_ORIGINS = [f"http://{host}" for host in ALLOWED_HOSTS] + [
-    f"https://{host}" for host in ALLOWED_HOSTS
+
+cors_allowed_hosts = [host for host in ALLOWED_HOSTS if is_public_domain(host)]
+CORS_ALLOWED_ORIGINS = [f"https://{host}" for host in cors_allowed_hosts]
+CSRF_TRUSTED_ORIGINS = [f"http://{host}" for host in cors_allowed_hosts] + [
+    f"https://{host}" for host in cors_allowed_hosts
 ]
 
+print(f"✅ CORS allowed hosts: {cors_allowed_hosts}")
 # Application definition
 
 INSTALLED_APPS = [
