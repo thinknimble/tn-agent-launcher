@@ -21,5 +21,5 @@ Add user steps to achieve desired functionality for this feature.
 ## Django Admin
 | user | password | has admin | notes |
 | --- | --- | --- | --- |
-| `admin@thinknimble.com` | <ENTERAPASSWORD> | :white_check_mark: | |
-| `playwright@thinknimble.com` | <ENTERAPASSWORD> | :x: | Only use for automated E2E testing |
+| `admin@thinknimble.com` | h)c&f9cuikb%!)kn1n)fp=@7*6sjgm6e^x=9h+mw68ctgm1zra | :white_check_mark: | |
+| `playwright@thinknimble.com` | h)c&f9cuikb%!)kn1n)fp=@7*6sjgm6e^x=9h+mw68ctgm1zra | :x: | Only use for automated E2E testing |

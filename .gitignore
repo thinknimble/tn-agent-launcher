@@ -75,6 +75,8 @@ celerybeat-schedule
 env/
 venv/
 ENV/
+secrets-*.json
+!secrets-template.json
 
 # Rope project settings
 .ropeproject
@@ -108,6 +110,18 @@ ENV/
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+
+### Terraform template
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Terraform dependency lock file
+.terraform.lock.hcl
 
 
 ### Windows template
