@@ -122,6 +122,8 @@ secrets-*.json
 
 # Terraform dependency lock file
 .terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
 
 
 ### Windows template
