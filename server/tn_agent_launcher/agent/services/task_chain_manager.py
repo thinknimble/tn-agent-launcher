@@ -64,9 +64,11 @@ class TaskChainManager:
         trigger_task.save()
 
     def _schedule_trigger_execution(self, trigger_task: Any) -> Optional[Any]:
-        """Schedule execution of the trigger task."""
+        """Schedule execution of the trigger task in a separate background task."""
         # Import here to avoid circular imports
-        from ..tasks import schedule_agent_task_execution
+        from ..tasks import trigger_chained_task
 
-        # Schedule execution of the trigger task (force execute, ignore schedules/limits)
-        return schedule_agent_task_execution(str(trigger_task.id), force_execute=True)
+        # Trigger the chained task in a separate background task to avoid event loop conflicts
+        bg_task = trigger_chained_task(str(trigger_task.id))
+        logger.info(f"Scheduled chained task trigger with background task ID: {bg_task.id}")
+        return bg_task

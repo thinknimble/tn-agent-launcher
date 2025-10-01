@@ -71,6 +71,13 @@ def schedule_agent_task_execution(
     return execution
 
 
+@background(schedule=1)
+def trigger_chained_task(trigger_task_id: int):
+    """Trigger execution of a chained task in a separate background task."""
+    logger.info(f"Triggering chained task execution {trigger_task_id}")
+    return schedule_agent_task_execution(trigger_task_id, force_execute=True)
+
+
 @background(schedule=60)
 def process_pending_agent_tasks():
     from .models import AgentTask
