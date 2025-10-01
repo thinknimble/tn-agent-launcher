@@ -33,7 +33,6 @@ Production-ready AWS infrastructure for Django applications using ECS Fargate, w
    # Repository Variables (in GitHub Settings → Actions)
    SERVICE_NAME="tn_agent_launcher"
    ECR_REPOSITORY_NAME="tn_agent_launcher-app"
-   AWS_ACCOUNT_ID="123456789012"
    
    # Environment-specific Role ARNs
    DEV_AWS_ROLE_ARN="arn:aws:iam::123456789012:role/github-actions-dev"

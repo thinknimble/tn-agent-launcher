@@ -1,4 +1,4 @@
-service                       = "tn_agent_launcher"
+service                       = "tn-agent-launcher"
 ecr_app_epository_name    = "tn_agent_launcher-app"
 
 aws_profile                   = "default"

@@ -8,84 +8,89 @@
       "secrets_bucket": "tn-agent-launcher-secrets-prod",
       "description": "Production environment - isolated account",
       "domain": {
-        "base_domain": "myapp.com",
-        "use_custom_domain": true,
-        "custom_domain": "myapp.com",
-        "route53_zone_id": "Z1D633PJN98FT9",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/prod-cert-id"
+        "base_domain": "kanw.3leafcoder.com",
+        "use_custom_domain": false,
+        "custom_domain": "",
+        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
       }
     },
     "staging": {
       "account": "Staging", 
-      "account_id": "319944611406",
+      "account_id": "458029411633",
       "region": "us-east-1",
-      "role_arn": "arn:aws:iam::319944611406:role/github-actions-staging",
-      "secrets_bucket": "tn-agent-launcher-secrets",
-      "description": "Staging environment - staging account",
+      "role_arn": "arn:aws:iam::458029411633:role/github-actions-production",
+      "secrets_bucket": "tn-agent-launcher-secrets-prod",
+      "description": "Staging environment - isolated account",
       "domain": {
-        "base_domain": "myapp.com",
+        "base_domain": "kanw.3leafcoder.com",
         "use_custom_domain": false,
-        "route53_zone_id": "Z1D633PJN98FT9",
-        "certificate_arn": "arn:aws:acm:us-east-1:319944611406:certificate/wildcard-cert-id"
+        "custom_domain": "",
+        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
       }
     },
     "development": {
       "account": "dev",
-      "account_id": "319944611406", 
-      "region": "us-east-1", 
-      "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
-      "secrets_bucket": "tn-agent-launcher-secrets",
-      "description": "Development environment - dev account",
+      "account_id": "458029411633",
+      "region": "us-east-1",
+      "role_arn": "arn:aws:iam::458029411633:role/github-actions-production",
+      "secrets_bucket": "tn-agent-launcher-secrets-prod",
+      "description": "Staging environment - isolated account",
       "domain": {
-        "base_domain": "dev.myapp.com",
+        "base_domain": "kanw.3leafcoder.com",
         "use_custom_domain": false,
+        "custom_domain": "",
         "route53_zone_id": "Z06118351LUGXMN4X34BT",
-        "certificate_arn": "arn:aws:acm:us-east-1:319944611406:certificate/dev-wildcard-cert-id"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
       }
     }
   },
   "patterns": {
     "pr-*": {
       "account": "dev",
-      "account_id": "319944611406",
+      "account_id": "458029411633",
       "region": "us-east-1",
-      "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
-      "secrets_bucket": "tn-agent-launcher-secrets",
-      "description": "Pull request environments",
+      "role_arn": "arn:aws:iam::458029411633:role/github-actions-production",
+      "secrets_bucket": "tn-agent-launcher-secrets-prod",
+      "description": "Production environment - isolated account",
       "domain": {
-        "base_domain": "dev.myapp.com",
+        "base_domain": "kanw.3leafcoder.com",
         "use_custom_domain": false,
+        "custom_domain": "",
         "route53_zone_id": "Z06118351LUGXMN4X34BT",
-        "certificate_arn": "arn:aws:acm:us-east-1:319944611406:certificate/dev-wildcard-cert-id"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
       }
     },
     "main": {
       "account": "dev", 
-      "account_id": "319944611406",
+      "account_id": "458029411633",
       "region": "us-east-1",
-      "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
-      "secrets_bucket": "tn-agent-launcher-secrets",
-      "description": "Main branch development",
+      "role_arn": "arn:aws:iam::458029411633:role/github-actions-production",
+      "secrets_bucket": "tn-agent-launcher-secrets-prod",
+      "description": "Staging environment - isolated account",
       "domain": {
-        "base_domain": "dev.myapp.com",
+        "base_domain": "kanw.3leafcoder.com",
         "use_custom_domain": false,
+        "custom_domain": "",
         "route53_zone_id": "Z06118351LUGXMN4X34BT",
-        "certificate_arn": "arn:aws:acm:us-east-1:319944611406:certificate/dev-wildcard-cert-id"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
       }
     }
   },
   "defaults": {
     "account": "dev",
-    "account_id": "319944611406",
-    "region": "us-east-1",
-    "role_arn": "arn:aws:iam::319944611406:role/github-actions-development",
-    "secrets_bucket": "tn-agent-launcher-secrets",
-    "description": "Default fallback configuration",
-    "domain": {
-      "base_domain": "dev.myapp.com",
-      "use_custom_domain": false,
-      "route53_zone_id": "Z06118351LUGXMN4X34BT",
-      "certificate_arn": "arn:aws:acm:us-east-1:319944611406:certificate/dev-wildcard-cert-id"
-    }
+       "account_id": "458029411633",
+      "region": "us-east-1",
+      "role_arn": "arn:aws:iam::458029411633:role/github-actions-production",
+      "secrets_bucket": "tn-agent-launcher-secrets-prod",
+      "description": "Production environment - isolated account",
+      "domain": {
+        "base_domain": "kanw.3leafcoder.com",
+        "use_custom_domain": false,
+        "custom_domain": "",
+        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
+      }
   }
 }

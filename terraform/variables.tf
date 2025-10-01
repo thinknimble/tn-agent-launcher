@@ -1,7 +1,7 @@
 variable "service" {
   type        = string
   description = "The service name for AWS resources (lowercase, alphanumeric and hyphens only, no underscores)"
-  default     = "tn_agent_launcher"
+  default     = "tn-agent-launcher"
   
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.service))
