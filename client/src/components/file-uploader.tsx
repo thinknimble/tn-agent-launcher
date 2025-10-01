@@ -19,52 +19,58 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const validateFile = (file: File): string | null => {
-    // Check file size
-    if (file.size > maxSize * 1024 * 1024) {
-      return `File "${file.name}" is too large. Maximum size is ${maxSize}MB.`
-    }
-
-    // Check file type (basic validation)
-    const fileExtension = file.name.split('.').pop()?.toLowerCase()
-    const allowedExtensions = ['pdf', 'txt', 'csv', 'json', 'md', 'jpg', 'jpeg', 'png', 'gif']
-
-    if (fileExtension && !allowedExtensions.includes(fileExtension)) {
-      return `File type ".${fileExtension}" is not supported.`
-    }
-
-    return null
-  }
-
-  const handleFiles = (selectedFiles: FileList | File[]) => {
-    const fileArray = Array.from(selectedFiles)
-    const validFiles: File[] = []
-    let errorMessage = ''
-
-    for (const file of fileArray) {
-      if (files.length + validFiles.length >= maxFiles) {
-        errorMessage = `Maximum ${maxFiles} files allowed.`
-        break
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      // Check file size
+      if (file.size > maxSize * 1024 * 1024) {
+        return `File "${file.name}" is too large. Maximum size is ${maxSize}MB.`
       }
 
-      const validation = validateFile(file)
-      if (validation) {
-        errorMessage = validation
-        break
+      // Check file type (basic validation)
+      const fileExtension = file.name.split('.').pop()?.toLowerCase()
+      const allowedExtensions = ['pdf', 'txt', 'csv', 'json', 'md', 'jpg', 'jpeg', 'png', 'gif']
+
+      if (fileExtension && !allowedExtensions.includes(fileExtension)) {
+        return `File type ".${fileExtension}" is not supported.`
       }
 
-      validFiles.push(file)
-    }
+      return null
+    },
+    [maxSize],
+  )
 
-    if (errorMessage) {
-      setError(errorMessage)
-      setTimeout(() => setError(null), 5000)
-      return
-    }
+  const handleFiles = useCallback(
+    (selectedFiles: FileList | File[]) => {
+      const fileArray = Array.from(selectedFiles)
+      const validFiles: File[] = []
+      let errorMessage = ''
 
-    setFiles((prev) => [...prev, ...validFiles])
-    setError(null)
-  }
+      for (const file of fileArray) {
+        if (files.length + validFiles.length >= maxFiles) {
+          errorMessage = `Maximum ${maxFiles} files allowed.`
+          break
+        }
+
+        const validation = validateFile(file)
+        if (validation) {
+          errorMessage = validation
+          break
+        }
+
+        validFiles.push(file)
+      }
+
+      if (errorMessage) {
+        setError(errorMessage)
+        setTimeout(() => setError(null), 5000)
+        return
+      }
+
+      setFiles((prev) => [...prev, ...validFiles])
+      setError(null)
+    },
+    [files.length, maxFiles, validateFile],
+  )
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -76,7 +82,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         e.dataTransfer.clearData()
       }
     },
-    [files.length, maxFiles, handleFiles],
+    [handleFiles],
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
