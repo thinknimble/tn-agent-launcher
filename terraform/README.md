@@ -2,55 +2,135 @@
 
 Production-ready AWS infrastructure for Django applications using ECS Fargate, with automated multi-account deployments, S3 secrets management, and comprehensive CI/CD integration.
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
-**Minimal setup for deployment:**
+Follow these step-by-step instructions to deploy your infrastructure:
 
-1. **Configure environments**:
-   ```bash
-   # Update AWS account IDs in .github/environments.json
-   # See Multi-Account Setup section below
-   ```
+> **📝 Important: Naming Constraints**: This template automatically handles AWS naming requirements. Service names are converted from `my_project` (underscores) to `my-project` (hyphens) to comply with AWS Fargate and ALB naming constraints. The original `project_slug` with underscores is still used for database names and Python identifiers where appropriate.
 
-2. **Set up secrets**:
-   ```bash
-   # First, create the S3 secrets bucket
-   .github/scripts/setup-secrets-bucket.sh development
-   
-   # Check if secrets already exist, otherwise create template
-   if .github/scripts/secrets-sync.sh pull development 2>/dev/null; then
-     echo "Using existing secrets from S3"
-   else
-     echo "Creating new secrets template"
-     .github/scripts/secrets-sync.sh template development
-     # Edit secrets-development.json with your values
-     .github/scripts/secrets-sync.sh push development
-   fi
-   ```
+### 🏗️ First-Time Account Setup (AWS Admin - Once per AWS Account)
 
-3. **Configure GitHub variables**:
-   ```bash
-   # Repository Variables (in GitHub Settings → Actions)
-   SERVICE_NAME="tn_agent_launcher"
-   ECR_REPOSITORY_NAME="tn_agent_launcher-app"
-   
-   # Environment-specific Role ARNs
-   DEV_AWS_ROLE_ARN="arn:aws:iam::123456789012:role/github-actions-dev"
-   STAGING_AWS_ROLE_ARN="arn:aws:iam::234567890123:role/github-actions-staging"
-   PROD_AWS_ROLE_ARN="arn:aws:iam::345678901234:role/github-actions-prod"
-   ```
+These steps only need to be done **once per AWS account** by an AWS account administrator:
 
-4. **Deploy**:
-   ```bash
-   # Local deployment
-   cd terraform
-   terraform init
-   terraform plan
-   terraform apply
-   
-   # Or push to GitHub for automated deployment
-   git push origin feature-branch  # Creates PR environment
-   ```
+#### 1. GitHub OIDC Roles Setup (Admin Only)
+```bash
+# Set up GitHub Actions OIDC roles (run once per AWS account by admin)
+# This creates reusable IAM roles that all projects can use
+cd terraform/scripts
+./setup-github-oidc-role.sh # this user has access to all projects as they get added 
+```
+:warning: Future improvement will be to have a main oidc-role that is setup by TN to create the OIDC users for each project and their tfstate buckets as part of a UI bootstrapper project.
+
+
+> **Note**: This step creates the foundational OIDC identity provider and roles. Subsequent projects will automatically attach their specific policies to these existing roles.
+
+### 🚀 First-Time New Project Setup
+
+#### 1. AWS CLI Setup
+```bash
+# Install AWS CLI if not already installed
+# Configure AWS CLI with your credentials
+aws configure
+```
+
+#### 2. S3 Backend Infrastructure Setup
+```bash
+# Set up Terraform state backend (run once per project)
+# Creates a dedicated S3 bucket for this project's Terraform state
+cd terraform/scripts
+./setup_backend.sh
+```
+
+> **Backend Strategy**: Each project gets its own dedicated S3 bucket (`{account-id}-{project-name}-terraform-state`) for complete isolation and simpler permissions management. This approach provides better security boundaries between projects.
+
+#### 3. Configure Environment Mapping
+```bash
+# Update AWS account IDs in .github/environments.json
+# See Multi-Account Setup section below for details
+```
+
+#### 2. Set Up Project Secrets
+```bash
+# Create the S3 secrets bucket for your project
+.github/scripts/setup-secrets-bucket.sh development
+
+# Check if secrets already exist, otherwise create template
+if .github/scripts/secrets-sync.sh pull development 2>/dev/null; then
+  echo "Using existing secrets from S3"
+else
+  echo "Creating new secrets template"
+  .github/scripts/secrets-sync.sh template development
+  # Edit secrets-development.json with your values
+  .github/scripts/secrets-sync.sh push development
+fi
+```
+
+#### 3. Configure Terraform Variables
+```bash
+# Copy and customize Terraform variables
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your project-specific values
+```
+
+#### 4. Initialize Terraform Backend
+```bash
+# Initialize Terraform with environment-specific backend
+cd scripts
+./init_backend.sh -e development -s {{cookiecutter.project_slug}}
+```
+
+#### 5. Configure GitHub Repository Variables
+Add these variables in GitHub repository settings → Secrets and variables → Actions → Variables:
+
+> **💡 Naming Safety Tip**: We recommend setting these variables in GitHub Actions as a safety net to avoid issues from local terraform.tfvars changes. If not set, the deployment will automatically use the sanitized defaults from your terraform variables.
+
+```bash
+# Repository Variables (Optional - will use terraform defaults if not set)
+SERVICE_NAME="{{cookiecutter.sanitized_tf_service_name}}"
+ECR_REPOSITORY_NAME="{{cookiecutter.sanitized_tf_service_name}}-app"
+
+# Environment-specific Role ARNs (from step 2 above)
+DEV_AWS_ROLE_ARN="arn:aws:iam::123456789012:role/github-actions-development"
+STAGING_AWS_ROLE_ARN="arn:aws:iam::234567890123:role/github-actions-staging"
+PROD_AWS_ROLE_ARN="arn:aws:iam::345678901234:role/github-actions-production"
+```
+
+> **🔧 Automatic Fallback**: If `SERVICE_NAME` or `ECR_REPOSITORY_NAME` are not set in GitHub Actions variables, the deployment will automatically use the AWS-compatible defaults from your `terraform/variables.tf` file. This ensures consistent, valid resource naming even without manual variable configuration.
+
+### 🔄 Regular Development Workflow
+
+Once your infrastructure is set up, your typical workflow becomes:
+
+#### Local Infrastructure Changes
+```bash
+# Plan infrastructure changes
+cd terraform
+terraform plan
+
+# Apply infrastructure changes
+terraform apply
+```
+
+#### Automated Deployments via GitHub Actions
+```bash
+# Development environment - auto-deploys on pushes to main branch
+git push origin main
+
+# PR environments - auto-creates temporary environments for each pull request
+git push origin feature-branch
+
+# Staging environment - auto-deploys on tagged releases
+git tag v1.0.0
+git push origin v1.0.0
+
+# Production environment - manual approval required through GitHub UI
+```
+
+#### Environment Management
+- **Development**: Deploys automatically on pushes to `main` branch
+- **Staging**: Deploys automatically on tagged releases
+- **Production**: Requires manual approval in GitHub Actions
+- **PR Environments**: Temporary environments created automatically for each pull request
 
 ## 📋 Prerequisites
 
@@ -226,7 +306,7 @@ This infrastructure uses an S3-based secrets management system that provides vis
 **Edit secrets file:**
 ```json
 {
-  "service": "tn_agent_launcher",
+  "service": "{{cookiecutter.project_slug}}",
   "environment": "development",
   "secrets": {
     "django_secret_key": "your-50-character-secret-key",
@@ -282,14 +362,14 @@ Deploy to separate AWS accounts for maximum security isolation between environme
 **1. Update `.github/environments.json`:**
 ```json
 {
-  "service": "tn_agent_launcher",
+  "service": "{{cookiecutter.project_slug}}",
   "environments": {
     "production": {
       "account": "prod",
       "account_id": "345678901234",
       "region": "us-east-1",
       "role_arn_var": "PROD_AWS_ROLE_ARN",
-      "secrets_bucket": "tn_agent_launcher-terraform-secrets",
+      "secrets_bucket": "{{cookiecutter.project_slug}}-terraform-secrets",
       "description": "Production environment"
     },
     "staging": {
@@ -297,7 +377,7 @@ Deploy to separate AWS accounts for maximum security isolation between environme
       "account_id": "234567890123",
       "region": "us-east-1",
       "role_arn_var": "STAGING_AWS_ROLE_ARN",
-      "secrets_bucket": "tn_agent_launcher-terraform-secrets",
+      "secrets_bucket": "{{cookiecutter.project_slug}}-terraform-secrets",
       "description": "Staging environment"
     },
     "development": {
@@ -305,7 +385,7 @@ Deploy to separate AWS accounts for maximum security isolation between environme
       "account_id": "123456789012",
       "region": "us-east-1",
       "role_arn_var": "DEV_AWS_ROLE_ARN",
-      "secrets_bucket": "tn_agent_launcher-terraform-secrets",
+      "secrets_bucket": "{{cookiecutter.project_slug}}-terraform-secrets",
       "description": "Development environment"
     }
   },
@@ -315,7 +395,7 @@ Deploy to separate AWS accounts for maximum security isolation between environme
       "account_id": "123456789012",
       "region": "us-east-1",
       "role_arn_var": "DEV_AWS_ROLE_ARN",
-      "secrets_bucket": "tn_agent_launcher-terraform-secrets",
+      "secrets_bucket": "{{cookiecutter.project_slug}}-terraform-secrets",
       "description": "Pull request environments"
     }
   },
@@ -324,7 +404,7 @@ Deploy to separate AWS accounts for maximum security isolation between environme
     "account_id": "123456789012",
     "region": "us-east-1",
     "role_arn_var": "DEV_AWS_ROLE_ARN",
-    "secrets_bucket": "tn_agent_launcher-terraform-secrets",
+    "secrets_bucket": "{{cookiecutter.project_slug}}-terraform-secrets",
     "description": "Default fallback configuration"
   }
 }
@@ -339,8 +419,8 @@ terraform/scripts/setup-github-oidc-role.sh
 **3. Configure GitHub repository variables:**
 ```bash
 # Repository Variables
-SERVICE_NAME="tn_agent_launcher"
-ECR_REPOSITORY_NAME="tn_agent_launcher-app"
+SERVICE_NAME="{{cookiecutter.project_slug}}"
+ECR_REPOSITORY_NAME="{{cookiecutter.project_slug}}-app"
 AWS_ACCOUNT_ID="123456789012"  # Primary account ID
 
 # Environment-specific Role ARNs
@@ -353,9 +433,9 @@ PROD_AWS_ROLE_ARN="arn:aws:iam::345678901234:role/github-actions-production"
 
 | Trigger | Environment | Account | Region | Outcome |
 |---------|-------------|---------|--------|---------|
-| **PR opened** | `pr-123` | Dev | us-east-1 | `https://tn_agent_launcher-pr-123.your-domain.com` |
-| **Push to main** | `staging` | Staging | us-east-1 | `https://tn_agent_launcher-staging.your-domain.com` |
-| **Manual deploy** | `production` | Prod | us-east-1 | `https://tn_agent_launcher-production.your-domain.com` |
+| **PR opened** | `pr-123` | Dev | us-east-1 | `https://{{cookiecutter.project_slug}}-pr-123.your-domain.com` |
+| **Push to main** | `staging` | Staging | us-east-1 | `https://{{cookiecutter.project_slug}}-staging.your-domain.com` |
+| **Manual deploy** | `production` | Prod | us-east-1 | `https://{{cookiecutter.project_slug}}-production.your-domain.com` |
 
 ## 🎯 Application Configuration
 
@@ -363,13 +443,13 @@ Centralized Django application settings are managed through `.github/app-config.
 
 ```json
 {
-  "service": "tn_agent_launcher",
+  "service": "{{cookiecutter.project_slug}}",
   "environments": {
     "production": {
       "django": {
         "debug": false,
         "enable_emails": true,
-        "staff_email": "admin@tn_agent_launcher.com"
+        "staff_email": "admin@{{cookiecutter.project_slug}}.com"
       },
       "aws": {
         "use_aws_storage": true,
@@ -487,7 +567,7 @@ terraform apply
 **Minimal configuration:**
 ```hcl
 # terraform.tfvars
-service = "tn_agent_launcher"
+service = "{{cookiecutter.project_slug}}"
 environment = "development"
 
 # Database & Security
@@ -530,18 +610,18 @@ cd terraform/scripts
 ./stream-logs.sh
 
 # CLI mode examples
-./stream-logs.sh -s tn_agent_launcher -e development -t a -f "ERROR" -d 1h
-./stream-logs.sh -s tn_agent_launcher -e production -t w -d 30m
+./stream-logs.sh -s {{cookiecutter.project_slug}} -e development -t a -f "ERROR" -d 1h
+./stream-logs.sh -s {{cookiecutter.project_slug}} -e production -t w -d 30m
 ```
 
 **Manual log commands:**
 ```bash
 # Follow logs in real-time
-aws logs tail "/ecs/tn_agent_launcher/development" --follow
+aws logs tail "/ecs/{{cookiecutter.project_slug}}/development" --follow
 
 # Filter by pattern
 aws logs filter-log-events \
-  --log-group-name "/ecs/tn_agent_launcher/development" \
+  --log-group-name "/ecs/{{cookiecutter.project_slug}}/development" \
   --filter-pattern "ERROR" \
   --start-time $(date -d "1 hour ago" +%s)000
 ```
@@ -554,20 +634,20 @@ cd terraform/scripts
 ./ecs-exec.sh
 
 # CLI mode examples
-./ecs-exec.sh -s tn_agent_launcher -e development -c bash
-./ecs-exec.sh -s tn_agent_launcher -e production -c "python manage.py shell"
+./ecs-exec.sh -s {{cookiecutter.project_slug}} -e development -c bash
+./ecs-exec.sh -s {{cookiecutter.project_slug}} -e production -c "python manage.py shell"
 ```
 
 **Manual ECS exec:**
 ```bash
 # Get running task ID
-aws ecs list-tasks --cluster cluster-tn_agent_launcher-development
+aws ecs list-tasks --cluster cluster-{{cookiecutter.project_slug}}-development
 
 # Connect to container
 aws ecs execute-command \
-  --cluster cluster-tn_agent_launcher-development \
+  --cluster cluster-{{cookiecutter.project_slug}}-development \
   --task TASK_ID \
-  --container app-tn_agent_launcher-development \
+  --container app-{{cookiecutter.project_slug}}-development \
   --interactive \
   --command "/bin/bash"
 ```
@@ -577,12 +657,12 @@ aws ecs execute-command \
 ```bash
 # Check service health
 aws ecs describe-services \
-  --cluster "cluster-tn_agent_launcher-development" \
-  --services "service-app-tn_agent_launcher-development"
+  --cluster "cluster-{{cookiecutter.project_slug}}-development" \
+  --services "service-app-{{cookiecutter.project_slug}}-development"
 
 # Check task details
 aws ecs describe-tasks \
-  --cluster "cluster-tn_agent_launcher-development" \
+  --cluster "cluster-{{cookiecutter.project_slug}}-development" \
   --tasks "TASK_ID"
 ```
 
@@ -654,8 +734,8 @@ resource "aws_cloudwatch_event_target" "daily_cleanup" {
 
 # Monitor workers
 aws ecs describe-services \
-  --cluster cluster-tn_agent_launcher-development \
-  --services service-data-processor-tn_agent_launcher-development
+  --cluster cluster-{{cookiecutter.project_slug}}-development \
+  --services service-data-processor-{{cookiecutter.project_slug}}-development
 ```
 
 ## 🔄 Team Collaboration
@@ -668,7 +748,7 @@ terraform/scripts/setup_backend.sh
 
 # 2. Configure backend in terraform.tfvars
 terraform_state_bucket = "company-terraform-state"
-terraform_state_key = "tn_agent_launcher/development/terraform.tfstate"
+terraform_state_key = "{{cookiecutter.project_slug}}/development/terraform.tfstate"
 terraform_state_region = "us-east-1"
 terraform_lock_table = "terraform-state-lock"
 
@@ -744,12 +824,12 @@ terraform force-unlock LOCK_ID
 **Container deployment failures:**
 ```bash
 # Check task definition
-aws ecs describe-task-definition --task-definition task-tn_agent_launcher-development
+aws ecs describe-task-definition --task-definition task-{{cookiecutter.project_slug}}-development
 
 # Force new deployment
 aws ecs update-service \
-  --cluster cluster-tn_agent_launcher-development \
-  --service service-app-tn_agent_launcher-development \
+  --cluster cluster-{{cookiecutter.project_slug}}-development \
+  --service service-app-{{cookiecutter.project_slug}}-development \
   --force-new-deployment
 ```
 
@@ -765,10 +845,10 @@ aws acm describe-certificate --certificate-arn arn:aws:acm:...
 **S3 secrets access issues:**
 ```bash
 # Test S3 access
-aws s3 ls s3://tn_agent_launcher-terraform-secrets/
+aws s3 ls s3://{{cookiecutter.project_slug}}-terraform-secrets/
 
 # Check IAM role permissions
 aws iam get-role --role-name github-actions-development
 ```
 
-For additional support, refer to the [GitHub repository issues](https://github.com/your-org/tn_agent_launcher/issues) or contact your infrastructure team.
+For additional support, refer to the [GitHub repository issues](https://github.com/your-org/{{cookiecutter.project_slug}}/issues) or contact your infrastructure team.
