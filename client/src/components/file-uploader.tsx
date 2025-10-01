@@ -19,22 +19,25 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const validateFile = useCallback((file: File): string | null => {
-    // Check file size
-    if (file.size > maxSize * 1024 * 1024) {
-      return `File "${file.name}" is too large. Maximum size is ${maxSize}MB.`
-    }
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      // Check file size
+      if (file.size > maxSize * 1024 * 1024) {
+        return `File "${file.name}" is too large. Maximum size is ${maxSize}MB.`
+      }
 
-    // Check file type (basic validation)
-    const fileExtension = file.name.split('.').pop()?.toLowerCase()
-    const allowedExtensions = ['pdf', 'txt', 'csv', 'json', 'md', 'jpg', 'jpeg', 'png', 'gif']
+      // Check file type (basic validation)
+      const fileExtension = file.name.split('.').pop()?.toLowerCase()
+      const allowedExtensions = ['pdf', 'txt', 'csv', 'json', 'md', 'jpg', 'jpeg', 'png', 'gif']
 
-    if (fileExtension && !allowedExtensions.includes(fileExtension)) {
-      return `File type ".${fileExtension}" is not supported.`
-    }
+      if (fileExtension && !allowedExtensions.includes(fileExtension)) {
+        return `File type ".${fileExtension}" is not supported.`
+      }
 
-    return null
-  }, [maxSize])
+      return null
+    },
+    [maxSize],
+  )
 
   const handleFiles = useCallback(
     (selectedFiles: FileList | File[]) => {
