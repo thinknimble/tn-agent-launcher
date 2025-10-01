@@ -36,35 +36,38 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     return null
   }
 
-  const handleFiles = (selectedFiles: FileList | File[]) => {
-    const fileArray = Array.from(selectedFiles)
-    const validFiles: File[] = []
-    let errorMessage = ''
+  const handleFiles = useCallback(
+    (selectedFiles: FileList | File[]) => {
+      const fileArray = Array.from(selectedFiles)
+      const validFiles: File[] = []
+      let errorMessage = ''
 
-    for (const file of fileArray) {
-      if (files.length + validFiles.length >= maxFiles) {
-        errorMessage = `Maximum ${maxFiles} files allowed.`
-        break
+      for (const file of fileArray) {
+        if (files.length + validFiles.length >= maxFiles) {
+          errorMessage = `Maximum ${maxFiles} files allowed.`
+          break
+        }
+
+        const validation = validateFile(file)
+        if (validation) {
+          errorMessage = validation
+          break
+        }
+
+        validFiles.push(file)
       }
 
-      const validation = validateFile(file)
-      if (validation) {
-        errorMessage = validation
-        break
+      if (errorMessage) {
+        setError(errorMessage)
+        setTimeout(() => setError(null), 5000)
+        return
       }
 
-      validFiles.push(file)
-    }
-
-    if (errorMessage) {
-      setError(errorMessage)
-      setTimeout(() => setError(null), 5000)
-      return
-    }
-
-    setFiles((prev) => [...prev, ...validFiles])
-    setError(null)
-  }
+      setFiles((prev) => [...prev, ...validFiles])
+      setError(null)
+    },
+    [files.length, maxFiles, maxSize],
+  )
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
