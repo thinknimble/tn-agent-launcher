@@ -8,7 +8,7 @@
 
 Once db credentials are set:
 
-1. `uv sync` to install dependencies
+1. `uv sync` to install dependencies (or `uv sync --extra doc-processing` for document preprocessing - see [Document Processing Setup](../DOC_PROCESSING_SETUP.md))
 1. `source .venv/bin/activate` to activate the virtualenv shell
 1. `cd server`
 1. `python manage.py migrate` to migrate database

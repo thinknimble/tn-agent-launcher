@@ -30,10 +30,18 @@ uv sync
 ## Platform-Specific Setup
 
 ### Local Development
+
+#### Using uv directly
 ```bash
 # Enable document processing
 uv sync --extra doc-processing
 export ENABLE_DOC_PREPROCESSING=true
+```
+
+#### Using Docker (recommended)
+```bash
+# Document processing is automatically enabled in docker-compose.yaml
+docker-compose up
 ```
 
 ### Heroku Deployment
@@ -42,11 +50,11 @@ export ENABLE_DOC_PREPROCESSING=true
 # Document processing will be automatically disabled
 ```
 
-### Custom Deployment
+### AWS/Custom Deployment
 ```bash
-# Install with document processing if your platform supports it
-uv sync --extra doc-processing
-export ENABLE_DOC_PREPROCESSING=true
+# Docker deployments automatically include document processing
+# For Terraform/AWS deployments, the tf/Dockerfile includes --extra doc-processing
+docker build -f compose/server/tf/Dockerfile .
 ```
 
 ## How It Works
