@@ -7,9 +7,9 @@ export const getAppConfig = createCustomServiceCall.standAlone({
   models: {
     outputShape: appConfigShape,
   },
-  name: "getAppConfig",
+  name: 'getAppConfig',
   cb: async ({ client, utils }) => {
-    const res = await client.get("/api/config/")
+    const res = await client.get('/api/config/')
     return utils.fromApi(res.data)
   },
 })

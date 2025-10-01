@@ -38,7 +38,7 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
 }) => {
   const { data: appConfig, isLoading: configLoading } = useAppConfig()
   const docProcessingEnabled = appConfig?.enableDocPreprocessing ?? false
-  
+
   const [config, setConfig] = useState<DocumentProcessingConfig>({
     skipPreprocessing: !docProcessingEnabled, // Default to skip if doc processing not enabled
     // Image processing defaults (used when preprocessing is enabled)
@@ -84,8 +84,8 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
         {!docProcessingEnabled && (
           <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-3">
             <p className="text-sm text-orange-700">
-              <strong>Note:</strong> Document preprocessing is not available on this server. 
-              Files will be sent directly to the agent for processing.
+              <strong>Note:</strong> Document preprocessing is not available on this server. Files
+              will be sent directly to the agent for processing.
             </p>
           </div>
         )}
@@ -102,14 +102,18 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
                 className="mt-1 h-4 w-4 rounded border-primary-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
               />
               <div>
-                <span className={`font-medium ${!docProcessingEnabled ? 'text-gray-500' : 'text-primary-700'}`}>
-                  Send file directly to agent {docProcessingEnabled ? '(recommended)' : '(required)'}
+                <span
+                  className={`font-medium ${!docProcessingEnabled ? 'text-gray-500' : 'text-primary-700'}`}
+                >
+                  Send file directly to agent{' '}
+                  {docProcessingEnabled ? '(recommended)' : '(required)'}
                 </span>
-                <p className={`text-sm ${!docProcessingEnabled ? 'text-gray-400' : 'text-primary-500'}`}>
-                  {docProcessingEnabled 
+                <p
+                  className={`text-sm ${!docProcessingEnabled ? 'text-gray-400' : 'text-primary-500'}`}
+                >
+                  {docProcessingEnabled
                     ? 'Skip all preprocessing and let the multimodal agent handle the raw file directly. Use preprocessing only for non-multimodal models or cost optimization.'
-                    : 'Document preprocessing is not available on this server, so files will be sent directly to the agent.'
-                  }
+                    : 'Document preprocessing is not available on this server, so files will be sent directly to the agent.'}
                 </p>
               </div>
             </label>

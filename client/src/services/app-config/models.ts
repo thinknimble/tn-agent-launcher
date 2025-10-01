@@ -1,7 +1,8 @@
+import { GetInferredFromRaw } from '@thinknimble/tn-models'
 import { z } from 'zod'
 
 export const appConfigShape = {
   enableDocPreprocessing: z.boolean(),
 }
 
-export type AppConfig = z.infer<typeof z.object(appConfigShape)>
+export type AppConfig = GetInferredFromRaw<typeof appConfigShape>
