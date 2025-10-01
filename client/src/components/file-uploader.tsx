@@ -19,7 +19,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
     // Check file size
     if (file.size > maxSize * 1024 * 1024) {
       return `File "${file.name}" is too large. Maximum size is ${maxSize}MB.`
@@ -34,7 +34,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
 
     return null
-  }
+  }, [maxSize])
 
   const handleFiles = useCallback(
     (selectedFiles: FileList | File[]) => {
@@ -66,7 +66,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       setFiles((prev) => [...prev, ...validFiles])
       setError(null)
     },
-    [files.length, maxFiles, maxSize],
+    [files.length, maxFiles, validateFile],
   )
 
   const handleDrop = useCallback(
