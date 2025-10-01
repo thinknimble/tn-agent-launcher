@@ -8,6 +8,11 @@ Follow these step-by-step instructions to deploy your infrastructure:
 
 > **📝 Important: Naming Constraints**: This template automatically handles AWS naming requirements. Service names are converted from `my_project` (underscores) to `my-project` (hyphens) to comply with AWS Fargate and ALB naming constraints. The original `project_slug` with underscores is still used for database names and Python identifiers where appropriate.
 
+> **🏗️ VPC Sharing Strategy**: To avoid AWS VPC limits (default 5 per region), development environments share a single VPC while maintaining isolation through environment-specific subnets, security groups, and databases:
+> - **Production & Staging**: Dedicated VPCs (in separate AWS accounts)
+> - **Development & PR Environments**: Shared VPC `shared-dev-vpc` (in dev AWS account)
+> - **Subnet Allocation**: Each environment gets unique CIDR blocks (e.g., `development` = `10.0.10.0/24`, `pr-123` = `10.0.123.0/24`)
+
 ### 🏗️ First-Time Account Setup (AWS Admin - Once per AWS Account)
 
 These steps only need to be done **once per AWS account** by an AWS account administrator:
@@ -76,7 +81,7 @@ cp terraform.tfvars.example terraform.tfvars
 ```bash
 # Initialize Terraform with environment-specific backend
 cd scripts
-./init_backend.sh -e development -s {{cookiecutter.project_slug}}
+./init_backend.sh -e development -s tn-agent-launcher
 ```
 
 #### 5. Configure GitHub Repository Variables
@@ -131,6 +136,55 @@ git push origin v1.0.0
 - **Staging**: Deploys automatically on tagged releases
 - **Production**: Requires manual approval in GitHub Actions
 - **PR Environments**: Temporary environments created automatically for each pull request
+
+## 🏗️ VPC Sharing & Resource Isolation
+
+### Shared VPC Architecture
+
+**Problem Solved**: AWS has a default limit of 5 VPCs per region. With multiple PR environments, this limit is quickly exceeded.
+
+**Solution**: Smart VPC sharing for development environments while maintaining security isolation.
+
+| Environment Type | VPC Strategy | AWS Account | Isolation Method |
+|------------------|--------------|-------------|------------------|
+| **Production** | Dedicated VPC | Production Account | Complete account separation |
+| **Staging** | Dedicated VPC | Production Account | Complete account separation |
+| **Development** | Shared VPC | Dev Account | Environment-specific subnets |
+| **PR Environments** | Shared VPC | Dev Account | Environment-specific subnets |
+
+### Subnet Allocation Strategy
+
+```
+Shared Development VPC (10.0.0.0/16)
+├── development environment
+│   ├── 10.0.10.0/24 (us-east-1b)
+│   └── 10.0.110.0/24 (us-east-1a)
+├── pr-1 environment  
+│   ├── 10.0.1.0/24 (us-east-1b)
+│   └── 10.0.101.0/24 (us-east-1a)
+├── pr-123 environment
+│   ├── 10.0.123.0/24 (us-east-1b)
+│   └── 10.0.223.0/24 (us-east-1a)
+└── pr-9999 environment
+    ├── 10.0.255.0/24 (us-east-1b)  # Wraps to 255 for large PR numbers
+    └── 10.0.255.0/24 (us-east-1a)
+```
+
+### Security Isolation
+
+Even with shared VPC, environments remain completely isolated through:
+
+- ✅ **Environment-specific Security Groups**: Each environment has unique security groups
+- ✅ **Separate Databases**: Each environment gets its own RDS and Redis instances
+- ✅ **Separate ECS Clusters**: Each environment has its own ECS cluster and services
+- ✅ **Environment-specific Subnets**: No network overlap between environments
+
+### Benefits
+
+- 🎯 **Avoids VPC Limits**: Unlimited PR environments without hitting AWS VPC quotas
+- 🔒 **Maintains Security**: Full isolation through security groups and separate databases
+- 💰 **Cost Efficient**: Shared VPC infrastructure reduces NAT Gateway and networking costs
+- 🚀 **Faster Deployments**: No VPC creation delays for new PR environments
 
 ## 📋 Prerequisites
 
@@ -306,7 +360,7 @@ This infrastructure uses an S3-based secrets management system that provides vis
 **Edit secrets file:**
 ```json
 {
-  "service": "{{cookiecutter.project_slug}}",
+  "service": "tn-agent-launcher",
   "environment": "development",
   "secrets": {
     "django_secret_key": "your-50-character-secret-key",
@@ -362,14 +416,14 @@ Deploy to separate AWS accounts for maximum security isolation between environme
 **1. Update `.github/environments.json`:**
 ```json
 {
-  "service": "{{cookiecutter.project_slug}}",
+  "service": "tn-agent-launcher",
   "environments": {
     "production": {
       "account": "prod",
       "account_id": "345678901234",
       "region": "us-east-1",
       "role_arn_var": "PROD_AWS_ROLE_ARN",
-      "secrets_bucket": "{{cookiecutter.project_slug}}-terraform-secrets",
+      "secrets_bucket": "tn-agent-launcher-terraform-secrets",
       "description": "Production environment"
     },
     "staging": {
@@ -377,7 +431,7 @@ Deploy to separate AWS accounts for maximum security isolation between environme
       "account_id": "234567890123",
       "region": "us-east-1",
       "role_arn_var": "STAGING_AWS_ROLE_ARN",
-      "secrets_bucket": "{{cookiecutter.project_slug}}-terraform-secrets",
+      "secrets_bucket": "tn-agent-launcher-terraform-secrets",
       "description": "Staging environment"
     },
     "development": {
@@ -385,7 +439,7 @@ Deploy to separate AWS accounts for maximum security isolation between environme
       "account_id": "123456789012",
       "region": "us-east-1",
       "role_arn_var": "DEV_AWS_ROLE_ARN",
-      "secrets_bucket": "{{cookiecutter.project_slug}}-terraform-secrets",
+      "secrets_bucket": "tn-agent-launcher-terraform-secrets",
       "description": "Development environment"
     }
   },
@@ -395,7 +449,7 @@ Deploy to separate AWS accounts for maximum security isolation between environme
       "account_id": "123456789012",
       "region": "us-east-1",
       "role_arn_var": "DEV_AWS_ROLE_ARN",
-      "secrets_bucket": "{{cookiecutter.project_slug}}-terraform-secrets",
+      "secrets_bucket": "tn-agent-launcher-terraform-secrets",
       "description": "Pull request environments"
     }
   },
@@ -404,7 +458,7 @@ Deploy to separate AWS accounts for maximum security isolation between environme
     "account_id": "123456789012",
     "region": "us-east-1",
     "role_arn_var": "DEV_AWS_ROLE_ARN",
-    "secrets_bucket": "{{cookiecutter.project_slug}}-terraform-secrets",
+    "secrets_bucket": "tn-agent-launcher-terraform-secrets",
     "description": "Default fallback configuration"
   }
 }
@@ -419,8 +473,8 @@ terraform/scripts/setup-github-oidc-role.sh
 **3. Configure GitHub repository variables:**
 ```bash
 # Repository Variables
-SERVICE_NAME="{{cookiecutter.project_slug}}"
-ECR_REPOSITORY_NAME="{{cookiecutter.project_slug}}-app"
+SERVICE_NAME="tn-agent-launcher"
+ECR_REPOSITORY_NAME="tn-agent-launcher-app"
 AWS_ACCOUNT_ID="123456789012"  # Primary account ID
 
 # Environment-specific Role ARNs
@@ -433,9 +487,9 @@ PROD_AWS_ROLE_ARN="arn:aws:iam::345678901234:role/github-actions-production"
 
 | Trigger | Environment | Account | Region | Outcome |
 |---------|-------------|---------|--------|---------|
-| **PR opened** | `pr-123` | Dev | us-east-1 | `https://{{cookiecutter.project_slug}}-pr-123.your-domain.com` |
-| **Push to main** | `staging` | Staging | us-east-1 | `https://{{cookiecutter.project_slug}}-staging.your-domain.com` |
-| **Manual deploy** | `production` | Prod | us-east-1 | `https://{{cookiecutter.project_slug}}-production.your-domain.com` |
+| **PR opened** | `pr-123` | Dev | us-east-1 | `https://tn-agent-launcher-pr-123.your-domain.com` |
+| **Push to main** | `staging` | Staging | us-east-1 | `https://tn-agent-launcher-staging.your-domain.com` |
+| **Manual deploy** | `production` | Prod | us-east-1 | `https://tn-agent-launcher-production.your-domain.com` |
 
 ## 🎯 Application Configuration
 
@@ -443,13 +497,13 @@ Centralized Django application settings are managed through `.github/app-config.
 
 ```json
 {
-  "service": "{{cookiecutter.project_slug}}",
+  "service": "tn-agent-launcher",
   "environments": {
     "production": {
       "django": {
         "debug": false,
         "enable_emails": true,
-        "staff_email": "admin@{{cookiecutter.project_slug}}.com"
+        "staff_email": "admin@tn-agent-launcher.com"
       },
       "aws": {
         "use_aws_storage": true,
@@ -567,7 +621,7 @@ terraform apply
 **Minimal configuration:**
 ```hcl
 # terraform.tfvars
-service = "{{cookiecutter.project_slug}}"
+service = "tn-agent-launcher"
 environment = "development"
 
 # Database & Security
@@ -610,18 +664,18 @@ cd terraform/scripts
 ./stream-logs.sh
 
 # CLI mode examples
-./stream-logs.sh -s {{cookiecutter.project_slug}} -e development -t a -f "ERROR" -d 1h
-./stream-logs.sh -s {{cookiecutter.project_slug}} -e production -t w -d 30m
+./stream-logs.sh -s tn-agent-launcher -e development -t a -f "ERROR" -d 1h
+./stream-logs.sh -s tn-agent-launcher -e production -t w -d 30m
 ```
 
 **Manual log commands:**
 ```bash
 # Follow logs in real-time
-aws logs tail "/ecs/{{cookiecutter.project_slug}}/development" --follow
+aws logs tail "/ecs/tn-agent-launcher/development" --follow
 
 # Filter by pattern
 aws logs filter-log-events \
-  --log-group-name "/ecs/{{cookiecutter.project_slug}}/development" \
+  --log-group-name "/ecs/tn-agent-launcher/development" \
   --filter-pattern "ERROR" \
   --start-time $(date -d "1 hour ago" +%s)000
 ```
@@ -634,20 +688,20 @@ cd terraform/scripts
 ./ecs-exec.sh
 
 # CLI mode examples
-./ecs-exec.sh -s {{cookiecutter.project_slug}} -e development -c bash
-./ecs-exec.sh -s {{cookiecutter.project_slug}} -e production -c "python manage.py shell"
+./ecs-exec.sh -s tn-agent-launcher -e development -c bash
+./ecs-exec.sh -s tn-agent-launcher -e production -c "python manage.py shell"
 ```
 
 **Manual ECS exec:**
 ```bash
 # Get running task ID
-aws ecs list-tasks --cluster cluster-{{cookiecutter.project_slug}}-development
+aws ecs list-tasks --cluster cluster-tn-agent-launcher-development
 
 # Connect to container
 aws ecs execute-command \
-  --cluster cluster-{{cookiecutter.project_slug}}-development \
+  --cluster cluster-tn-agent-launcher-development \
   --task TASK_ID \
-  --container app-{{cookiecutter.project_slug}}-development \
+  --container app-tn-agent-launcher-development \
   --interactive \
   --command "/bin/bash"
 ```
@@ -657,12 +711,12 @@ aws ecs execute-command \
 ```bash
 # Check service health
 aws ecs describe-services \
-  --cluster "cluster-{{cookiecutter.project_slug}}-development" \
-  --services "service-app-{{cookiecutter.project_slug}}-development"
+  --cluster "cluster-tn-agent-launcher-development" \
+  --services "service-app-tn-agent-launcher-development"
 
 # Check task details
 aws ecs describe-tasks \
-  --cluster "cluster-{{cookiecutter.project_slug}}-development" \
+  --cluster "cluster-tn-agent-launcher-development" \
   --tasks "TASK_ID"
 ```
 
@@ -734,8 +788,8 @@ resource "aws_cloudwatch_event_target" "daily_cleanup" {
 
 # Monitor workers
 aws ecs describe-services \
-  --cluster cluster-{{cookiecutter.project_slug}}-development \
-  --services service-data-processor-{{cookiecutter.project_slug}}-development
+  --cluster cluster-tn-agent-launcher-development \
+  --services service-data-processor-tn-agent-launcher-development
 ```
 
 ## 🔄 Team Collaboration
@@ -748,7 +802,7 @@ terraform/scripts/setup_backend.sh
 
 # 2. Configure backend in terraform.tfvars
 terraform_state_bucket = "company-terraform-state"
-terraform_state_key = "{{cookiecutter.project_slug}}/development/terraform.tfstate"
+terraform_state_key = "tn-agent-launcher/development/terraform.tfstate"
 terraform_state_region = "us-east-1"
 terraform_lock_table = "terraform-state-lock"
 
@@ -824,12 +878,12 @@ terraform force-unlock LOCK_ID
 **Container deployment failures:**
 ```bash
 # Check task definition
-aws ecs describe-task-definition --task-definition task-{{cookiecutter.project_slug}}-development
+aws ecs describe-task-definition --task-definition task-tn-agent-launcher-development
 
 # Force new deployment
 aws ecs update-service \
-  --cluster cluster-{{cookiecutter.project_slug}}-development \
-  --service service-app-{{cookiecutter.project_slug}}-development \
+  --cluster cluster-tn-agent-launcher-development \
+  --service service-app-tn-agent-launcher-development \
   --force-new-deployment
 ```
 
@@ -845,10 +899,10 @@ aws acm describe-certificate --certificate-arn arn:aws:acm:...
 **S3 secrets access issues:**
 ```bash
 # Test S3 access
-aws s3 ls s3://{{cookiecutter.project_slug}}-terraform-secrets/
+aws s3 ls s3://tn-agent-launcher-terraform-secrets/
 
 # Check IAM role permissions
 aws iam get-role --role-name github-actions-development
 ```
 
-For additional support, refer to the [GitHub repository issues](https://github.com/your-org/{{cookiecutter.project_slug}}/issues) or contact your infrastructure team.
+For additional support, refer to the [GitHub repository issues](https://github.com/your-org/tn-agent-launcher/issues) or contact your infrastructure team.
