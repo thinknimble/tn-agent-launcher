@@ -1,4 +1,3 @@
-
 name: Deploy Application
 
 concurrency:
@@ -357,7 +356,6 @@ jobs:
       - name: Terraform Plan
         run: |
           cd terraform
-          cat terraform.tfvars
           terraform plan -out=tfplan
 
       - name: Check if this is a subsequent commit (force redeployment)
