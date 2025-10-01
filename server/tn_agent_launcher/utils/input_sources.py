@@ -125,7 +125,7 @@ class InputSourceDownloader:
             parsed = urlparse(url)
             if parsed.scheme == "s3":
                 # s3://bucket/key format
-                bucket = parsed.netloc
+                parsed.netloc
                 key = parsed.path.lstrip("/")
             else:
                 # https://bucket.s3.amazonaws.com/key format

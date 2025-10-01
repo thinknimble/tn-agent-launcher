@@ -76,7 +76,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         e.dataTransfer.clearData()
       }
     },
-    [files.length, maxFiles, handleFiles],
+    [handleFiles],
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {

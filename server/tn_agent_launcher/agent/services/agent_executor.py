@@ -8,17 +8,17 @@ logger = logging.getLogger(__name__)
 
 class AgentExecutionResult:
     """Wrapper for agent execution results to standardize interface."""
-    
+
     def __init__(self, output: str):
         self.output = output
 
 
 class AgentExecutor:
     """Handles execution of agents via Lambda or local execution."""
-    
+
     def __init__(self):
         pass
-    
+
     def execute_agent(
         self,
         agent_instance: Any,
@@ -27,11 +27,11 @@ class AgentExecutor:
         multimodal_content: List[Any],
         has_raw_files: bool,
         input_data: Dict[str, Any],
-        use_lambda: bool
+        use_lambda: bool,
     ) -> AgentExecutionResult:
         """
         Execute agent either via Lambda or locally.
-        
+
         Args:
             agent_instance: The agent instance to execute
             instruction: Base instruction
@@ -40,41 +40,39 @@ class AgentExecutor:
             has_raw_files: Whether raw files are present
             input_data: Input data context
             use_lambda: Whether to use Lambda execution
-            
+
         Returns:
             AgentExecutionResult with the output
         """
         logger.info(
             f"Executing agent {agent_instance.friendly_name} with instruction: {instruction[:100]}..."
         )
-        
+
         if has_raw_files:
             logger.info(
                 f"Task includes {len(multimodal_content)} raw files for multimodal processing"
             )
-        
+
         if use_lambda:
             return self._execute_via_lambda(agent_instance, enhanced_instruction, input_data)
         else:
             return self._execute_locally(
                 agent_instance, instruction, enhanced_instruction, multimodal_content, has_raw_files
             )
-    
+
     def _execute_via_lambda(
-        self, 
-        agent_instance: Any, 
-        enhanced_instruction: str, 
-        input_data: Dict[str, Any]
+        self, agent_instance: Any, enhanced_instruction: str, input_data: Dict[str, Any]
     ) -> AgentExecutionResult:
         """Execute agent via Lambda service."""
         from tn_agent_launcher.chat.models import PromptTemplate
+
         from ..lambda_service import lambda_agent_service
-        
+
         # Get the system prompt
         system_prompt = PromptTemplate.objects.get_assembled_prompt(
             agent_instance=agent_instance.id
         )
-        
+
         # Invoke Lambda with provider configuration
         # Note: Lambda doesn't support multimodal content yet, so always use enhanced_instruction
         response = lambda_agent_service.invoke_agent(
@@ -88,21 +86,22 @@ class AgentExecutor:
             target_url=agent_instance.target_url,
             context=input_data,
         )
-        
+
         return AgentExecutionResult(response.get("response", ""))
-    
+
     def _execute_locally(
         self,
         agent_instance: Any,
         instruction: str,
         enhanced_instruction: str,
         multimodal_content: List[Any],
-        has_raw_files: bool
+        has_raw_files: bool,
     ) -> AgentExecutionResult:
         """Execute agent locally with async handling."""
+
         async def run_agent():
             agent = await agent_instance.agent()
-            
+
             # If we have raw files, use multimodal content with PydanticAI
             if has_raw_files and multimodal_content:
                 # For multimodal content, we pass the instruction along with the media
@@ -112,7 +111,7 @@ class AgentExecutor:
             else:
                 # For text-only or preprocessed content, use enhanced instruction
                 return await agent.run(enhanced_instruction)
-        
+
         # Handle existing event loop by creating a new one in a separate thread
         def run_in_new_loop():
             # Create a new event loop for this thread
@@ -122,10 +121,10 @@ class AgentExecutor:
                 return new_loop.run_until_complete(run_agent())
             finally:
                 new_loop.close()
-        
+
         # Run the async function in a new thread with its own event loop
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(run_in_new_loop)
             result = future.result()
-        
+
         return AgentExecutionResult(result.output)
