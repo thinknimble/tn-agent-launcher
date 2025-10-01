@@ -10,7 +10,7 @@ import pandas as pd
 from django.conf import settings
 from django.core.files.storage import get_storage_class
 
-from .document_pipeline import DocumentProcessor
+from .document_pipeline import DocumentProcessor, is_document_processing_available
 from .sandbox import SandboxManager
 
 logger = logging.getLogger(__name__)
@@ -532,8 +532,8 @@ class InputSourceDownloader:
         file_type = download_info["file_type"]
         content_type = download_info.get("content_type", "")
 
-        # Check if user wants to skip preprocessing entirely
-        skip_preprocessing = self.processing_config.get("skip_preprocessing", False)
+        # Check if user wants to skip preprocessing entirely OR if document processing is not available
+        skip_preprocessing = self.processing_config.get("skip_preprocessing", False) or not is_document_processing_available()
 
         if skip_preprocessing:
             # For raw files, prepare BinaryContent for PydanticAI

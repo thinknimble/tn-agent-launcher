@@ -560,3 +560,27 @@ SPECTACULAR_SETTINGS = {
 # OpenAI Configuration
 #
 OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
+
+#
+# Document Preprocessing Configuration
+#
+# Enable/disable document preprocessing features that require heavy dependencies
+# Set to False by default on Heroku since docling doesn't work there
+# Can be overridden by ENABLE_DOC_PREPROCESSING environment variable
+def _detect_heroku_environment():
+    """Detect if we're running on Heroku by checking for common Heroku environment variables"""
+    heroku_indicators = [
+        'DYNO',  # Heroku dyno name
+        'PORT',  # Heroku sets this
+        'DATABASE_URL',  # Usually present on Heroku deployments
+        'HEROKU_APP_NAME',  # If set in config vars
+        'HEROKU_SLUG_COMMIT',  # Present in Heroku builds
+    ]
+    return any(os.environ.get(indicator) for indicator in heroku_indicators)
+
+IS_HEROKU = _detect_heroku_environment()
+ENABLE_DOC_PREPROCESSING = False if IS_HEROKU else config(
+    "ENABLE_DOC_PREPROCESSING", 
+    default=False,  # Default to False on Heroku, True elsewhere
+    cast=bool
+)

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Button } from './button'
+import { useAppConfig } from 'src/services/app-config/queries'
 
 interface DocumentProcessingConfig {
   skipPreprocessing: boolean
@@ -35,8 +36,11 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
   filename,
   contentType,
 }) => {
+  const { data: appConfig, isLoading: configLoading } = useAppConfig()
+  const docProcessingEnabled = appConfig?.enableDocPreprocessing ?? false
+  
   const [config, setConfig] = useState<DocumentProcessingConfig>({
-    skipPreprocessing: true, // Default to skip preprocessing for multimodal models
+    skipPreprocessing: !docProcessingEnabled, // Default to skip if doc processing not enabled
     // Image processing defaults (used when preprocessing is enabled)
     preprocessImage: true,
     isDocumentWithText: true,
@@ -56,6 +60,18 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
     onClose()
   }
 
+  if (configLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-primary-600">Loading configuration...</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
@@ -65,6 +81,15 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
           Configure how <strong>{filename}</strong> should be processed for the agent.
         </p>
 
+        {!docProcessingEnabled && (
+          <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-3">
+            <p className="text-sm text-orange-700">
+              <strong>Note:</strong> Document preprocessing is not available on this server. 
+              Files will be sent directly to the agent for processing.
+            </p>
+          </div>
+        )}
+
         <div className="space-y-4">
           {/* Skip preprocessing option */}
           <div className="rounded-lg border border-primary-200 p-4">
@@ -73,22 +98,25 @@ export const DocumentProcessingConfigModal: React.FC<DocumentProcessingConfigMod
                 type="checkbox"
                 checked={config.skipPreprocessing}
                 onChange={(e) => setConfig({ ...config, skipPreprocessing: e.target.checked })}
-                className="mt-1 h-4 w-4 rounded border-primary-300 text-primary-600 focus:ring-primary-500"
+                disabled={!docProcessingEnabled}
+                className="mt-1 h-4 w-4 rounded border-primary-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
               />
               <div>
-                <span className="font-medium text-primary-700">
-                  Send file directly to agent (recommended)
+                <span className={`font-medium ${!docProcessingEnabled ? 'text-gray-500' : 'text-primary-700'}`}>
+                  Send file directly to agent {docProcessingEnabled ? '(recommended)' : '(required)'}
                 </span>
-                <p className="text-sm text-primary-500">
-                  Skip all preprocessing and let the multimodal agent handle the raw file directly.
-                  Use preprocessing only for non-multimodal models or cost optimization.
+                <p className={`text-sm ${!docProcessingEnabled ? 'text-gray-400' : 'text-primary-500'}`}>
+                  {docProcessingEnabled 
+                    ? 'Skip all preprocessing and let the multimodal agent handle the raw file directly. Use preprocessing only for non-multimodal models or cost optimization.'
+                    : 'Document preprocessing is not available on this server, so files will be sent directly to the agent.'
+                  }
                 </p>
               </div>
             </label>
           </div>
 
-          {/* Conditional processing options when not skipping */}
-          {!config.skipPreprocessing && (
+          {/* Conditional processing options when not skipping AND doc processing is enabled */}
+          {!config.skipPreprocessing && docProcessingEnabled && (
             <div className="space-y-4">
               {isImage && (
                 <div className="bg-blue-25 rounded-lg border border-blue-200 p-4">
