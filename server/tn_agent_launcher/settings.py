@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import requests
 
 import dj_database_url
 from decouple import config
