@@ -4,21 +4,39 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions, granite_picture_description
-from docling.document_converter import (
-    AsciiDocFormatOption,
-    CsvFormatOption,
-    DocumentConverter,
-    ExcelFormatOption,
-    HTMLFormatOption,
-    ImageFormatOption,
-    MarkdownFormatOption,
-    PdfFormatOption,
-    PowerpointFormatOption,
-    WordFormatOption,
-)
-from docling_core.types.doc.document import PictureDescriptionData
+from django.conf import settings
+
+# Conditional imports for docling - only available when doc processing is enabled
+try:
+    if settings.ENABLE_DOC_PREPROCESSING:
+        from docling.datamodel.base_models import InputFormat
+        from docling.datamodel.pipeline_options import PdfPipelineOptions, granite_picture_description
+        from docling.document_converter import (
+            AsciiDocFormatOption,
+            CsvFormatOption,
+            DocumentConverter,
+            ExcelFormatOption,
+            HTMLFormatOption,
+            ImageFormatOption,
+            MarkdownFormatOption,
+            PdfFormatOption,
+            PowerpointFormatOption,
+            WordFormatOption,
+        )
+        from docling_core.types.doc.document import PictureDescriptionData
+        DOCLING_AVAILABLE = True
+    else:
+        DOCLING_AVAILABLE = False
+except ImportError:
+    DOCLING_AVAILABLE = False
+
+
+def is_document_processing_available() -> bool:
+    """
+    Check if document processing is available.
+    Returns False if docling is not installed or ENABLE_DOC_PREPROCESSING is False.
+    """
+    return DOCLING_AVAILABLE
 
 
 class DocumentType(Enum):
@@ -71,6 +89,12 @@ class ProcessingResult:
 
 class DocumentProcessor:
     def __init__(self):
+        if not DOCLING_AVAILABLE:
+            raise RuntimeError(
+                "Document processing is not available. Either docling is not installed "
+                "or ENABLE_DOC_PREPROCESSING is set to False. To enable document processing, "
+                "install the doc-processing dependency group: uv sync --group doc-processing"
+            )
         self.image_config = ImageProcessingConfig()
         self.converter = None
 

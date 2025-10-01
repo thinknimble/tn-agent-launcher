@@ -33,8 +33,8 @@ COPY ./server /app/
 
 ENV UV_PROJECT_ENVIRONMENT=/usr/local
 
-# Install Python packages using uv sync
-RUN uv sync
+# Install Python packages using uv sync with document processing support
+RUN uv sync --extra doc-processing
 
 # Copy and build client application
 COPY ./client /app/client
