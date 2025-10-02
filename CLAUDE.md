@@ -43,15 +43,12 @@ You do not need to push to github do not ask me.
 When building components:
  always reference the tailwind.colors.js as the main source for the branding
  always use tailwind classes
+ always try looking for existing components first
+
 When building out API Services :
     always place them inside the services folder
     always use tn-models with zods
     always use tanstack
-
-
-
-
-
 
 
 # TN-Models-FP Package Understanding Prompt

@@ -8,6 +8,8 @@ import Select from 'react-dropdown-select'
 import { Button } from 'src/components/button'
 import { Input } from 'src/components/input'
 import { ErrorsList } from 'src/components/errors'
+import { InputSourceUploader } from 'src/components/input-source-uploader'
+import { DocumentProcessingConfigModal } from 'src/components/document-processing-config'
 import {
   AgentTask,
   AgentTaskForm,
@@ -17,6 +19,8 @@ import {
   scheduleTypeLabelMap,
   scheduleTypeEnum,
   ScheduleTypeValues,
+  InputSource,
+  sourceTypeEnum,
 } from 'src/services/agent-task'
 import { AgentInstance, agentInstanceQueries, agentTypeEnum } from 'src/services/agent-instance'
 import { SelectOption } from 'src/services/base-model'
@@ -24,18 +28,22 @@ import { SelectOption } from 'src/services/base-model'
 const CreateEditAgentTaskInner = ({
   onSuccess,
   onCancel,
-  preselectedAgentId,
+  preselectedAgent,
   initialData,
+  duplicateFrom,
   isEditing = false,
 }: {
   onSuccess: (task: AgentTask) => void
   onCancel?: () => void
-  preselectedAgentId?: string
+  preselectedAgent?: AgentInstance
   initialData?: AgentTask
+  duplicateFrom?: AgentTask
   isEditing?: boolean
 }) => {
   const { form, createFormFieldChangeHandler, overrideForm } = useTnForm<TAgentTaskForm>()
   const queryClient = useQueryClient()
+  const [urlConfigModalOpen, setUrlConfigModalOpen] = useState(false)
+  const [currentUrlIndex, setCurrentUrlIndex] = useState<number | null>(null)
 
   const { data: agentInstances } = useQuery(
     agentInstanceQueries.list(new Pagination(), {
@@ -44,19 +52,32 @@ const CreateEditAgentTaskInner = ({
     }),
   )
 
+  // Get all agent tasks for trigger selection TODO: filter by current project
+  const { data: agentTasks } = useQuery(
+    agentTaskQueries.list({ filters: undefined, pagination: new Pagination() }),
+  )
+
   const { mutate: create, isPending: isCreating } = useMutation({
     mutationFn: agentTaskApi.create,
-    onSuccess(data) {
+    async onSuccess(data) {
+      // Invalidate all agent-tasks queries with prefix matching
+      await queryClient.invalidateQueries({
+        queryKey: ['agent-tasks'],
+        exact: false,
+      })
       onSuccess(data)
-      queryClient.invalidateQueries({ queryKey: ['agent-tasks'] })
     },
   })
 
   const { mutate: update, isPending: isUpdating } = useMutation({
     mutationFn: agentTaskApi.update,
-    onSuccess(data) {
+    async onSuccess(data) {
+      // Invalidate all agent-tasks queries with prefix matching
+      await queryClient.invalidateQueries({
+        queryKey: ['agent-tasks'],
+        exact: false,
+      })
       onSuccess(data)
-      queryClient.invalidateQueries({ queryKey: ['agent-tasks'] })
     },
   })
 
@@ -75,6 +96,17 @@ const CreateEditAgentTaskInner = ({
     return Object.entries(scheduleTypeLabelMap).map(([value, label]) => ({ label, value }))
   }, [])
 
+  const agentTaskOptions: SelectOption[] = useMemo(() => {
+    return (
+      agentTasks?.results
+        ?.filter((task) => task.id !== initialData?.id) // Don't allow self-reference
+        ?.map((task) => ({
+          label: task.name,
+          value: task.id,
+        })) || []
+    )
+  }, [agentTasks, initialData?.id])
+
   // Pre-populate form for editing
   useEffect(() => {
     if (initialData && isEditing) {
@@ -82,14 +114,18 @@ const CreateEditAgentTaskInner = ({
       updatedForm._name.value = initialData.name
       updatedForm.description.value = initialData.description || ''
       updatedForm.instruction.value = initialData.instruction
+      updatedForm.inputSources.value = initialData.inputSources || []
       updatedForm.scheduledAt.value = initialData.scheduledAt || ''
       updatedForm.intervalMinutes.value = initialData.intervalMinutes
       updatedForm.maxExecutions.value = initialData.maxExecutions
 
       // Set agent instance
-      const agentOption = agentOptions.find((opt) => opt.value === initialData.agentInstance)
-      if (agentOption) {
-        updatedForm.agentInstance.value = agentOption
+
+      if (initialData.agentInstance) {
+        updatedForm.agentInstance.value = {
+          label: initialData.agentInstanceName || 'Agent',
+          value: initialData.agentInstance,
+        }
       }
 
       // Set schedule type
@@ -100,41 +136,129 @@ const CreateEditAgentTaskInner = ({
         updatedForm.scheduleType.value = scheduleOption
       }
 
+      // Set triggered by task
+      if (initialData.triggeredByTask) {
+        updatedForm.triggeredByTask.value = {
+          label: initialData.triggeredByTaskName || 'Agent Task',
+          value: initialData.triggeredByTask,
+        }
+      }
+
       overrideForm(updatedForm)
     }
   }, [initialData, isEditing, agentOptions, scheduleTypeOptions, overrideForm])
 
-  // Pre-select agent for new tasks
+  // Pre-populate form for duplication
   useEffect(() => {
-    if (preselectedAgentId && agentOptions.length > 0 && !isEditing) {
-      const selectedAgent = agentOptions.find((option) => option.value === preselectedAgentId)
+    if (duplicateFrom && !isEditing && agentOptions.length > 0) {
+      const updatedForm = new AgentTaskForm() as TAgentTaskForm
+      updatedForm._name.value = `${duplicateFrom.name} (Copy)`
+      updatedForm.description.value = duplicateFrom.description || ''
+      updatedForm.instruction.value = duplicateFrom.instruction
+      updatedForm.inputSources.value = duplicateFrom.inputSources || []
+      updatedForm.scheduledAt.value = duplicateFrom.scheduledAt || ''
+      updatedForm.intervalMinutes.value = duplicateFrom.intervalMinutes
+      updatedForm.maxExecutions.value = duplicateFrom.maxExecutions
+
+      // Set agent instance
+      const agentOption = agentOptions.find((opt) => opt.value === duplicateFrom.agentInstance)
+      if (agentOption) {
+        updatedForm.agentInstance.value = agentOption
+      }
+
+      // Set schedule type
+      const scheduleOption = scheduleTypeOptions.find(
+        (opt) => opt.value === duplicateFrom.scheduleType,
+      )
+      if (scheduleOption) {
+        updatedForm.scheduleType.value = scheduleOption
+      }
+
+      // Set triggered by task
+      if (duplicateFrom.triggeredByTask) {
+        const triggerOption = agentTaskOptions.find(
+          (opt) => opt.value === duplicateFrom.triggeredByTask,
+        )
+        if (triggerOption) {
+          updatedForm.triggeredByTask.value = triggerOption
+        }
+      }
+
+      overrideForm(updatedForm)
+    }
+  }, [duplicateFrom, agentOptions, scheduleTypeOptions, agentTaskOptions, overrideForm, isEditing])
+
+  // Pre-select agent for new tasks (only if not duplicating)
+  useEffect(() => {
+    if (preselectedAgent && !isEditing && !duplicateFrom) {
+      const selectedAgent = { label: preselectedAgent.friendlyName, value: preselectedAgent.id }
+      console.log('Preselecting agent:', selectedAgent)
       if (selectedAgent) {
         const updatedForm = new AgentTaskForm() as TAgentTaskForm
         updatedForm.agentInstance.value = selectedAgent
         overrideForm(updatedForm)
       }
     }
-  }, [preselectedAgentId, agentOptions, overrideForm, isEditing])
+  }, [preselectedAgent, overrideForm, isEditing, duplicateFrom])
 
   const isScheduleTypeOnce = form.scheduleType.value?.value === scheduleTypeEnum.ONCE
   const isScheduleTypeCustom = form.scheduleType.value?.value === scheduleTypeEnum.CUSTOM_INTERVAL
+  const isScheduleTypeAgent = form.scheduleType.value?.value === scheduleTypeEnum.AGENT
+
+  // Helper function to create InputSource object from URL
+  const createInputSourceFromUrl = (url: string): InputSource => {
+    const filename = url.split('/').pop() || 'unknown_file'
+    return {
+      url,
+      sourceType: sourceTypeEnum.PUBLIC_URL,
+      filename,
+      skipPreprocessing: true, // Default to skip preprocessing for multimodal models
+    }
+  }
+
+  const openUrlConfigModal = (index: number) => {
+    setCurrentUrlIndex(index)
+    setUrlConfigModalOpen(true)
+  }
+
+  const handleUrlConfigSave = (config: any) => {
+    if (currentUrlIndex !== null) {
+      const currentSources = form.inputSources.value || []
+      const newSources = [...currentSources]
+      newSources[currentUrlIndex] = {
+        ...newSources[currentUrlIndex],
+        skipPreprocessing: config.skipPreprocessing,
+        preprocessImage: config.preprocessImage,
+        isDocumentWithText: config.isDocumentWithText,
+        replaceImagesWithDescriptions: config.replaceImagesWithDescriptions,
+        containsImages: config.containsImages,
+        extractImagesAsText: config.extractImagesAsText,
+      }
+      createFormFieldChangeHandler(form.inputSources)(newSources)
+    }
+    setCurrentUrlIndex(null)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (form.isValid) {
       const formValue = form.value
+      console.log(form.value)
       const data = {
         name: formValue._name || '',
         description: formValue.description || '',
         agentInstance: formValue.agentInstance?.value || '',
         instruction: formValue.instruction || '',
+        inputSources: (formValue.inputSources || []).filter((source) => source.url.trim() !== ''),
         scheduleType: (formValue.scheduleType?.value || '') as ScheduleTypeValues,
         scheduledAt: formValue.scheduledAt || undefined,
         intervalMinutes: formValue.intervalMinutes || undefined,
+        triggeredByTask: formValue.triggeredByTask?.value || undefined,
         maxExecutions: formValue.maxExecutions || undefined,
       }
 
       if (isEditing && initialData) {
+        console.log('Updating with data:', { ...data, id: initialData.id })
         update({ ...data, id: initialData.id })
       } else {
         create(data)
@@ -146,12 +270,18 @@ const CreateEditAgentTaskInner = ({
     <div className="rounded-lg border border-primary-200 bg-white p-6 shadow-sm">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-primary-600">
-          {isEditing ? 'Edit Agent Task' : 'Create New Agent Task'}
+          {isEditing
+            ? 'Edit Agent Task'
+            : duplicateFrom
+              ? 'Duplicate Agent Task'
+              : 'Create New Agent Task'}
         </h2>
         <p className="mt-2 text-sm text-primary-400">
           {isEditing
             ? 'Update your scheduled task configuration'
-            : 'Schedule automated tasks for your one-shot agents'}
+            : duplicateFrom
+              ? `Creating a copy of "${duplicateFrom.name}"`
+              : 'Schedule automated tasks for your one-shot agents'}
         </p>
       </div>
 
@@ -180,7 +310,7 @@ const CreateEditAgentTaskInner = ({
               }
               placeholder="Select an agent instance"
               className="bg-primary-50 border-primary-200"
-              disabled={!!preselectedAgentId || isEditing}
+              disabled={!!preselectedAgent || isEditing}
             />
             <ErrorsList errors={form.agentInstance.errors} />
           </div>
@@ -206,6 +336,147 @@ const CreateEditAgentTaskInner = ({
             onChange={(e) => createFormFieldChangeHandler(form.instruction)(e.target.value)}
           />
           <ErrorsList errors={form.instruction.errors} />
+        </div>
+
+        <div>
+          <label className="mb-3 block text-sm font-medium text-primary-600">Input Sources</label>
+
+          {/* File Upload Section */}
+          <div className="mb-4">
+            <InputSourceUploader
+              onFilesSelected={(inputSources) => {
+                const currentSources = form.inputSources.value || []
+                createFormFieldChangeHandler(form.inputSources)([
+                  ...currentSources,
+                  ...inputSources,
+                ])
+              }}
+              maxFiles={5}
+              maxSize={50}
+            />
+          </div>
+
+          {/* URL Input Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-px flex-1 bg-primary-200"></div>
+              <span className="px-2 text-xs text-primary-400">Or add URLs manually</span>
+              <div className="h-px flex-1 bg-primary-200"></div>
+            </div>
+
+            <div className="space-y-2">
+              {(form.inputSources.value || []).map((source, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Input
+                      type="url"
+                      placeholder="https://example.com/document.pdf"
+                      value={source.url || ''}
+                      onChange={(e) => {
+                        const currentSources = form.inputSources.value || []
+                        const newSources = [...currentSources]
+                        if (e.target.value.trim()) {
+                          newSources[index] = createInputSourceFromUrl(e.target.value.trim())
+                        } else {
+                          newSources[index] = {
+                            ...source,
+                            url: e.target.value,
+                            filename: e.target.value || 'unknown_file', // Ensure filename is always present
+                          }
+                        }
+                        createFormFieldChangeHandler(form.inputSources)(newSources)
+                      }}
+                      className="bg-primary-50 border-primary-200 focus:border-primary-500"
+                    />
+                    <div className="mt-1 flex gap-2">
+                      <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                        {source.sourceType === sourceTypeEnum.OUR_S3 ? '📁' : '🌐'}
+                        {source.sourceType === sourceTypeEnum.OUR_S3
+                          ? 'Uploaded File'
+                          : 'Public URL'}
+                      </span>
+                      {source.filename && (
+                        <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600">
+                          📄 {source.filename}
+                        </span>
+                      )}
+                      <span className="rounded bg-green-50 px-2 py-1 text-xs text-green-600">
+                        {source.skipPreprocessing !== undefined ||
+                        source.preprocessImage !== undefined ||
+                        source.containsImages !== undefined ? (
+                          <>
+                            ✓ Configured
+                            {source.skipPreprocessing && ' (Direct to agent)'}
+                            {source.skipPreprocessing === false && ' (Preprocessing enabled)'}
+                          </>
+                        ) : (
+                          '→ Will be sent directly to agent (default)'
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    {source.sourceType === sourceTypeEnum.PUBLIC_URL && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => openUrlConfigModal(index)}
+                        className="hover:bg-primary-50 text-primary-600 hover:text-primary-700"
+                      >
+                        Configure
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        const currentSources = form.inputSources.value || []
+                        const newSources = currentSources.filter((_, i) => i !== index)
+                        createFormFieldChangeHandler(form.inputSources)(newSources)
+
+                        // Handle configuration modal state when removing URL
+                        if (currentUrlIndex === index) {
+                          setUrlConfigModalOpen(false)
+                          setCurrentUrlIndex(null)
+                        } else if (currentUrlIndex !== null && currentUrlIndex > index) {
+                          setCurrentUrlIndex(currentUrlIndex - 1)
+                        }
+                      }}
+                      className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  const currentSources = form.inputSources.value || []
+                  const newInputSource: InputSource = {
+                    url: '',
+                    sourceType: sourceTypeEnum.PUBLIC_URL,
+                    filename: 'unknown_file', // Provide default filename
+                    skipPreprocessing: true, // Default to skip preprocessing
+                  }
+                  createFormFieldChangeHandler(form.inputSources)([
+                    ...currentSources,
+                    newInputSource,
+                  ])
+                }}
+                className="hover:bg-primary-50 text-primary-600 hover:text-primary-700"
+              >
+                Add URL
+              </Button>
+            </div>
+          </div>
+
+          <ErrorsList errors={form.inputSources.errors} />
+          <p className="mt-2 text-xs text-primary-400">
+            Upload files or add URLs to documents, images, or other resources for the agent to
+            process
+          </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -253,6 +524,27 @@ const CreateEditAgentTaskInner = ({
               <ErrorsList errors={form.intervalMinutes.errors} />
             </div>
           )}
+
+          {isScheduleTypeAgent && (
+            <div>
+              <label className="mb-2 block text-sm font-medium text-primary-600">
+                Triggered By Task
+              </label>
+              <Select
+                options={agentTaskOptions}
+                values={form.triggeredByTask.value ? [form.triggeredByTask.value] : []}
+                onChange={(values) =>
+                  createFormFieldChangeHandler(form.triggeredByTask)(values ? values[0] : null)
+                }
+                placeholder="Select task that will trigger this task"
+                className="bg-primary-50 border-primary-200"
+              />
+              <ErrorsList errors={form.triggeredByTask.errors} />
+              <p className="mt-1 text-xs text-primary-400">
+                This task will be executed when the selected task completes successfully
+              </p>
+            </div>
+          )}
         </div>
 
         <div>
@@ -294,6 +586,20 @@ const CreateEditAgentTaskInner = ({
           </Button>
         </div>
       </form>
+
+      {/* URL Processing Configuration Modal */}
+      {currentUrlIndex !== null && (
+        <DocumentProcessingConfigModal
+          isOpen={urlConfigModalOpen}
+          onClose={() => {
+            setUrlConfigModalOpen(false)
+            setCurrentUrlIndex(null)
+          }}
+          onConfirm={handleUrlConfigSave}
+          filename={form.inputSources.value?.[currentUrlIndex]?.filename || 'URL'}
+          contentType={undefined} // We don't know content type for URLs until download
+        />
+      )}
     </div>
   )
 }
@@ -301,18 +607,17 @@ const CreateEditAgentTaskInner = ({
 export const CreateAgentTask = ({
   task,
   agent,
+  duplicateFrom,
   onSuccess,
   onCancel,
 }: {
   task?: AgentTask
-  agent: AgentInstance
+  agent?: AgentInstance
+  duplicateFrom?: AgentTask
   onSuccess?: () => void
   onCancel?: () => void
 }) => {
   const isEditing = useMemo(() => !!task, [task])
-
-  const pageTitle = isEditing ? 'Edit Agent Task' : 'Create Agent Task'
-  const backPath = isEditing ? `/tasks` : '/tasks'
 
   return (
     <div className="min-h-screen">
@@ -325,8 +630,9 @@ export const CreateAgentTask = ({
             onCancel={() => {
               onCancel?.()
             }}
-            preselectedAgentId={agent.id || undefined}
+            preselectedAgent={agent || undefined}
             initialData={task}
+            duplicateFrom={duplicateFrom}
             isEditing={isEditing}
           />
         </FormProvider>

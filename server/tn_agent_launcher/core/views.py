@@ -199,3 +199,18 @@ class PreviewTemplateView(views.APIView):
             model, pk = value.split(":")
             value = apps.get_model(model).objects.get(pk=pk)
         return key, value
+
+
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def app_config(request):
+    """
+    Return application configuration settings for the frontend.
+    This endpoint allows the frontend to conditionally show/hide features
+    based on server-side configuration.
+    """
+    return Response(
+        {
+            "enableDocPreprocessing": settings.ENABLE_DOC_PREPROCESSING,
+        }
+    )

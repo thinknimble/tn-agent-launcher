@@ -27,6 +27,7 @@ dependencies = [
     "drf-writable-nested==0.6.3",
     "gunicorn>=23.0.0",
     "openai>=1.65.0",
+    "pandas>=2.3.3",
     "pre-commit==2.13.*",
     "premailer>=3.10.0",
     "psycopg2-binary==2.9.*",
@@ -59,6 +60,12 @@ lambda-dev = [
     "pytest-asyncio>=0.21.0,<0.24.0",  # Compatible with pytest 7.x
     "mypy>=1.0.0",
     "types-boto3>=1.0.0",
+]
+
+[project.optional-dependencies]
+doc-processing = [
+    # Document processing dependencies - not available on Heroku
+    "docling>=2.48.0",
 ]
 
 [tool.ruff]

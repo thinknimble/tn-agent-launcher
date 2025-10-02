@@ -1,7 +1,7 @@
 variable "service" {
   type        = string
   description = "The service name for AWS resources (lowercase, alphanumeric and hyphens only, no underscores)"
-  default     = "tn-agent-launcher"
+  default     = "{{ cookiecutter.sanitized_tf_service_name }}"
   
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.service))
@@ -27,7 +27,7 @@ variable "aws_region" {
 variable "ecr_app_repository_name" {
   type        = string
   description = "The ECR repository name for the app service backend"
-  default     = "tn_agent_launcher-app"
+  default     = "{{ cookiecutter.sanitized_tf_service_name }}-app"
 }
 
 
@@ -55,7 +55,7 @@ variable "secret_key" {
   type        = string
   description = "SECRET_KEY for the app service backend"
   sensitive   = true
-  default     = "nReGmEkIwPqqlZcMPIIyHGvVSsWJeddzqHBMHMjGzbfNVlgLnX"
+  default     = "{{ random_ascii_string(50) }}"
 }
 
 variable "debug" {
@@ -86,21 +86,21 @@ variable "db_name" {
   type        = string
   description = "The database name for the app service backend"
   sensitive   = true
-  default     = "tn_agent_launcher_db"
+  default     = "{{ cookiecutter.project_slug }}_db"
 }
 
 variable "db_user" {
   type        = string
   description = "The database user for the app service backend"
   sensitive   = true
-  default     = "tn_agent_launcher_user"
+  default     = "{{ cookiecutter.project_slug }}_user"
 }
 
 variable "db_pass" {
   type        = string
   description = "The database password for the app service backend"
   sensitive   = true
-  default     = "DNgAeTxohypLfYWvVWwApijaPUjhQJjdiRGpUthXzygPvUjgOw"
+  default     = "{{ random_ascii_string(50) }}"
 }
 
 variable "use_aws_storage" {
@@ -145,21 +145,21 @@ variable "enable_emails" {
 variable "staff_email" {
   type        = string
   description = "The staff email for the app service backend"
-  default     = "ThinkNimble <hello@thinknimble.com>"
+  default     = "{{ cookiecutter.author_name }} <{{ cookiecutter.email }}>"
 }
 
 variable "django_superuser_password" {
   type        = string
   description = "The password for the Django superuser"
   sensitive   = true
-  default     = "nwrIrHpGvtlALJUaWvdLbMAcjffpiteqfhcLIkpgDNnxQdETDo"
+  default     = "{{ random_ascii_string(50) }}"
 }
 
 variable "playwright_test_user_pass" {
   type        = string
   description = "The password for the Playwright test user"
   sensitive   = true
-  default     = "iNeQeJZLgLClKXdTYLvMQEKnZczOgrcILIEkbveMIHLpNXLSRj"
+  default     = "{{ random_ascii_string(50) }}"
 }
 variable "playwright_test_base_url" {
   type        = string
@@ -218,3 +218,15 @@ variable "custom_certificate_arn" {
   default     = ""
 }
 
+# VPC sharing configuration
+variable "use_per_project_shared_vpc" {
+  type        = bool
+  description = "If true, create per-project shared VPCs (shared-dev-vpc-PROJECT). If false, use account-wide shared VPC (shared-dev-vpc)"
+  default     = false
+}
+
+variable "enable_doc_preprocessing" {
+  type        = bool
+  description = "Enable document preprocessing for the app service backend - not available in heroku"
+  default     = false
+}

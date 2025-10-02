@@ -61,6 +61,7 @@ class AgentTaskSerializer(serializers.ModelSerializer):
     agent_instance_name = serializers.CharField(
         source="agent_instance.friendly_name", read_only=True
     )
+    triggered_by_task_name = serializers.CharField(source="triggered_by_task.name", read_only=True)
     next_execution_display = serializers.SerializerMethodField()
     last_execution_display = serializers.SerializerMethodField()
 
@@ -73,9 +74,12 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "agent_instance",
             "agent_instance_name",
             "instruction",
+            "input_sources",
             "schedule_type",
             "scheduled_at",
             "interval_minutes",
+            "triggered_by_task",
+            "triggered_by_task_name",
             "status",
             "last_executed_at",
             "last_execution_display",
@@ -94,6 +98,7 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "next_execution_at",
             "execution_count",
             "agent_instance_name",
+            "triggered_by_task_name",
         ]
 
     def get_next_execution_display(self, obj):
@@ -116,15 +121,22 @@ class AgentTaskSerializer(serializers.ModelSerializer):
     def validate(self, data):
         schedule_type = data.get("schedule_type")
 
-        if schedule_type == AgentTask.ScheduleTypeChoices.ONCE:
-            if not data.get("scheduled_at"):
-                raise serializers.ValidationError(
-                    {"scheduled_at": "scheduled_at is required for one-time tasks"}
-                )
-        elif schedule_type == AgentTask.ScheduleTypeChoices.CUSTOM_INTERVAL:
+        # Validate agent instance type (ensure this always runs)
+        agent_instance = data.get("agent_instance")
+        if agent_instance and agent_instance.agent_type != AgentInstance.AgentTypeChoices.ONE_SHOT:
+            raise serializers.ValidationError(
+                {"agent_instance": "Only one-shot agents can be used for scheduled tasks"}
+            )
+
+        if schedule_type == AgentTask.ScheduleTypeChoices.CUSTOM_INTERVAL:
             if not data.get("interval_minutes"):
                 raise serializers.ValidationError(
                     {"interval_minutes": "interval_minutes is required for custom interval tasks"}
+                )
+        elif schedule_type == AgentTask.ScheduleTypeChoices.AGENT:
+            if not data.get("triggered_by_task"):
+                raise serializers.ValidationError(
+                    {"triggered_by_task": "triggered_by_task is required for agent-triggered tasks"}
                 )
 
         return data

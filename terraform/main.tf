@@ -19,24 +19,36 @@ resource "aws_ecs_cluster" "main" {
 }
 
 
-# Data source to find existing shared VPC for development environments
-data "aws_vpc" "shared" {
+# External data source to check if shared VPC exists (doesn't fail if not found)
+data "external" "check_shared_vpc" {
   count = local.is_shared_vpc_env ? 1 : 0
   
-  filter {
-    name   = "tag:Name"
-    values = [local.shared_vpc_name]
-  }
+  program = ["bash", "-c", <<-EOF
+    # Get the oldest VPC by creation time to ensure deterministic selection
+    VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=${local.shared_vpc_name}" "Name=state,Values=available" "Name=tag:Environment,Values=shared-development" --query 'sort_by(Vpcs, &CreationTime)[0].VpcId' --output text 2>/dev/null || echo "None")
+    if [ "$VPC_ID" = "None" ] || [ "$VPC_ID" = "null" ]; then
+      echo '{"exists": "false", "vpc_id": ""}'
+    else
+      echo "{\"exists\": \"true\", \"vpc_id\": \"$VPC_ID\"}"
+    fi
+EOF
+  ]
+}
+
+# Data source to find existing shared VPC (only if it exists)
+# Uses the VPC ID from external data source to avoid multiple matches
+data "aws_vpc" "shared" {
+  count = local.is_shared_vpc_env && try(data.external.check_shared_vpc[0].result.exists, "false") == "true" ? 1 : 0
   
   filter {
-    name   = "state"
-    values = ["available"]
+    name   = "vpc-id"
+    values = [try(data.external.check_shared_vpc[0].result.vpc_id, "")]
   }
 }
 
 # Create shared VPC for development environments (only if it doesn't exist)
 resource "aws_vpc" "shared" {
-  count      = local.is_shared_vpc_env && length(try(data.aws_vpc.shared, [])) == 0 ? 1 : 0
+  count      = local.is_shared_vpc_env && try(data.external.check_shared_vpc[0].result.exists, "false") == "false" ? 1 : 0
   cidr_block = "10.0.0.0/16"
 
   tags = {
@@ -63,9 +75,9 @@ locals {
   ) : aws_vpc.main[0].id
 }
 
-# Data source to find existing shared Internet Gateway
+# Data source to find existing shared Internet Gateway (only if VPC exists)
 data "aws_internet_gateway" "shared" {
-  count = local.is_shared_vpc_env ? 1 : 0
+  count = local.is_shared_vpc_env && try(data.external.check_shared_vpc[0].result.exists, "false") == "true" ? 1 : 0
   
   filter {
     name   = "tag:Name"
@@ -80,7 +92,7 @@ data "aws_internet_gateway" "shared" {
 
 # Create shared Internet Gateway (only if it doesn't exist)
 resource "aws_internet_gateway" "shared" {
-  count  = local.is_shared_vpc_env && length(try(data.aws_internet_gateway.shared, [])) == 0 ? 1 : 0
+  count  = local.is_shared_vpc_env && try(data.external.check_shared_vpc[0].result.exists, "false") == "false" ? 1 : 0
   vpc_id = local.vpc_id
 
   tags = {
@@ -106,9 +118,9 @@ locals {
   ) : aws_internet_gateway.main[0].id
 }
 
-# Data source to find existing shared route table
+# Data source to find existing shared route table (only if VPC exists)
 data "aws_route_table" "shared" {
-  count = local.is_shared_vpc_env ? 1 : 0
+  count = local.is_shared_vpc_env && try(data.external.check_shared_vpc[0].result.exists, "false") == "true" ? 1 : 0
   
   filter {
     name   = "tag:Name"
@@ -123,7 +135,7 @@ data "aws_route_table" "shared" {
 
 # Create shared route table (only if it doesn't exist)
 resource "aws_route_table" "shared" {
-  count  = local.is_shared_vpc_env && length(try(data.aws_route_table.shared, [])) == 0 ? 1 : 0
+  count  = local.is_shared_vpc_env && try(data.external.check_shared_vpc[0].result.exists, "false") == "false" ? 1 : 0
   vpc_id = local.vpc_id
 
   route {

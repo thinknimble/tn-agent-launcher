@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 
 from tn_agent_launcher.chat.models import PromptTemplate
 
-from .models import AgentInstance
+from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution
 
 # Register your models here.
 
@@ -83,3 +83,8 @@ class AgentInstanceAdmin(admin.ModelAdmin):
         )
 
         return fieldsets
+
+
+admin.site.register(AgentTask)
+admin.site.register(AgentTaskExecution)
+admin.site.register(AgentProject)

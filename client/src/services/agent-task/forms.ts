@@ -1,14 +1,101 @@
-import { Form, IFormField, FormField } from '@thinknimble/tn-forms'
+import {
+  Form,
+  IFormField,
+  FormField,
+  PatternValidator,
+  notNullOrUndefined,
+} from '@thinknimble/tn-forms'
 import { SelectOption } from '../base-model'
+import { InputSource } from './models'
+
+export class InputSourceValidator extends PatternValidator {
+  constructor({
+    message = 'Please provide valid input sources',
+    code = 'invalidInputSource',
+    isRequired = false,
+  } = {}) {
+    // URL pattern for validating URLs within input source objects
+    const pattern =
+      /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-/]))?$/
+    super({ message, code, isRequired, pattern })
+  }
+
+  call(value: any) {
+    // Allow empty arrays
+    if (!value || (Array.isArray(value) && value.length === 0)) {
+      if (this.isRequired) {
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'At least one input source is required' }),
+        )
+      }
+      return
+    }
+
+    if (!Array.isArray(value)) {
+      throw new Error(
+        JSON.stringify({ code: this.code, message: 'Input sources must be an array' }),
+      )
+    }
+
+    for (const source of value) {
+      // Validate each input source object
+      if (typeof source !== 'object' || source === null) {
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'Each input source must be an object' }),
+        )
+      }
+
+      // Check required fields
+      if (!source.url || typeof source.url !== 'string') {
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'Each input source must have a valid URL' }),
+        )
+      }
+
+      // Validate URL format
+      if (!this.pattern.test(source.url)) {
+        throw new Error(
+          JSON.stringify({ code: this.code, message: `Invalid URL format: ${source.url}` }),
+        )
+      }
+
+      // Validate sourceType if present
+      if (source.sourceType && typeof source.sourceType !== 'string') {
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'Source type must be a string' }),
+        )
+      }
+
+      // Validate optional fields
+      if (source.filename && typeof source.filename !== 'string') {
+        throw new Error(JSON.stringify({ code: this.code, message: 'Filename must be a string' }))
+      }
+
+      if (source.size && (typeof source.size !== 'number' || source.size < 0)) {
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'File size must be a positive number' }),
+        )
+      }
+
+      if (source.contentType && typeof source.contentType !== 'string') {
+        throw new Error(
+          JSON.stringify({ code: this.code, message: 'Content type must be a string' }),
+        )
+      }
+    }
+  }
+}
 
 export type AgentTaskFormInputs = {
   _name: IFormField<string>
   description: IFormField<string>
   agentInstance: IFormField<SelectOption | null>
   instruction: IFormField<string>
+  inputSources: IFormField<InputSource[]>
   scheduleType: IFormField<SelectOption | null>
   scheduledAt: IFormField<string>
   intervalMinutes: IFormField<number | null>
+  triggeredByTask: IFormField<SelectOption | null>
   maxExecutions: IFormField<number | null>
 }
 
@@ -41,6 +128,14 @@ export class AgentTaskForm extends Form<AgentTaskFormInputs> {
     value: '',
   })
 
+  static inputSources = FormField.create({
+    label: 'Input Sources',
+    placeholder: 'Add files or URLs as input sources...',
+    type: 'array',
+    value: [],
+    validators: [new InputSourceValidator({ isRequired: false })],
+  })
+
   static scheduleType = FormField.create({
     label: 'Schedule Type',
     placeholder: 'Select schedule type',
@@ -59,6 +154,13 @@ export class AgentTaskForm extends Form<AgentTaskFormInputs> {
     label: 'Interval (Minutes)',
     placeholder: 'e.g., 60 for hourly',
     type: 'number',
+    value: null,
+  })
+
+  static triggeredByTask = FormField.create({
+    label: 'Triggered By Task',
+    placeholder: 'Select task that will trigger this task',
+    type: 'select',
     value: null,
   })
 

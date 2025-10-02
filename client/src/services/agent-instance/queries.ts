@@ -11,10 +11,11 @@ export const agentInstanceQueries = {
       queryFn: () => agentInstanceApi.retrieve(id),
       enabled: Boolean(id),
     }),
-  list: (pagination: Pagination, filters?: Partial<AgentInstanceFilters>) =>
-    queryOptions({
+  list: (pagination: Pagination, filters?: Partial<AgentInstanceFilters>) => {
+    return queryOptions({
       queryKey: [...agentInstanceQueries.all(), { pagination, filters }],
       queryFn: () => agentInstanceApi.list({ pagination, filters }),
-      enabled: true,
-    }),
+      enabled: filters?.projects?.length ? true : false,
+    })
+  },
 }

@@ -1,19 +1,19 @@
-import asyncio
 import logging
-import re
 from datetime import datetime
 from typing import Optional
 
 from background_task import background
-from django.conf import settings
 from django.utils import timezone
+
+from .services.execution_manager import ExecutionManager
 
 logger = logging.getLogger(__name__)
 
 
 @background(schedule=1)
 def execute_agent_task(task_execution_id: int):
-    from .models import AgentTask, AgentTaskExecution
+    """Execute an agent task using the ExecutionManager service."""
+    from .models import AgentTaskExecution
 
     logger.info(f"Starting execution of agent task execution {task_execution_id}")
 
@@ -23,112 +23,9 @@ def execute_agent_task(task_execution_id: int):
         logger.error(f"AgentTaskExecution {task_execution_id} not found")
         return
 
-    task = execution.agent_task
-    start_time = timezone.now()
-
-    execution.status = AgentTaskExecution.StatusChoices.RUNNING
-    execution.started_at = start_time
-    execution.save()
-
-    try:
-        agent_instance = task.agent_instance
-        # Check both global setting and per-agent setting
-        use_lambda = settings.USE_LAMBDA_FOR_AGENT_EXECUTION and agent_instance.use_lambda
-
-        input_data = {
-            "instruction": task.instruction,
-            "task_name": task.name,
-            "execution_id": str(execution.id),
-        }
-
-        execution.input_data = input_data
-        execution.save()
-
-        logger.info(
-            f"Executing agent {agent_instance.friendly_name} with instruction: {task.instruction[:100]}..."
-        )
-
-        if use_lambda:
-            # Use Lambda for execution
-            from tn_agent_launcher.chat.models import PromptTemplate
-
-            from .lambda_service import lambda_agent_service
-
-            # Get the system prompt
-            system_prompt = PromptTemplate.objects.get_assembled_prompt(
-                agent_instance=agent_instance.id
-            )
-
-            # Invoke Lambda with provider configuration
-            response = lambda_agent_service.invoke_agent(
-                provider=agent_instance.provider,
-                model_name=agent_instance.model_name,
-                api_key=agent_instance.api_key,
-                prompt=task.instruction,
-                system_prompt=system_prompt,
-                agent_type=agent_instance.agent_type,
-                agent_name=agent_instance.friendly_name,
-                target_url=agent_instance.target_url,
-                context=input_data,
-            )
-
-            # Create a result object similar to PydanticAI response
-            class LambdaResult:
-                def __init__(self, output):
-                    self.output = output
-
-            result = LambdaResult(response.get("response", ""))
-        else:
-            # Run locally with async agent
-            async def run_agent():
-                agent = await agent_instance.agent()
-                return await agent.run(task.instruction)
-
-            result = asyncio.run(run_agent())
-
-        end_time = timezone.now()
-        duration = (end_time - start_time).total_seconds()
-
-        execution.status = AgentTaskExecution.StatusChoices.COMPLETED
-        execution.completed_at = end_time
-        execution.execution_time_seconds = duration
-        # lets filter out the thinknig from the output <think> some text </think>
-
-        filtered_output = re.sub(r"<think>.*?</think>", "", result.output, flags=re.DOTALL).strip()
-        execution.output_data = {"result": filtered_output}
-
-        execution.save()
-
-        task.execution_count += 1
-        task.last_executed_at = end_time
-
-        next_execution = task.calculate_next_execution()
-        if next_execution:
-            task.next_execution_at = next_execution
-        else:
-            task.status = AgentTask.StatusChoices.COMPLETED
-
-        task.save()
-
-        logger.info(
-            f"Agent task execution {task_execution_id} completed successfully in {duration:.2f} seconds"
-        )
-
-    except Exception as e:
-        error_message = str(e)
-        logger.error(f"Agent task execution {task_execution_id} failed: {error_message}")
-
-        end_time = timezone.now()
-        duration = (end_time - start_time).total_seconds()
-
-        execution.status = AgentTaskExecution.StatusChoices.FAILED
-        execution.completed_at = end_time
-        execution.execution_time_seconds = duration
-        execution.error_message = error_message
-        execution.save()
-
-        task.status = AgentTask.StatusChoices.FAILED
-        task.save()
+    # Use the ExecutionManager to handle the entire execution flow
+    execution_manager = ExecutionManager()
+    execution_manager.execute_task(execution)
 
 
 def schedule_agent_task_execution(
@@ -172,6 +69,13 @@ def schedule_agent_task_execution(
     logger.info(f"Scheduled execution {execution.id} for task {task.name}")
 
     return execution
+
+
+@background(schedule=1)
+def trigger_chained_task(trigger_task_id: int):
+    """Trigger execution of a chained task in a separate background task."""
+    logger.info(f"Triggering chained task execution {trigger_task_id}")
+    return schedule_agent_task_execution(trigger_task_id, force_execute=True)
 
 
 @background(schedule=60)

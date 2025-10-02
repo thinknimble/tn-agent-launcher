@@ -1,4 +1,3 @@
-
 name: Deploy Application
 
 concurrency:
@@ -434,12 +433,12 @@ jobs:
           
           echo "✅ Updated Playwright test base URL to: $DEPLOYMENT_URL"
 
-      - name: Apply Terraform with updated Playwright URL
-        run: |
-          cd terraform
-          terraform plan -out=tfplan-final
-          terraform apply -auto-approve tfplan-final
-          echo "✅ Applied final configuration with correct Playwright URL"
+      # - name: Apply Terraform with updated Playwright URL
+      #   run: |
+      #     cd terraform
+      #     terraform plan -out=tfplan-final
+      #     terraform apply -auto-approve tfplan-final
+      #     echo "✅ Applied final configuration with correct Playwright URL"
 
       - name: Comment PR with deployment URL
         if: steps.env-vars.outputs.is_pr == 'true'

@@ -344,8 +344,11 @@ const AgentInstanceInner = ({
         ]
       case providerKeysEnum.ANTHROPIC:
         return [
-          { label: 'claude-2', value: 'claude-2' },
-          { label: 'claude-instant-100k', value: 'claude-instant-100k' },
+          { label: 'Sonnet 3.7', value: 'claude-3-7-sonnet-20250219' },
+          { label: 'Sonnet 4.2', value: 'claude-sonnet-4-20250514' },
+          { label: 'Sonnet 4.5', value: 'claude-sonnet-4-5-20250929' },
+          { label: 'Opus 4.1', value: 'claude-opus-4-1-20250805' },
+          { label: 'Opus 4.2', value: 'claude-opus-4-20250514' },
         ]
       case providerKeysEnum.GEMINI:
         return [

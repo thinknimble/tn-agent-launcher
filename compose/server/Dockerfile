@@ -29,8 +29,8 @@ COPY ./server /app/
 
 ENV UV_PROJECT_ENVIRONMENT=/usr/local
 
-# Install Python packages using uv sync
-RUN uv sync
+# Install Python packages using uv sync with document processing support
+RUN uv sync --extra doc-processing
 
 
 # Move the 'start' shell script to the root

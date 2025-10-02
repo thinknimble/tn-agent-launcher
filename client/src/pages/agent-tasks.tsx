@@ -78,7 +78,7 @@ export const AgentTasks = () => {
   const { mutate: cancelExecution } = useMutation({
     mutationFn: (executionId: string) => agentTaskExecutionApi.csc.cancel(executionId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agentTaskExecutions'] })
+      queryClient.invalidateQueries({ queryKey: ['agent-task-executions'] })
     },
   })
 
@@ -327,7 +327,7 @@ export const AgentTasks = () => {
       </div>
       {editing || creating ? (
         <CreateAgentTask
-          agent={agentInstance!}
+          agent={agentInstance}
           task={editing || undefined}
           onSuccess={() => {
             setEditing(null)
