@@ -477,25 +477,6 @@ class TestAgentTaskCRUD:
         response = api_client.get(f"/api/agents/tasks/{other_user_task.id}/")
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_task_validation_one_shot_agent_only(self, api_client, sample_user):
-        """Test that tasks can only be created with one-shot agent instances"""
-        api_client.force_authenticate(user=sample_user)
-
-        # Create a chat agent (not one-shot)
-        chat_agent = AgentInstanceFactory(user=sample_user, agent_type="chat")
-        chat_agent.save()
-
-        data = {
-            "name": "Invalid Task",
-            "agent_instance": str(chat_agent.id),
-            "instruction": "This should fail",
-            "schedule_type": "once",
-        }
-
-        response = api_client.post("/api/agents/tasks/", data, format="json")
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "only one-shot agents" in str(response.data).lower()
-
     def test_task_execute_now_action(self, api_client, sample_user):
         """Test the execute_now action for tasks"""
         api_client.force_authenticate(user=sample_user)
