@@ -136,11 +136,11 @@ const CreateEditAgentTaskInner = ({
         updatedForm.scheduleType.value = scheduleOption
       }
 
-      // Set trigger agent task
-      if (initialData.triggerAgentTask) {
-        updatedForm.triggerAgentTask.value = {
-          label: initialData.triggerAgentTaskName || 'Agent Task',
-          value: initialData.triggerAgentTask,
+      // Set triggered by task
+      if (initialData.triggeredByTask) {
+        updatedForm.triggeredByTask.value = {
+          label: initialData.triggeredByTaskName || 'Agent Task',
+          value: initialData.triggeredByTask,
         }
       }
 
@@ -174,13 +174,13 @@ const CreateEditAgentTaskInner = ({
         updatedForm.scheduleType.value = scheduleOption
       }
 
-      // Set trigger agent task
-      if (duplicateFrom.triggerAgentTask) {
+      // Set triggered by task
+      if (duplicateFrom.triggeredByTask) {
         const triggerOption = agentTaskOptions.find(
-          (opt) => opt.value === duplicateFrom.triggerAgentTask,
+          (opt) => opt.value === duplicateFrom.triggeredByTask,
         )
         if (triggerOption) {
-          updatedForm.triggerAgentTask.value = triggerOption
+          updatedForm.triggeredByTask.value = triggerOption
         }
       }
 
@@ -253,7 +253,7 @@ const CreateEditAgentTaskInner = ({
         scheduleType: (formValue.scheduleType?.value || '') as ScheduleTypeValues,
         scheduledAt: formValue.scheduledAt || undefined,
         intervalMinutes: formValue.intervalMinutes || undefined,
-        triggerAgentTask: formValue.triggerAgentTask?.value || undefined,
+        triggeredByTask: formValue.triggeredByTask?.value || undefined,
         maxExecutions: formValue.maxExecutions || undefined,
       }
 
@@ -528,20 +528,20 @@ const CreateEditAgentTaskInner = ({
           {isScheduleTypeAgent && (
             <div>
               <label className="mb-2 block text-sm font-medium text-primary-600">
-                Trigger Agent Task
+                Triggered By Task
               </label>
               <Select
                 options={agentTaskOptions}
-                values={form.triggerAgentTask.value ? [form.triggerAgentTask.value] : []}
+                values={form.triggeredByTask.value ? [form.triggeredByTask.value] : []}
                 onChange={(values) =>
-                  createFormFieldChangeHandler(form.triggerAgentTask)(values ? values[0] : null)
+                  createFormFieldChangeHandler(form.triggeredByTask)(values ? values[0] : null)
                 }
-                placeholder="Select agent task to trigger on completion"
+                placeholder="Select task that will trigger this task"
                 className="bg-primary-50 border-primary-200"
               />
-              <ErrorsList errors={form.triggerAgentTask.errors} />
+              <ErrorsList errors={form.triggeredByTask.errors} />
               <p className="mt-1 text-xs text-primary-400">
-                This agent task will be executed when the current task completes successfully
+                This task will be executed when the selected task completes successfully
               </p>
             </div>
           )}

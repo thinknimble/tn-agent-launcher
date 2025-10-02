@@ -483,6 +483,7 @@ class TestAgentTaskCRUD:
 
         # Create a chat agent (not one-shot)
         chat_agent = AgentInstanceFactory(user=sample_user, agent_type="chat")
+        chat_agent.save()
 
         data = {
             "name": "Invalid Task",

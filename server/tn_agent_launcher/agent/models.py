@@ -109,7 +109,8 @@ class AgentProject(AbstractBaseModel):
 
 class AgentTask(AbstractBaseModel):
     class ScheduleTypeChoices(models.TextChoices):
-        ONCE = "once", "Run Once"
+        ONCE = "once", "Run Once"  # Deprecated, use MANUAL instead
+        MANUAL = "manual", "Manual"
         DAILY = "daily", "Daily"
         WEEKLY = "weekly", "Weekly"
         MONTHLY = "monthly", "Monthly"
@@ -164,14 +165,14 @@ class AgentTask(AbstractBaseModel):
     )
     execution_count = models.PositiveIntegerField(default=0)
 
-    # For AGENT schedule type - which agent to trigger on completion
-    trigger_agent_task = models.ForeignKey(
+    # For AGENT schedule type - which agent task triggers this task
+    triggered_by_task = models.ForeignKey(
         "self",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name="triggered_by_tasks",
-        help_text="Agent task to trigger on completion (for AGENT schedule type)",
+        related_name="triggers_tasks",
+        help_text="Agent task that triggers this task (for AGENT schedule type)",
     )
 
     class Meta:
@@ -189,8 +190,8 @@ class AgentTask(AbstractBaseModel):
         super().save(*args, **kwargs)
 
     def _set_next_execution(self):
-        if self.schedule_type == self.ScheduleTypeChoices.ONCE:
-            # For one-time tasks, use the scheduled_at time or None
+        if self.schedule_type in [self.ScheduleTypeChoices.ONCE, self.ScheduleTypeChoices.MANUAL]:
+            # For manual/one-time tasks, use the scheduled_at time or None
             self.next_execution_at = self.scheduled_at
         else:
             # For recurring tasks, use scheduled_at as start time, or calculate immediate next
@@ -201,7 +202,7 @@ class AgentTask(AbstractBaseModel):
                 self.next_execution_at = self.calculate_next_execution()
 
     def calculate_next_execution(self):
-        if self.schedule_type == self.ScheduleTypeChoices.ONCE:
+        if self.schedule_type in [self.ScheduleTypeChoices.ONCE, self.ScheduleTypeChoices.MANUAL]:
             return None
         elif self.schedule_type == self.ScheduleTypeChoices.AGENT:
             # Agent executions are triggered by other agents, not scheduled

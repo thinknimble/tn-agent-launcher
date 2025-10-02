@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.files.storage import get_storage_class
 
 from .document_pipeline import DocumentProcessor, is_document_processing_available
+from .file_type_handler import ProcessingStrategy, make_processing_decision
 from .sandbox import SandboxManager
 
 logger = logging.getLogger(__name__)
@@ -527,27 +528,28 @@ class InputSourceDownloader:
             return f"[Document file: {file_path.name} - extraction failed: {e}]"
 
     def process_downloaded_content(self, download_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Process downloaded content based on file type."""
+        """Process downloaded content based on file type using organized file type handling."""
         file_path = download_info["file_path"]
-        file_type = download_info["file_type"]
         content_type = download_info.get("content_type", "")
 
-        # Check if user wants to skip preprocessing entirely OR if document processing is not available
-        skip_preprocessing = self.processing_config.get("skip_preprocessing", False) or not is_document_processing_available()
+        # Make a processing decision using the new file type handler
+        decision = make_processing_decision(file_path, content_type, self.processing_config)
 
-        if skip_preprocessing:
-            # For raw files, prepare BinaryContent for PydanticAI
+        logger.info(f"Processing {file_path.name}: {decision.description}")
+
+        # Handle binary files for multimodal agents (only images and PDFs)
+        if decision.send_as_binary:
             try:
                 with open(file_path, "rb") as f:
                     file_data = f.read()
 
                 return {
                     **download_info,
-                    "processed_content": f"[Raw file for multimodal processing: {file_path.name}]",
+                    "processed_content": f"[Raw {decision.strategy.value} file for multimodal processing: {file_path.name}]",
                     "content_preview": f"[File ready for direct agent processing: {download_info['filename']}]",
                     "raw_file_mode": True,
                     "binary_data": file_data,
-                    "media_type": content_type,
+                    "media_type": decision.content_type,
                 }
             except Exception as e:
                 logger.error(f"Failed to read raw file {file_path}: {e}")
@@ -559,61 +561,57 @@ class InputSourceDownloader:
                     "error": str(e),
                 }
 
+        # For all other cases, process based on file type strategy
+        # Check if document processing is available when needed
+        if (
+            decision.strategy == ProcessingStrategy.DOCUMENT_PROCESSING
+            and not is_document_processing_available()
+        ):
+            logger.warning(
+                f"Document processing not available for {file_path}, falling back to text processing"
+            )
+            # Fall through to text processing
+
         try:
-            if file_type == "pdf":
-                content = self.extract_pdf_content(file_path)
+            # Process based on the determined strategy
+            if decision.strategy == ProcessingStrategy.BINARY_CAPABLE:
+                # For PDFs and images when not sending as binary
+                if file_path.suffix.lower() == ".pdf":
+                    content = self.extract_pdf_content(file_path)
+                else:
+                    # Image files
+                    content = self.extract_image_content(file_path)
+
                 return {
                     **download_info,
                     "processed_content": content,
                     "content_preview": content[:500] + "..." if len(content) > 500 else content,
                 }
 
-            elif file_type == "image":
-                content = self.extract_image_content(file_path)
-                return {
-                    **download_info,
-                    "processed_content": content,
-                    "content_preview": content[:200] + "..." if len(content) > 200 else content,
-                }
+            elif decision.strategy == ProcessingStrategy.STRUCTURED_DATA:
+                # Handle CSV, JSON, and other structured data
+                if decision.content_type == "application/json" or file_path.suffix.lower() in [
+                    ".json",
+                    ".jsonl",
+                ]:
+                    content = self.process_json_content(file_path)
+                elif decision.content_type == "text/csv" or file_path.suffix.lower() in [
+                    ".csv",
+                    ".tsv",
+                ]:
+                    content = self.process_csv_content(file_path)
+                else:
+                    # Fallback to text for other structured types
+                    content = self.read_text_content(file_path)
 
-            elif file_type == "json" or content_type == "application/json":
-                content = self.process_json_content(file_path)
                 return {
                     **download_info,
                     "processed_content": content,
                     "content_preview": content[:500] + "..." if len(content) > 500 else content,
                 }
 
-            elif content_type == "text/csv" or file_path.suffix.lower() == ".csv":
-                content = self.process_csv_content(file_path)
-                return {
-                    **download_info,
-                    "processed_content": content,
-                    "content_preview": content[:500] + "..." if len(content) > 500 else content,
-                }
-
-            elif file_path.suffix.lower() in [
-                ".docx",
-                ".dotx",
-                ".docm",
-                ".dotm",
-                ".pptx",
-                ".potx",
-                ".ppsx",
-                ".pptm",
-                ".potm",
-                ".ppsm",
-                ".xlsx",
-                ".xlsm",
-                ".html",
-                ".htm",
-                ".xhtml",
-                ".md",
-                ".adoc",
-                ".asciidoc",
-                ".asc",
-            ]:
-                # Handle Office documents, HTML, Markdown, and AsciiDoc using DocumentProcessor
+            elif decision.strategy == ProcessingStrategy.DOCUMENT_PROCESSING:
+                # Handle Office documents, HTML, Markdown using DocumentProcessor
                 content = self.extract_document_content(file_path)
                 return {
                     **download_info,
@@ -621,7 +619,8 @@ class InputSourceDownloader:
                     "content_preview": content[:500] + "..." if len(content) > 500 else content,
                 }
 
-            elif file_type == "text":
+            elif decision.strategy == ProcessingStrategy.ALWAYS_TEXT:
+                # Plain text files, markdown, etc.
                 content = self.read_text_content(file_path)
                 return {
                     **download_info,
@@ -631,6 +630,9 @@ class InputSourceDownloader:
 
             else:
                 # Unknown file type, try to read as text
+                logger.warning(
+                    f"Unknown processing strategy {decision.strategy} for {file_path}, attempting text processing"
+                )
                 try:
                     content = self.read_text_content(file_path)
                     return {

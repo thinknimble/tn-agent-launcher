@@ -571,6 +571,7 @@ SPECTACULAR_SETTINGS = {
 #
 OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
 
+
 #
 # Document Preprocessing Configuration
 #
@@ -580,17 +581,22 @@ OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
 def _detect_heroku_environment():
     """Detect if we're running on Heroku by checking for common Heroku environment variables"""
     heroku_indicators = [
-        'DYNO',  # Heroku dyno name
-        'PORT',  # Heroku sets this
-        'DATABASE_URL',  # Usually present on Heroku deployments
-        'HEROKU_APP_NAME',  # If set in config vars
-        'HEROKU_SLUG_COMMIT',  # Present in Heroku builds
+        "DYNO",  # Heroku dyno name
+        "PORT",  # Heroku sets this
+        "DATABASE_URL",  # Usually present on Heroku deployments
+        "HEROKU_APP_NAME",  # If set in config vars
+        "HEROKU_SLUG_COMMIT",  # Present in Heroku builds
     ]
     return any(os.environ.get(indicator) for indicator in heroku_indicators)
 
+
 IS_HEROKU = _detect_heroku_environment()
-ENABLE_DOC_PREPROCESSING = False if IS_HEROKU else config(
-    "ENABLE_DOC_PREPROCESSING", 
-    default=False,  # Default to False on Heroku, True elsewhere
-    cast=bool
+ENABLE_DOC_PREPROCESSING = (
+    False
+    if IS_HEROKU
+    else config(
+        "ENABLE_DOC_PREPROCESSING",
+        default=False,  # Default to False on Heroku, True elsewhere
+        cast=bool,
+    )
 )

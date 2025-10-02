@@ -51,6 +51,13 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return self.queryset.filter(agent_instance__user=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        # Ensure the agent instance belongs to the user
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=["post"])
     def execute_now(self, request, pk=None):
         task = self.get_object()

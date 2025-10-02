@@ -209,6 +209,8 @@ def app_config(request):
     This endpoint allows the frontend to conditionally show/hide features
     based on server-side configuration.
     """
-    return Response({
-        "enableDocPreprocessing": settings.ENABLE_DOC_PREPROCESSING,
-    })
+    return Response(
+        {
+            "enableDocPreprocessing": settings.ENABLE_DOC_PREPROCESSING,
+        }
+    )

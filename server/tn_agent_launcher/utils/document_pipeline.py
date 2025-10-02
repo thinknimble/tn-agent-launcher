@@ -10,7 +10,10 @@ from django.conf import settings
 try:
     if settings.ENABLE_DOC_PREPROCESSING:
         from docling.datamodel.base_models import InputFormat
-        from docling.datamodel.pipeline_options import PdfPipelineOptions, granite_picture_description
+        from docling.datamodel.pipeline_options import (
+            PdfPipelineOptions,
+            granite_picture_description,
+        )
         from docling.document_converter import (
             AsciiDocFormatOption,
             CsvFormatOption,
@@ -24,6 +27,7 @@ try:
             WordFormatOption,
         )
         from docling_core.types.doc.document import PictureDescriptionData
+
         DOCLING_AVAILABLE = True
     else:
         DOCLING_AVAILABLE = False

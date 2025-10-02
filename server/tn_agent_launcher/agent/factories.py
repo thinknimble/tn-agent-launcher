@@ -23,6 +23,7 @@ class AgentProjectFactory(DjangoModelFactory):
 class AgentInstanceFactory(DjangoModelFactory):
     class Meta:
         model = AgentInstance
+        # django_get_or_create = ('friendly_name',)
 
     friendly_name = factory.Faker("name")
     provider = factory.Iterator([choice[0] for choice in AgentInstance.ProviderChoices.choices])

@@ -129,7 +129,16 @@ class ExecutionManager:
         if next_execution:
             task.next_execution_at = next_execution
         else:
-            task.status = task.StatusChoices.COMPLETED
+            # Only mark task as completed if it has reached max executions
+            # For MANUAL and AGENT tasks, they should remain ACTIVE until max executions reached
+            if task.max_executions and task.execution_count >= task.max_executions:
+                task.status = task.StatusChoices.COMPLETED
+            else:
+                # For MANUAL and AGENT tasks without max_executions, keep them ACTIVE
+                # For ONCE tasks, keep legacy behavior for backward compatibility
+                if task.schedule_type == task.ScheduleTypeChoices.ONCE:
+                    task.status = task.StatusChoices.COMPLETED
+                # MANUAL and AGENT tasks stay ACTIVE until manually paused or max reached
 
         task.save()
 

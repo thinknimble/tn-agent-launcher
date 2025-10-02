@@ -12,56 +12,91 @@ class TaskChainManager:
 
     def handle_task_chain(self, task: Any, execution: Any, filtered_output: str) -> None:
         """
-        Handle triggering of next agent task in the chain.
+        Handle triggering of next agent tasks in the chain.
 
         Args:
-            task: The current agent task
+            task: The current agent task that just completed
             execution: The current execution
             filtered_output: The processed output from the current task
         """
-        if not task.trigger_agent_task:
+        # Find all tasks that are triggered by this task
+        triggered_tasks = task.triggers_tasks.all()
+
+        if not triggered_tasks.exists():
             return
 
-        logger.info(f"Triggering next agent: {task.trigger_agent_task.name}")
+        logger.info(
+            f"Triggering {triggered_tasks.count()} agent(s) from completed task: {task.name}"
+        )
 
-        try:
-            self._create_trigger_input_source(task, execution, filtered_output)
-            trigger_execution = self._schedule_trigger_execution(task.trigger_agent_task)
+        for triggered_task in triggered_tasks:
+            try:
+                logger.info(f"Triggering agent: {triggered_task.name}")
+                self._create_trigger_input_source(task, execution, filtered_output, triggered_task)
+                trigger_execution = self._schedule_trigger_execution(triggered_task)
 
-            if trigger_execution:
-                logger.info(
-                    f"Successfully scheduled trigger agent execution {trigger_execution.id}"
-                )
-            else:
-                logger.warning(
-                    f"Failed to schedule trigger agent execution for task {task.trigger_agent_task.id}"
-                )
+                if trigger_execution:
+                    logger.info(
+                        f"Successfully scheduled trigger agent execution {trigger_execution.id} for task {triggered_task.name}"
+                    )
+                else:
+                    logger.warning(
+                        f"Failed to schedule trigger agent execution for task {triggered_task.id}"
+                    )
 
-        except Exception as e:
-            logger.error(f"Failed to trigger next agent {task.trigger_agent_task.name}: {e}")
+            except Exception as e:
+                logger.error(f"Failed to trigger agent {triggered_task.name}: {e}")
 
-    def _create_trigger_input_source(self, task: Any, execution: Any, output: str) -> None:
+    def _create_trigger_input_source(
+        self, task: Any, execution: Any, output: str, trigger_task: Any
+    ) -> None:
         """Create input source from current task's output for the trigger task."""
-        # Create input source from this task's output
+
+        # Copy preprocessing options from the triggering task's first input source if available
+        preprocessing_options = {}
+        if task.input_sources:
+            # Get preprocessing options from the first input source of the triggering task
+            first_source = (
+                task.input_sources[0]
+                if isinstance(task.input_sources, list)
+                else task.input_sources
+            )
+            if isinstance(first_source, dict):
+                # Copy relevant preprocessing options
+                for option in [
+                    "skip_preprocessing",
+                    "preprocess_image",
+                    "is_document_with_text",
+                    "replace_images_with_descriptions",
+                    "contains_images",
+                    "extract_images_as_text",
+                ]:
+                    if option in first_source:
+                        preprocessing_options[option] = first_source[option]
+
+        # Create input source from this task's output with copied preprocessing options
         trigger_input_source = {
             "url": f"agent-output://{execution.id}",
             "source_type": "agent_output",
             "filename": f"{task.name}_output.txt",
             "content_type": "text/plain",
-            "agent_execution_id": execution.id,
+            "agent_execution_id": str(execution.id),
             "processed_content": output,
+            **preprocessing_options,  # Include preprocessing options
         }
 
-        # Add the output as input source to the trigger task's input sources
-        trigger_task = task.trigger_agent_task
-        trigger_task_input_sources = (
-            list(trigger_task.input_sources) if trigger_task.input_sources else []
-        )
-        trigger_task_input_sources.append(trigger_input_source)
+        # Replace all input sources with just the output from the triggering task
+        # This ensures chained tasks only receive the output from their trigger, not original sources
+        trigger_task.input_sources = [trigger_input_source]
 
         # Update the trigger task with the new input source
-        trigger_task.input_sources = trigger_task_input_sources
         trigger_task.save()
+
+        logger.info(
+            f"Replaced input sources for triggered task {trigger_task.name} with output from {task.name}"
+        )
+        if preprocessing_options:
+            logger.info(f"Copied preprocessing options: {preprocessing_options}")
 
     def _schedule_trigger_execution(self, trigger_task: Any) -> Optional[Any]:
         """Schedule execution of the trigger task in a separate background task."""

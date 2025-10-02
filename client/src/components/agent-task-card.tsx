@@ -76,6 +76,11 @@ export const AgentTaskCard = ({
                 <span className="font-medium">Last:</span> {task.lastExecutionDisplay}
               </p>
             )}
+            {task.triggeredByTaskName && (
+              <p>
+                <span className="font-medium">Triggered by:</span> {task.triggeredByTaskName}
+              </p>
+            )}
           </div>
         </div>
 

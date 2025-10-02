@@ -225,3 +225,8 @@ variable "use_per_project_shared_vpc" {
   default     = false
 }
 
+variable "enable_doc_preprocessing" {
+  type        = bool
+  description = "Enable document preprocessing for the app service backend - not available in heroku"
+  default     = false
+}

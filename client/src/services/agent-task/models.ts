@@ -43,7 +43,8 @@ export const inputSourceShape = {
 }
 
 export const scheduleTypeEnum = {
-  ONCE: 'once',
+  ONCE: 'once', // Deprecated, use MANUAL instead
+  MANUAL: 'manual',
   DAILY: 'daily',
   WEEKLY: 'weekly',
   MONTHLY: 'monthly',
@@ -55,13 +56,14 @@ export const scheduleTypeEnum = {
 export type ScheduleTypeValues = (typeof scheduleTypeEnum)[keyof typeof scheduleTypeEnum]
 
 export const scheduleTypeLabelMap = {
-  [scheduleTypeEnum.ONCE]: 'Run Once',
+  [scheduleTypeEnum.ONCE]: 'Run Once (Deprecated)',
+  [scheduleTypeEnum.MANUAL]: 'Manual',
   [scheduleTypeEnum.DAILY]: 'Daily',
   [scheduleTypeEnum.WEEKLY]: 'Weekly',
   [scheduleTypeEnum.MONTHLY]: 'Monthly',
   [scheduleTypeEnum.HOURLY]: 'Hourly',
   [scheduleTypeEnum.CUSTOM_INTERVAL]: 'Custom Interval',
-  [scheduleTypeEnum.AGENT]: 'Agent Execution',
+  [scheduleTypeEnum.AGENT]: 'Triggered by Another Task',
 }
 
 export const taskStatusEnum = {
@@ -107,8 +109,8 @@ export const agentTaskShape = {
   scheduleType: z.nativeEnum(scheduleTypeEnum),
   scheduledAt: z.string().datetime().or(z.string()).optional().nullable(),
   intervalMinutes: z.number().positive().optional().nullable(),
-  triggerAgentTask: z.string().uuid().optional().nullable(),
-  triggerAgentTaskName: z.string().optional().nullable(),
+  triggeredByTask: z.string().uuid().optional().nullable(),
+  triggeredByTaskName: z.string().optional().nullable(),
   status: z.nativeEnum(taskStatusEnum),
   lastExecutedAt: z.string().datetime().optional().nullable(),
   lastExecutionDisplay: z.string().optional().nullable(),
@@ -129,7 +131,7 @@ export const createAgentTaskShape = {
   scheduleType: agentTaskShape.scheduleType,
   scheduledAt: agentTaskShape.scheduledAt,
   intervalMinutes: agentTaskShape.intervalMinutes,
-  triggerAgentTask: agentTaskShape.triggerAgentTask,
+  triggeredByTask: agentTaskShape.triggeredByTask,
   maxExecutions: agentTaskShape.maxExecutions,
 }
 
