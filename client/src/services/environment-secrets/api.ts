@@ -4,7 +4,6 @@ import {
   projectEnvironmentSecretShape,
   createProjectEnvironmentSecretShape,
   environmentSecretFiltersShape,
- 
 } from './models'
 
 export const environmentSecretApi = createApi({
@@ -13,8 +12,7 @@ export const environmentSecretApi = createApi({
   models: {
     entity: projectEnvironmentSecretShape,
     create: createProjectEnvironmentSecretShape,
-    extraFilters: environmentSecretFiltersShape
-    
+    extraFilters: environmentSecretFiltersShape,
   },
 })
 

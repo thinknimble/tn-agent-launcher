@@ -30,9 +30,9 @@ export const environmentVariableShape = {
   description: z.string().optional(),
 }
 
-
-
 export type ProjectEnvironmentSecret = GetInferredFromRaw<typeof projectEnvironmentSecretShape>
-export type CreateProjectEnvironmentSecret = GetInferredFromRaw<typeof createProjectEnvironmentSecretShape>
+export type CreateProjectEnvironmentSecret = GetInferredFromRaw<
+  typeof createProjectEnvironmentSecretShape
+>
 export type EnvironmentSecretFilters = GetInferredFromRaw<typeof environmentSecretFiltersShape>
 export type EnvironmentVariable = GetInferredFromRaw<typeof environmentVariableShape>

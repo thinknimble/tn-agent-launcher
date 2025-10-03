@@ -57,8 +57,8 @@ class AgentProjectSerializer(serializers.ModelSerializer):
 
 
 class AgentTaskSerializer(serializers.ModelSerializer):
-    agent_instance_name = serializers.CharField(
-        source="agent_instance.friendly_name", read_only=True
+    agent_instance_ref = serializers.CharField(
+        source="agent_instance", read_only=True
     )
     triggered_by_task_name = serializers.CharField(source="triggered_by_task.name", read_only=True)
     next_execution_display = serializers.SerializerMethodField()
@@ -71,7 +71,7 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "agent_instance",
-            "agent_instance_name",
+            "agent_instance_ref",
             "instruction",
             "input_sources",
             "schedule_type",

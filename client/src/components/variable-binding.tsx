@@ -51,23 +51,28 @@ export const VariableBinding = ({
   const [cursorPosition, setCursorPosition] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const bindingButtonRefs = useRef<HTMLButtonElement[]>([])
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Filter variables based on search term
   const filteredVariables = variables.filter(
     (variable) =>
       variable.label.toLowerCase().includes(currentSearch.toLowerCase()) ||
       variable.value.toLowerCase().includes(currentSearch.toLowerCase()) ||
-      (variable.description && variable.description.toLowerCase().includes(currentSearch.toLowerCase()))
+      (variable.description &&
+        variable.description.toLowerCase().includes(currentSearch.toLowerCase())),
   )
 
   // Group variables by category if needed
   const groupedVariables = showCategories
-    ? filteredVariables.reduce((acc, variable) => {
-        const category = variable.category || 'Other'
-        if (!acc[category]) acc[category] = []
-        acc[category].push(variable)
-        return acc
-      }, {} as Record<string, Variable[]>)
+    ? filteredVariables.reduce(
+        (acc, variable) => {
+          const category = variable.category || 'Other'
+          if (!acc[category]) acc[category] = []
+          acc[category].push(variable)
+          return acc
+        },
+        {} as Record<string, Variable[]>,
+      )
     : { All: filteredVariables }
 
   // Scroll selected suggestion into view
@@ -85,7 +90,7 @@ export const VariableBinding = ({
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value
       const cursorPos = e.target.selectionStart || 0
-      
+
       onChange(newValue)
       setCursorPosition(cursorPos)
 
@@ -95,7 +100,7 @@ export const VariableBinding = ({
 
       if (lastTriggerIndex !== -1) {
         const searchTerm = textBeforeCursor.slice(lastTriggerIndex + triggerPattern.length)
-        
+
         // Check if we're still in a potential variable binding
         if (!searchTerm.includes('}') && !searchTerm.includes('\n')) {
           setShowSuggestions(true)
@@ -108,7 +113,7 @@ export const VariableBinding = ({
         setShowSuggestions(false)
       }
     },
-    [onChange, triggerPattern]
+    [onChange, triggerPattern],
   )
 
   // Insert variable at current cursor position
@@ -119,10 +124,10 @@ export const VariableBinding = ({
       const textarea = textareaRef.current
       const textBeforeCursor = value.slice(0, cursorPosition)
       const textAfterCursor = value.slice(cursorPosition)
-      
+
       // Find the trigger pattern before cursor
       const lastTriggerIndex = textBeforeCursor.lastIndexOf(triggerPattern)
-      
+
       if (lastTriggerIndex !== -1) {
         const beforeTrigger = value.slice(0, lastTriggerIndex)
         const variableText = variablePattern(variable.value)
@@ -130,7 +135,7 @@ export const VariableBinding = ({
         const newCursorPos = beforeTrigger.length + variableText.length
 
         onChange(newValue)
-        
+
         // Set cursor position after the inserted variable
         setTimeout(() => {
           textarea.focus()
@@ -141,7 +146,7 @@ export const VariableBinding = ({
       setShowSuggestions(false)
       setCurrentSearch('')
     },
-    [value, cursorPosition, triggerPattern, variablePattern, onChange]
+    [value, cursorPosition, triggerPattern, variablePattern, onChange],
   )
 
   // Handle keyboard navigation
@@ -156,14 +161,10 @@ export const VariableBinding = ({
         setSelectedSuggestionIndex(0)
       } else if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setSelectedSuggestionIndex((prev) =>
-          prev < filteredVariables.length - 1 ? prev + 1 : 0
-        )
+        setSelectedSuggestionIndex((prev) => (prev < filteredVariables.length - 1 ? prev + 1 : 0))
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setSelectedSuggestionIndex((prev) =>
-          prev > 0 ? prev - 1 : filteredVariables.length - 1
-        )
+        setSelectedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : filteredVariables.length - 1))
       } else if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault()
         if (filteredVariables[selectedSuggestionIndex]) {
@@ -171,7 +172,7 @@ export const VariableBinding = ({
         }
       }
     },
-    [showSuggestions, selectedSuggestionIndex, filteredVariables, insertVariable]
+    [showSuggestions, selectedSuggestionIndex, filteredVariables, insertVariable],
   )
 
   // Default textarea component
@@ -182,12 +183,12 @@ export const VariableBinding = ({
       onChange={handleTextChange}
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
-      className={`w-full min-h-[120px] p-3 border border-gray-200 rounded-lg resize-vertical font-mono text-sm placeholder-gray-400 focus:border-primary-500 focus:outline-none ${className}`}
+      className={`resize-vertical min-h-[120px] w-full rounded-lg border border-gray-200 p-3 font-mono text-sm placeholder-gray-400 focus:border-primary-500 focus:outline-none ${className}`}
     />
   )
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="space-y-2">
       {children
         ? children({
             value,
@@ -197,13 +198,16 @@ export const VariableBinding = ({
           })
         : defaultTextarea}
 
-      {/* Variables dropdown */}
+      {/* Variables dropdown - inline */}
       {showSuggestions && Object.keys(groupedVariables).length > 0 && (
-        <div className="absolute z-50 mt-1 max-h-60 w-full min-w-[300px] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+          <div className="border-b border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+            💡 Available variables (use ↑↓ to navigate, Enter to select)
+          </div>
           {Object.entries(groupedVariables).map(([category, categoryVariables]) => (
             <div key={category}>
               {showCategories && Object.keys(groupedVariables).length > 1 && (
-                <div className="bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                <div className="border-b border-gray-100 bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700">
                   {category}
                 </div>
               )}
@@ -227,11 +231,11 @@ export const VariableBinding = ({
                   >
                     <div className="flex-1">
                       <div className="font-medium text-gray-900">{variable.label}</div>
-                      <div className="text-xs text-gray-500 font-mono">
+                      <div className="font-mono text-xs text-gray-500">
                         {variablePattern(variable.value)}
                       </div>
                       {variable.description && (
-                        <div className="text-xs text-gray-400 mt-1">{variable.description}</div>
+                        <div className="mt-1 text-xs text-gray-400">{variable.description}</div>
                       )}
                     </div>
                   </Button>
@@ -243,8 +247,10 @@ export const VariableBinding = ({
       )}
 
       {showSuggestions && filteredVariables.length === 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
-          <div className="text-sm text-gray-500">No matching variables found</div>
+        <div className="w-full rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
+          <div className="text-sm text-gray-500">
+            No matching variables found for &ldquo;{currentSearch}&rdquo;
+          </div>
         </div>
       )}
     </div>

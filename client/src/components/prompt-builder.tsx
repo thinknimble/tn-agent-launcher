@@ -199,12 +199,12 @@ const stanceSections: StanceSection[] = [
   },
 ]
 
-export const PromptBuilder = ({ 
-  value, 
-  onChange, 
-  placeholder, 
-  projectId, 
-  enableVariableBinding = false 
+export const PromptBuilder = ({
+  value,
+  onChange,
+  placeholder,
+  projectId,
+  enableVariableBinding = false,
 }: PromptBuilderProps) => {
   const [isImprovePromptActive, setIsImprovePromptActive] = useState(false)
   const [selectedStances, setSelectedStances] = useState<Set<string>>(new Set())
@@ -218,12 +218,13 @@ export const PromptBuilder = ({
   })
 
   // Transform environment variables for the variable binding component
-  const projectSecrets = secretsData?.results?.filter((secret: any) => secret.project === projectId) || []
+  const projectSecrets =
+    secretsData?.results?.filter((secret: any) => secret.project === projectId) || []
   const variables: Variable[] = projectSecrets.map((secret: any) => ({
     label: secret.key,
     value: secret.key,
     description: secret.description,
-    category: 'Environment Secrets'
+    category: 'Environment Secrets',
   }))
 
   const toggleImprovePrompt = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -452,8 +453,8 @@ export const PromptBuilder = ({
           </div>
         )}
 
-        {!isImprovePromptActive && (
-          enableVariableBinding && projectId ? (
+        {!isImprovePromptActive &&
+          (enableVariableBinding && projectId ? (
             <VariableBinding
               value={value}
               onChange={onChange}
@@ -468,8 +469,7 @@ export const PromptBuilder = ({
               onChange={(e) => onChange(e.target.value)}
               className="resize-vertical font-inherit min-h-[120px] w-full rounded-md border border-gray-200 bg-white p-3 text-sm placeholder-neutral-400 transition-colors focus:border-neutral-400 focus:outline-none"
             />
-          )
-        )}
+          ))}
 
         {(isImprovePromptActive || selectedStancesArray.length > 0) && (
           <div className="flex justify-end gap-2 border-t border-gray-200 pt-5">
@@ -490,8 +490,9 @@ export const PromptBuilder = ({
           <p className="mt-2 text-xs text-neutral-400">
             Define the behavior and personality of your AI agent
             {enableVariableBinding && projectId && (
-              <span className="block mt-1">
-                Type <code className="bg-gray-100 px-1 rounded">{'{{'}</code> to insert environment variables
+              <span className="mt-1 block">
+                Type <code className="rounded bg-gray-100 px-1">{'{{'}</code> to insert environment
+                variables
               </span>
             )}
           </p>

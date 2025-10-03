@@ -56,7 +56,7 @@ export const AgentTaskCard = ({
 
           <div className="mt-2 space-y-1 text-xs text-primary-400">
             <p>
-              <span className="font-medium">Agent:</span> {task.agentInstanceName}
+              <span className="font-medium">Agent:</span> {task.agentInstanceRef?.friendlyName || task.agentInstance}
             </p>
             <p>
               <span className="font-medium">Schedule:</span>{' '}

@@ -31,10 +31,8 @@ const EnvironmentSecretCard = ({
     <div className="flex items-start justify-between">
       <div className="flex-1">
         <h3 className="font-semibold text-primary-600">{secret.key}</h3>
-        <p className="mt-1 text-sm text-primary-400 font-mono">{secret.maskedValue}</p>
-        {secret.description && (
-          <p className="mt-2 text-sm text-gray-600">{secret.description}</p>
-        )}
+        <p className="mt-1 font-mono text-sm text-primary-400">{secret.maskedValue}</p>
+        {secret.description && <p className="mt-2 text-sm text-gray-600">{secret.description}</p>}
         <p className="mt-2 text-xs text-gray-400">
           Created: {new Date(secret.created).toLocaleDateString()}
         </p>
@@ -78,13 +76,13 @@ const EnvironmentSecretFormComponent = ({
   useEffect(() => {
     const newForm = new EnvironmentSecretForm({}) as TEnvironmentSecretForm
     newForm.project.value = projectId
-    
+
     if (editingSecret) {
       newForm.key.value = editingSecret.key
       newForm.description.value = editingSecret.description || ''
       // Don't set value for editing - it will be empty to indicate "keep current"
     }
-    
+
     overrideForm(newForm)
   }, [editingSecret, projectId, overrideForm])
 
@@ -124,7 +122,7 @@ const EnvironmentSecretFormComponent = ({
           key: form.key.value,
           description: form.description.value || '',
         }
-        
+
         // Only include value if it was changed
         if (form.secretValue.value) {
           updateData.value = form.secretValue.value
@@ -147,16 +145,16 @@ const EnvironmentSecretFormComponent = ({
       <div className="rounded-lg border border-green-200 bg-green-50 p-6 shadow-sm">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-green-800">Secret Created Successfully!</h3>
-          <p className="text-sm text-green-600 mt-1">
-            This is the only time you'll see the full secret value. Please copy it now.
+          <p className="mt-1 text-sm text-green-600">
+            This is the only time you&apos;ll see the full secret value. Please copy it now.
           </p>
         </div>
-        
+
         <div className="mb-4">
-          <label className="block text-sm font-medium text-green-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-green-700">
             Secret Value (copy this now):
           </label>
-          <div className="bg-white border border-green-300 rounded p-3 font-mono text-sm">
+          <div className="rounded border border-green-300 bg-white p-3 font-mono text-sm">
             {secretJustCreated}
           </div>
         </div>
@@ -170,7 +168,7 @@ const EnvironmentSecretFormComponent = ({
             }}
             className="bg-green-600 hover:bg-green-700"
           >
-            I've Copied It
+            I&apos;ve Copied It
           </Button>
         </div>
       </div>
@@ -209,7 +207,9 @@ const EnvironmentSecretFormComponent = ({
           <Input
             label={isEditing ? 'Secret Value (leave empty to keep current)' : 'Secret Value'}
             type="password"
-            placeholder={isEditing ? 'Enter new value to replace current...' : 'Enter the secret value...'}
+            placeholder={
+              isEditing ? 'Enter new value to replace current...' : 'Enter the secret value...'
+            }
             value={form.secretValue.value ?? ''}
             onChange={(e) => createFormFieldChangeHandler(form.secretValue)(e.target.value)}
             className="bg-primary-50 border-primary-200 focus:border-primary-500"
@@ -264,14 +264,12 @@ export const ProjectSettings = () => {
   const [editingSecret, setEditingSecret] = useState<ProjectEnvironmentSecret | null>(null)
   const queryClient = useQueryClient()
 
-  const { data: project, isLoading: loadingProject } = useQuery(
-    agentProjectQueries.retrieve(id!)
-  )
+  const { data: project, isLoading: loadingProject } = useQuery(agentProjectQueries.retrieve(id!))
 
   const { data: secretsData, isLoading: loadingSecrets } = useQuery({
-    ...environmentSecretQueries.list({ 
+    ...environmentSecretQueries.list({
       pagination: new Pagination({ page: 1, size: 100 }),
-      filters: { project: id!, search: '' }
+      filters: { project: id!, search: '' },
     }),
     enabled: !!id,
   })
@@ -334,7 +332,7 @@ export const ProjectSettings = () => {
     return (
       <div className="min-h-screen">
         <div className="mx-auto max-w-6xl px-4 py-8">
-          <div className="text-center py-20">
+          <div className="py-20 text-center">
             <p className="text-error">Project not found</p>
           </div>
         </div>
@@ -359,9 +357,7 @@ export const ProjectSettings = () => {
           {/* Project Header */}
           <div className="rounded-lg border border-primary-200 bg-white p-6 shadow-sm">
             <h1 className="text-3xl font-bold text-primary-600">{project.title} Settings</h1>
-            <p className="mt-2 text-primary-400">
-              Manage environment secrets for your project
-            </p>
+            <p className="mt-2 text-primary-400">Manage environment secrets for your project</p>
           </div>
 
           {/* Environment Secrets Section */}
@@ -371,7 +367,7 @@ export const ProjectSettings = () => {
                 <h2 className="text-2xl font-bold text-primary-600">Environment Secrets</h2>
                 <p className="mt-1 text-sm text-primary-400">
                   Secure variables that can be used in your agent prompts with{' '}
-                  <code className="bg-gray-100 px-1 rounded">{'{{VARIABLE_NAME}}'}</code> syntax
+                  <code className="rounded bg-gray-100 px-1">{'{{VARIABLE_NAME}}'}</code> syntax
                 </p>
               </div>
               {!showSecretForm && (

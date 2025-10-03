@@ -50,9 +50,9 @@ const ProjectDetailsSection = ({
         <p className="mt-2 text-primary-400">{agentProject.description}</p>
       </div>
       <div className="flex space-x-3">
-        <Link 
+        <Link
           to={`/projects/${agentProject.id}/settings`}
-          className="inline-flex items-center px-3 py-2 border border-primary-300 text-sm font-medium rounded-md text-primary-600 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          className="hover:bg-primary-50 inline-flex items-center rounded-md border border-primary-300 bg-white px-3 py-2 text-sm font-medium text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
         >
           Settings
         </Link>
@@ -316,7 +316,7 @@ const AgentInstanceInner = ({
         onInstanceSaved(newInstance)
         overrideForm(new AgentInstanceForm() as TAgentInstanceForm)
       }
-      
+
       if (editingInstance?.promptTemplate?.id) {
         updatePrompt({
           id: editingInstance.promptTemplate.id,
@@ -430,16 +430,16 @@ const AgentInstanceInner = ({
       <div className="rounded-lg border border-green-200 bg-green-50 p-6 shadow-sm">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-green-800">Agent Created Successfully!</h3>
-          <p className="text-sm text-green-600 mt-1">
-            This is the only time you'll see the full API key. Please copy it now.
+          <p className="mt-1 text-sm text-green-600">
+            This is the only time you&apos;ll see the full API key. Please copy it now.
           </p>
         </div>
-        
+
         <div className="mb-4">
-          <label className="block text-sm font-medium text-green-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-green-700">
             API Key (copy this now):
           </label>
-          <div className="bg-white border border-green-300 rounded p-3 font-mono text-sm">
+          <div className="rounded border border-green-300 bg-white p-3 font-mono text-sm">
             {apiKeyJustCreated}
           </div>
         </div>
@@ -454,7 +454,7 @@ const AgentInstanceInner = ({
             }}
             className="bg-green-600 hover:bg-green-700"
           >
-            I've Copied It
+            I&apos;ve Copied It
           </Button>
         </div>
       </div>
@@ -541,7 +541,9 @@ const AgentInstanceInner = ({
           <div>
             <Input
               label={isEditing ? 'API Key (leave empty to keep current)' : form.apiKey.label}
-              placeholder={isEditing ? 'Enter new API key to replace current...' : form.apiKey.placeholder}
+              placeholder={
+                isEditing ? 'Enter new API key to replace current...' : form.apiKey.placeholder
+              }
               value={form.apiKey.value ?? ''}
               onChange={(e) => createFormFieldChangeHandler(form.apiKey)(e.target.value)}
               type="password"

@@ -34,6 +34,16 @@ export class EnvironmentSecretForm extends Form<EnvironmentSecretFormInputs> {
     validators: [],
   })
 
+  get modelValue(){
+    return {
+      project: this.field.project.value!,
+      key: this.field.key.value!,
+      value: this.field.secretValue.value!,
+      description: this.field.description.value || undefined,
+    }
+  }
+
+
 }
 
 export type TEnvironmentSecretForm = EnvironmentSecretFormInputs & EnvironmentSecretForm
