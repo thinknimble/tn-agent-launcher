@@ -2,7 +2,13 @@ from rest_framework import serializers
 
 from tn_agent_launcher.chat.serializers import SystemPromptSerializer
 
-from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution, ProjectEnvironmentSecret
+from .models import (
+    AgentInstance,
+    AgentProject,
+    AgentTask,
+    AgentTaskExecution,
+    ProjectEnvironmentSecret,
+)
 
 
 class AgentInstanceSerializer(serializers.ModelSerializer):
@@ -57,9 +63,7 @@ class AgentProjectSerializer(serializers.ModelSerializer):
 
 
 class AgentTaskSerializer(serializers.ModelSerializer):
-    agent_instance_ref = serializers.CharField(
-        source="agent_instance", read_only=True
-    )
+    agent_instance_ref = serializers.CharField(source="agent_instance", read_only=True)
     triggered_by_task_name = serializers.CharField(source="triggered_by_task.name", read_only=True)
     next_execution_display = serializers.SerializerMethodField()
     last_execution_display = serializers.SerializerMethodField()
@@ -230,17 +234,17 @@ class ProjectEnvironmentSecretSerializer(serializers.ModelSerializer):
         """Validate that the key follows environment variable naming conventions"""
         if not value:
             raise serializers.ValidationError("Key is required")
-        
+
         # Remove underscores for alphanumeric check
-        if not value.replace('_', '').isalnum():
+        if not value.replace("_", "").isalnum():
             raise serializers.ValidationError(
                 "Key must contain only letters, numbers, and underscores"
             )
-        
+
         # Check if it starts with a number
         if value[0].isdigit():
             raise serializers.ValidationError("Key cannot start with a number")
-        
+
         # Convert to uppercase for consistency
         return value.upper()
 
@@ -252,17 +256,15 @@ class ProjectEnvironmentSecretSerializer(serializers.ModelSerializer):
 
         if project and key:
             # Check for existing secret with same key in same project for same user
-            existing = ProjectEnvironmentSecret.objects.filter(
-                project=project, key=key, user=user
-            )
-            
+            existing = ProjectEnvironmentSecret.objects.filter(project=project, key=key, user=user)
+
             # If updating, exclude current instance
             if self.instance:
                 existing = existing.exclude(id=self.instance.id)
-                
+
             if existing.exists():
-                raise serializers.ValidationError({
-                    "key": f"Environment secret with key '{key}' already exists for this project"
-                })
+                raise serializers.ValidationError(
+                    {"key": f"Environment secret with key '{key}' already exists for this project"}
+                )
 
         return data

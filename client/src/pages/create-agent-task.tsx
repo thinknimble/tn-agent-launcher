@@ -385,7 +385,7 @@ const CreateEditAgentTaskInner = ({
           )}
           {selectedProject?.id && variables.length === 0 && (
             <p className="mt-1 text-xs text-gray-400">
-              No environment variables available for this agent's project. You can add them in
+              No environment variables available for this agent&apos;s project. You can add them in
               project settings.
             </p>
           )}

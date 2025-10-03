@@ -9,7 +9,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .filters import AgentInstanceFilter
-from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution, ProjectEnvironmentSecret
+from .models import (
+    AgentInstance,
+    AgentProject,
+    AgentTask,
+    AgentTaskExecution,
+    ProjectEnvironmentSecret,
+)
 from .serializers import (
     AgentInstanceSerializer,
     AgentProjectSerializer,
@@ -201,7 +207,6 @@ class ProjectEnvironmentSecretViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
-    
+
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
-        

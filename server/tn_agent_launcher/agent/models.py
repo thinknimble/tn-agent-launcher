@@ -338,26 +338,19 @@ class ProjectEnvironmentSecret(AbstractBaseModel):
     Environment secrets for projects that can be used in agent prompts.
     Secrets are encrypted and only show masked values after creation.
     """
+
     project = models.ForeignKey(
-        AgentProject, 
-        on_delete=models.CASCADE, 
-        related_name="environment_secrets"
+        AgentProject, on_delete=models.CASCADE, related_name="environment_secrets"
     )
     user = models.ForeignKey(
-        "core.User", 
-        on_delete=models.CASCADE, 
-        related_name="project_environment_secrets"
+        "core.User", on_delete=models.CASCADE, related_name="project_environment_secrets"
     )
     key = models.CharField(
-        max_length=255,
-        help_text="Environment variable name (e.g., 'API_KEY', 'DATABASE_URL')"
+        max_length=255, help_text="Environment variable name (e.g., 'API_KEY', 'DATABASE_URL')"
     )
-    value = models.TextField(
-        help_text="Encrypted secret value"
-    )
+    value = models.TextField(help_text="Encrypted secret value")
     description = models.TextField(
-        blank=True,
-        help_text="Optional description of what this secret is used for"
+        blank=True, help_text="Optional description of what this secret is used for"
     )
 
     objects = ProjectEnvironmentSecretManager()
@@ -380,18 +373,18 @@ class ProjectEnvironmentSecret(AbstractBaseModel):
 
     def clean(self):
         from django.core.exceptions import ValidationError
-        
+
         errors = {}
-        
+
         # Validate key format (alphanumeric and underscores only)
-        if self.key and not self.key.replace('_', '').isalnum():
+        if self.key and not self.key.replace("_", "").isalnum():
             errors["key"] = "Key must contain only letters, numbers, and underscores"
-            
+
         # Validate key doesn't start with number
         if self.key and self.key[0].isdigit():
             errors["key"] = "Key cannot start with a number"
-            
+
         if errors:
             raise ValidationError(errors)
-            
+
         super().clean()
