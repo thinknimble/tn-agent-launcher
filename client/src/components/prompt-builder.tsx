@@ -213,7 +213,7 @@ export const PromptBuilder = ({
 
   // Fetch environment variables if project ID is provided
   const { data: secretsData } = useQuery({
-    ...environmentSecretQueries.list({ pagination: new Pagination({ page: 1, size: 100 }) }),
+    ...environmentSecretQueries.list({ pagination: new Pagination({ page: 1, size: 100 }), filters: {} }),
     enabled: !!projectId && enableVariableBinding,
   })
 
