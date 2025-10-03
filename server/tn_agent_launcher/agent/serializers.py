@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from tn_agent_launcher.chat.serializers import SystemPromptSerializer
 
-from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution
+from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution, ProjectEnvironmentSecret
 
 
 class AgentInstanceSerializer(serializers.ModelSerializer):
@@ -26,11 +26,10 @@ class AgentInstanceSerializer(serializers.ModelSerializer):
             "masked_api_key",
             "prompt_template",
         ]
-        read_only_fields = ["id", "created", "last_edited"]
-
-    extra_kwargs = {
-        "api_key": {"write_only": True},
-    }
+        read_only_fields = ["id", "created", "last_edited", "masked_api_key"]
+        extra_kwargs = {
+            "api_key": {"write_only": True},
+        }
 
     def get_prompt_template(self, obj):
         template = obj.prompt_templates.first()
@@ -198,3 +197,72 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
         if obj.completed_at:
             return obj.completed_at.strftime("%Y-%m-%d %H:%M:%S UTC")
         return None
+
+
+class ProjectEnvironmentSecretSerializer(serializers.ModelSerializer):
+    masked_value = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProjectEnvironmentSecret
+        fields = [
+            "id",
+            "project",
+            "key",
+            "value",
+            "masked_value",
+            "description",
+            "created",
+            "last_edited",
+        ]
+        read_only_fields = ["id", "created", "last_edited", "masked_value"]
+        extra_kwargs = {
+            "value": {"write_only": True},
+        }
+
+    def get_masked_value(self, obj):
+        return obj.masked_value
+
+    def to_internal_value(self, data):
+        data["user"] = self.context["request"].user.id
+        return super().to_internal_value(data)
+
+    def validate_key(self, value):
+        """Validate that the key follows environment variable naming conventions"""
+        if not value:
+            raise serializers.ValidationError("Key is required")
+        
+        # Remove underscores for alphanumeric check
+        if not value.replace('_', '').isalnum():
+            raise serializers.ValidationError(
+                "Key must contain only letters, numbers, and underscores"
+            )
+        
+        # Check if it starts with a number
+        if value[0].isdigit():
+            raise serializers.ValidationError("Key cannot start with a number")
+        
+        # Convert to uppercase for consistency
+        return value.upper()
+
+    def validate(self, data):
+        """Validate unique key per project for the user"""
+        project = data.get("project")
+        key = data.get("key")
+        user = self.context["request"].user
+
+        if project and key:
+            # Check for existing secret with same key in same project for same user
+            existing = ProjectEnvironmentSecret.objects.filter(
+                project=project, key=key, user=user
+            )
+            
+            # If updating, exclude current instance
+            if self.instance:
+                existing = existing.exclude(id=self.instance.id)
+                
+            if existing.exists():
+                raise serializers.ValidationError({
+                    "key": f"Environment secret with key '{key}' already exists for this project"
+                })
+
+        return data
