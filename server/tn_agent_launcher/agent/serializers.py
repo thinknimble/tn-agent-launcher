@@ -1,7 +1,5 @@
 from rest_framework import serializers
 
-from tn_agent_launcher.chat.serializers import SystemPromptSerializer
-
 from .models import (
     AgentInstance,
     AgentProject,
@@ -13,7 +11,6 @@ from .models import (
 
 class AgentInstanceSerializer(serializers.ModelSerializer):
     masked_api_key = serializers.SerializerMethodField()
-    prompt_template = serializers.SerializerMethodField()
 
     class Meta:
         model = AgentInstance
@@ -30,16 +27,12 @@ class AgentInstanceSerializer(serializers.ModelSerializer):
             "api_key",
             "user",
             "masked_api_key",
-            "prompt_template",
+            "instruction",
         ]
         read_only_fields = ["id", "created", "last_edited", "masked_api_key"]
         extra_kwargs = {
             "api_key": {"write_only": True},
         }
-
-    def get_prompt_template(self, obj):
-        template = obj.prompt_templates.first()
-        return SystemPromptSerializer(template).data if template else None
 
     def get_masked_api_key(self, obj):
         if obj.api_key:

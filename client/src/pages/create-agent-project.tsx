@@ -261,7 +261,7 @@ const AgentInstanceInner = ({
 }) => {
   const { form, createFormFieldChangeHandler, overrideForm } = useTnForm<TAgentInstanceForm>()
   const isEditing = Boolean(editingInstance)
-  const [promptTemplateContent, setPromptTemplateContent] = useState<string | null>(null)
+  const [promptTemplateVariables, setPromptTemplateVariables] = useState<Record<string, any>>({})
   const [showApiKeyValue, setShowApiKeyValue] = useState(false)
   const [apiKeyJustCreated, setApiKeyJustCreated] = useState<string | null>(null)
   const queryClient = useQueryClient()
@@ -280,24 +280,11 @@ const AgentInstanceInner = ({
         label: agentTypeLabelMap[editingInstance.agentType],
         value: editingInstance.agentType,
       }
+      updatedForm.instruction.value = editingInstance.instruction || ''
       overrideForm(updatedForm)
-      setPromptTemplateContent(editingInstance.promptTemplate?.content || null)
     }
   }, [editingInstance, overrideForm])
 
-  const { mutate: createPrompt, isPending: isCreatingPrompt } = useMutation({
-    mutationFn: (data: CreatePromptTemplate) => promptTemplateApi.create(data),
-    onSuccess: (newPrompt) => {
-      queryClient.invalidateQueries({ queryKey: ['agent-instances'] })
-    },
-  })
-
-  const { mutate: updatePrompt, isPending: isUpdatingPrompt } = useMutation({
-    mutationFn: (data: PromptTemplate) => promptTemplateApi.update(data),
-    onSuccess: (newPrompt) => {
-      queryClient.invalidateQueries({ queryKey: ['agent-instances'] })
-    },
-  })
 
   const { mutate: create, isPending: isCreating } = useMutation({
     mutationFn: (data: any) => agentInstanceApi.create(data),
@@ -316,21 +303,6 @@ const AgentInstanceInner = ({
         onInstanceSaved(newInstance)
         overrideForm(new AgentInstanceForm() as TAgentInstanceForm)
       }
-
-      if (editingInstance?.promptTemplate?.id) {
-        updatePrompt({
-          id: editingInstance.promptTemplate.id,
-          name: editingInstance.promptTemplate.name,
-          content: promptTemplateContent ?? '',
-          agentInstance: newInstance.id,
-        })
-      } else {
-        createPrompt({
-          name: form.friendlyName.value ?? 'Default Prompt',
-          content: promptTemplateContent ?? '',
-          agentInstance: newInstance.id,
-        })
-      }
     },
   })
 
@@ -338,24 +310,10 @@ const AgentInstanceInner = ({
     mutationFn: (data: any) => agentInstanceApi.update(data),
     onSuccess: (updatedInstance) => {
       onInstanceSaved(updatedInstance)
-      if (editingInstance?.promptTemplate?.id) {
-        updatePrompt({
-          id: editingInstance.promptTemplate.id,
-          name: editingInstance.promptTemplate.name,
-          content: promptTemplateContent ?? '',
-          agentInstance: updatedInstance.id,
-        })
-      } else {
-        createPrompt({
-          name: form.friendlyName.value ?? 'Default Prompt',
-          content: promptTemplateContent ?? '',
-          agentInstance: updatedInstance.id,
-        })
-      }
     },
   })
 
-  const isPending = isCreating || isUpdating || isCreatingPrompt || isUpdatingPrompt
+  const isPending = isCreating || isUpdating
 
   const modelOptions = useMemo(() => {
     if (!form.provider.value) return []
@@ -410,6 +368,7 @@ const AgentInstanceInner = ({
         projects: [agentProject.id],
         provider: formValue.provider?.value,
         agentType: formValue.agentType?.value,
+        instruction: formValue.instruction || null,
       }
 
       // Only include API key if it was provided
@@ -570,8 +529,11 @@ const AgentInstanceInner = ({
         </div>
 
         <PromptBuilder
-          value={promptTemplateContent ?? ''}
-          onChange={setPromptTemplateContent}
+          value={form.instruction.value || ''}
+          onChange={(value: string) => {
+            createFormFieldChangeHandler(form.instruction)(value)
+          }}
+          onVariablesChange={setPromptTemplateVariables}
           placeholder="Enter the system prompt for this agent..."
           projectId={agentProject.id}
           enableVariableBinding={true}

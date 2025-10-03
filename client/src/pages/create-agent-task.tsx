@@ -48,6 +48,7 @@ const CreateEditAgentTaskInner = ({
   const queryClient = useQueryClient()
   const [urlConfigModalOpen, setUrlConfigModalOpen] = useState(false)
   const [currentUrlIndex, setCurrentUrlIndex] = useState<number | null>(null)
+  const [instructionVariables, setInstructionVariables] = useState<Record<string, any>>({})
   const selectedProject = useAtomValue(projectAtom)
   const { data: agentInstances } = useQuery(
     agentInstanceQueries.list(new Pagination(), {
@@ -279,6 +280,7 @@ const CreateEditAgentTaskInner = ({
         description: formValue.description || '',
         agentInstance: formValue.agentInstance?.value || '',
         instruction: formValue.instruction || '',
+        variables: instructionVariables,
         inputSources: (formValue.inputSources || []).filter((source) => source.url.trim() !== ''),
         scheduleType: (formValue.scheduleType?.value || '') as ScheduleTypeValues,
         scheduledAt: formValue.scheduledAt || undefined,
@@ -361,7 +363,12 @@ const CreateEditAgentTaskInner = ({
           <label className="mb-2 block text-sm font-medium text-primary-600">Instruction</label>
           <VariableBinding
             value={form.instruction.value || ''}
-            onChange={(value) => createFormFieldChangeHandler(form.instruction)(value)}
+            onChange={(value) => {
+              createFormFieldChangeHandler(form.instruction)(value)
+              // Extract variables from the instruction content
+              const extractedVariables = extractVariablesFromContent(value)
+              setInstructionVariables(extractedVariables)
+            }}
             variables={variables}
             placeholder="Write the prompt/instruction for the agent..."
           >

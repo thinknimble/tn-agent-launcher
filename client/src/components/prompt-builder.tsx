@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Pagination } from '@thinknimble/tn-models'
@@ -10,6 +10,7 @@ import { environmentSecretQueries } from 'src/services/environment-secrets'
 interface PromptBuilderProps {
   value: string
   onChange: (value: string) => void
+  onVariablesChange?: (variables: Record<string, any>) => void // Callback when variables are extracted
   placeholder?: string
   projectId?: string // Optional project ID to load environment variables
   enableVariableBinding?: boolean // Whether to enable environment variable binding
@@ -199,9 +200,31 @@ const stanceSections: StanceSection[] = [
   },
 ]
 
+// Utility function to extract variables from content
+const extractVariablesFromContent = (content: string): Record<string, any> => {
+  if (!content) return {}
+
+  // Pattern to match {{VARIABLE_NAME}} - allows letters, numbers, underscores
+  const pattern = /\{\{([A-Z_][A-Z0-9_]*)\}\}/g
+  const matches = content.matchAll(pattern)
+
+  // Create a dictionary with variable metadata
+  const variables: Record<string, any> = {}
+  matches.forEach(([, varName]) => {
+    variables[varName] = {
+      name: varName,
+      required: true,
+      type: 'environment_secret',
+    }
+  })
+
+  return variables
+}
+
 export const PromptBuilder = ({
   value,
   onChange,
+  onVariablesChange,
   placeholder,
   projectId,
   enableVariableBinding = false,
@@ -213,7 +236,10 @@ export const PromptBuilder = ({
 
   // Fetch environment variables if project ID is provided
   const { data: secretsData } = useQuery({
-    ...environmentSecretQueries.list({ pagination: new Pagination({ page: 1, size: 100 }), filters: {} }),
+    ...environmentSecretQueries.list({
+      pagination: new Pagination({ page: 1, size: 100 }),
+      filters: {},
+    }),
     enabled: !!projectId && enableVariableBinding,
   })
 
@@ -226,6 +252,20 @@ export const PromptBuilder = ({
     description: secret.description,
     category: 'Environment Secrets',
   }))
+
+  // Handle content changes and extract variables
+  const handleContentChange = useCallback(
+    (newValue: string) => {
+      onChange(newValue)
+
+      // Extract variables and notify parent component
+      if (onVariablesChange) {
+        const extractedVariables = extractVariablesFromContent(newValue)
+        onVariablesChange(extractedVariables)
+      }
+    },
+    [onChange, onVariablesChange],
+  )
 
   const toggleImprovePrompt = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
@@ -273,7 +313,7 @@ export const PromptBuilder = ({
 
     if (prompts.length > 0) {
       const combinedPrompt = prompts.join('\n\n---\n\n')
-      onChange(combinedPrompt)
+      handleContentChange(combinedPrompt)
     }
   }
 
@@ -281,7 +321,7 @@ export const PromptBuilder = ({
     setSelectedStances(new Set())
     setStanceContents({})
     setExpandedHelpers(new Set())
-    onChange('')
+    handleContentChange('')
   }
 
   const selectedStancesArray = Array.from(selectedStances)
@@ -457,7 +497,7 @@ export const PromptBuilder = ({
           (enableVariableBinding && projectId ? (
             <VariableBinding
               value={value}
-              onChange={onChange}
+              onChange={handleContentChange}
               variables={variables}
               placeholder={placeholder || 'Enter the system prompt for this agent...'}
               className="resize-vertical font-inherit min-h-[120px] bg-white text-sm placeholder-neutral-400 transition-colors focus:border-neutral-400 focus:outline-none"
@@ -466,7 +506,7 @@ export const PromptBuilder = ({
             <Textarea
               placeholder={placeholder || 'Enter the system prompt for this agent...'}
               value={value}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={(e) => handleContentChange(e.target.value)}
               className="resize-vertical font-inherit min-h-[120px] w-full rounded-md border border-gray-200 bg-white p-3 text-sm placeholder-neutral-400 transition-colors focus:border-neutral-400 focus:outline-none"
             />
           ))}

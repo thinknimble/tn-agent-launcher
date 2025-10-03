@@ -32,6 +32,8 @@ interface VariableBindingProps {
   }) => React.ReactNode
   /** Additional CSS classes */
   className?: string
+  /** Whether the component is disabled */
+  disabled?: boolean
 }
 
 export const VariableBinding = ({
@@ -44,6 +46,7 @@ export const VariableBinding = ({
   showCategories = false,
   children,
   className = '',
+  disabled = true,
 }: VariableBindingProps) => {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [currentSearch, setCurrentSearch] = useState('')
@@ -52,6 +55,18 @@ export const VariableBinding = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const bindingButtonRefs = useRef<HTMLButtonElement[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Render a disabled textarea if the component is disabled
+  if (disabled) {
+    return (
+      <textarea
+        value={value}
+        placeholder={placeholder}
+        disabled
+        className={`resize-vertical min-h-[120px] w-full rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-sm text-gray-400 placeholder-gray-400 focus:border-primary-500 focus:outline-none ${className}`}
+      />
+    )
+  }
 
   // Filter variables based on search term
   const filteredVariables = variables.filter(

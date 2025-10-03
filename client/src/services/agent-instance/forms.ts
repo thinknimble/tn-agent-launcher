@@ -8,6 +8,7 @@ export type AgentInstanceFormInputs = {
   apiKey: IFormField<string | null>
   targetUrl: IFormField<string>
   agentType: IFormField<SelectOption | null>
+  instruction: IFormField<string>
 }
 
 export class AgentInstanceForm extends Form<AgentInstanceFormInputs> {
@@ -46,6 +47,12 @@ export class AgentInstanceForm extends Form<AgentInstanceFormInputs> {
     placeholder: 'Select Agent Type',
     type: 'select',
     value: null,
+  })
+  static instruction = FormField.create({
+    label: 'Instruction / Prompt',
+    placeholder: 'The prompt or instruction to send to the agent',
+    type: 'textarea',
+    value: '',
   })
 }
 

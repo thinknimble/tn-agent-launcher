@@ -43,6 +43,7 @@ class AgentInstance(AbstractBaseModel):
         help_text="Execute this agent using AWS Lambda (admin only). Auto-enabled for Bedrock providers.",
     )
     user = models.ForeignKey("core.User", on_delete=models.CASCADE, related_name="agent_instances")
+    instruction = models.TextField(help_text="The prompt/instruction to send to the agent")
 
     def __str__(self):
         return self.friendly_name
