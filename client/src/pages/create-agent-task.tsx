@@ -366,7 +366,7 @@ const CreateEditAgentTaskInner = ({
             onChange={(value) => {
               createFormFieldChangeHandler(form.instruction)(value)
               // Extract variables from the instruction content
-      
+
               setInstructionVariables(extractedVariables)
             }}
             variables={variables}

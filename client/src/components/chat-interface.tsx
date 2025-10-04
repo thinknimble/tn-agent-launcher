@@ -1,5 +1,6 @@
 import { useState, useRef, FormEvent, useEffect, useMemo } from 'react'
 import useWebSocket from 'react-use-websocket'
+import ReactMarkdown from 'react-markdown'
 import { useAuth } from 'src/stores/auth'
 import { Sidebar } from './sidebar'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -9,10 +10,22 @@ import { chatApi } from 'src/services/chat/api'
 import { Spinner } from './spinner'
 import { Pagination } from '@thinknimble/tn-models'
 import { chatMessageQueries } from '../services/chat-messages/queries'
+import { objectToCamelCase } from '@thinknimble/tn-utils'
 
 type Message = {
   content: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'tool'
+  parsedContent?: {
+    type: 'user_message' | 'agent_response' | 'tool_call' | 'tool_result' | 'message'
+    content?: string
+    function?: string
+    arguments?: any
+    toolName?: string
+    result?: any
+    raw?: string
+    error?: string
+  }
+  showToolDetails?: boolean
 }
 
 interface ChatInterfaceProps {
@@ -96,10 +109,16 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
 
   useEffect(() => {
     if (selectedChatId && existingMessages) {
-      const loadedMessages = existingMessages.results.map((msg) => ({
-        content: msg.content,
-        role: msg.role,
-      }))
+      console.log('Loading existing messages for chat:', existingMessages)
+      const loadedMessages = existingMessages.results.map((msg) => {
+        debugger
+        return {
+          content: msg.content,
+          role: msg.role,
+          parsedContent: msg.parsedContent,
+          showToolDetails: false,
+        }
+      })
       setMessages(loadedMessages.reverse())
     }
   }, [selectedChatId, existingMessages])
@@ -126,6 +145,7 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
         if (data.delta.content) {
           setStreamingContent((prev) => {
             const newContent = prev + data.delta.content
+            console.log('Streaming content:', newContent)
             setMessages((messages) => {
               const newMessages = [...messages]
               newMessages[newMessages.length - 1].content = newContent
@@ -137,6 +157,111 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
       } else if (data.message) {
         // Handling regular response
         setMessages((prev) => [...prev, { content: data.message.content, role: 'assistant' }])
+      } else if (data.tool_message) {
+        // Handling tool messages (calls and results)
+        const toolMsg = data.tool_message
+
+        if (toolMsg.type === 'call') {
+          // Parse the tool call JSON
+          try {
+            const callData = JSON.parse(toolMsg.content)
+            setMessages((prev) => [
+              ...prev,
+              {
+                content: toolMsg.content,
+                role: 'assistant',
+                parsedContent: {
+                  type: 'tool_call',
+                  function: callData.function,
+                  arguments: JSON.parse(callData.arguments),
+                  raw: toolMsg.content,
+                },
+              },
+            ])
+          } catch (e) {
+            // Fallback if parsing fails
+            setMessages((prev) => [
+              ...prev,
+              {
+                content: toolMsg.content,
+                role: 'assistant',
+                parsedContent: {
+                  type: 'tool_call',
+                  raw: toolMsg.content,
+                },
+              },
+            ])
+          }
+        } else if (toolMsg.type === 'result') {
+          // Handle new format where tool_name is separate and content is clean
+          let result
+          try {
+            const parsedResult = JSON.parse(toolMsg.content)
+            // Convert snake_case to camelCase to match API format
+            result = objectToCamelCase(parsedResult)
+          } catch {
+            result = toolMsg.content
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              content: toolMsg.content,
+              role: 'assistant',
+              parsedContent: {
+                type: 'tool_result',
+                toolName: toolMsg.tool_name || 'unknown',
+                result: result,
+                raw: toolMsg.content,
+              },
+            },
+          ])
+
+          // Legacy format fallback
+          if (toolMsg.content.startsWith('Tool result (')) {
+            try {
+              const match = toolMsg.content.match(/Tool result \((.+?)\): (.+)/)
+              if (match) {
+                const [, toolName, resultStr] = match
+                let legacyResult
+                try {
+                  const parsedResult = JSON.parse(resultStr)
+                  // Convert snake_case to camelCase to match API format
+                  legacyResult = objectToCamelCase(parsedResult)
+                } catch {
+                  legacyResult = resultStr
+                }
+
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    content: toolMsg.content,
+                    role: 'assistant',
+                    parsedContent: {
+                      type: 'tool_result',
+                      toolName: toolName,
+                      result: legacyResult,
+                      raw: toolMsg.content,
+                    },
+                  },
+                ])
+              }
+            } catch (e) {
+              // Fallback
+              setMessages((prev) => [
+                ...prev,
+                {
+                  content: toolMsg.content,
+                  role: 'assistant',
+                  parsedContent: {
+                    type: 'tool_result',
+                    raw: toolMsg.content,
+                  },
+                },
+              ])
+            }
+          }
+        }
       }
     }
   }, [lastJsonMessage])
@@ -229,6 +354,266 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
     return match ? match[1].trim() : null
   }
 
+  const toggleToolDetails = (index: number) => {
+    setMessages((prev) =>
+      prev.map((msg, i) => (i === index ? { ...msg, showToolDetails: !msg.showToolDetails } : msg)),
+    )
+  }
+
+  const truncateContent = (content: string, maxLength: number = 300) => {
+    if (content.length <= maxLength) return content
+    return content.substring(0, maxLength) + '...'
+  }
+
+  // Group tool calls with their results
+  const groupToolMessages = (messages: Message[]) => {
+    const grouped: (
+      | Message
+      | { type: 'tool_group'; toolCall: Message; toolResult: Message; showCall: boolean }
+    )[] = []
+
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i]
+      const parsed = message.parsedContent
+
+      if (parsed?.type === 'tool_call') {
+        // Look for the next tool_result
+        const nextMessage = messages[i + 1]
+        if (nextMessage?.parsedContent?.type === 'tool_result') {
+          // Group them together
+          grouped.push({
+            type: 'tool_group',
+            toolCall: message,
+            toolResult: nextMessage,
+            showCall: false, // Default to showing result
+          })
+          i++ // Skip the next message since we've grouped it
+        } else {
+          // No matching result, add call alone
+          grouped.push(message)
+        }
+      } else if (parsed?.type === 'tool_result') {
+        // Tool result without a preceding call (shouldn't happen, but handle it)
+        grouped.push(message)
+      } else {
+        // Regular message
+        grouped.push(message)
+      }
+    }
+
+    return grouped
+  }
+
+  const [toolGroupStates, setToolGroupStates] = useState<{ [key: number]: boolean }>({})
+
+  const toggleToolGroup = (groupIndex: number) => {
+    setToolGroupStates((prev) => ({
+      ...prev,
+      [groupIndex]: !prev[groupIndex],
+    }))
+  }
+
+  const renderToolGroup = (
+    toolCall: Message,
+    toolResult: Message,
+    showCall: boolean,
+    groupIndex: number,
+  ) => {
+    const currentMessage = showCall ? toolCall : toolResult
+    const parsed = currentMessage.parsedContent
+
+    return (
+      <div className="rounded-r border-l-4 border-purple-400 bg-purple-50 p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <div className="text-xs font-medium text-purple-700">
+            {showCall ? (
+              <>🚀 Tool Call: {parsed?.function}</>
+            ) : (
+              <>🔧 Tool Result: {parsed?.toolName}</>
+            )}
+          </div>
+          <button
+            onClick={() => toggleToolGroup(groupIndex)}
+            className="text-purple-600 hover:text-purple-800"
+            title={showCall ? 'Show result' : 'Show call details'}
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div className="text-sm text-purple-800">
+          {showCall ? (
+            // Show tool call arguments
+            <div className="whitespace-pre-wrap font-mono">
+              {JSON.stringify(parsed?.arguments, null, 2)}
+            </div>
+          ) : (
+            // Show tool result with markdown rendering
+            <MarkdownRenderer>
+              {typeof parsed?.result === 'string'
+                ? parsed.result
+                : JSON.stringify(parsed?.result, null, 2)}
+            </MarkdownRenderer>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const MarkdownRenderer = ({ children }: { children: string | undefined }) => (
+    <ReactMarkdown
+      components={{
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        h1: ({ children }) => <h1 className="mb-2 text-xl font-bold">{children}</h1>,
+        h2: ({ children }) => <h2 className="mb-2 text-lg font-bold">{children}</h2>,
+        h3: ({ children }) => <h3 className="text-md mb-1 font-bold">{children}</h3>,
+        ul: ({ children }) => <ul className="mb-2 ml-4 list-disc">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-2 ml-4 list-decimal">{children}</ol>,
+        li: ({ children }) => <li className="mb-1">{children}</li>,
+        code: ({ children }) => (
+          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-sm">{children}</code>
+        ),
+        pre: ({ children }) => (
+          <pre className="mb-2 overflow-x-auto rounded bg-gray-100 p-3">{children}</pre>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="mb-2 border-l-4 border-gray-300 pl-4 italic">
+            {children}
+          </blockquote>
+        ),
+        strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+        em: ({ children }) => <em className="italic">{children}</em>,
+      }}
+    >
+      {children}
+    </ReactMarkdown>
+  )
+
+  const renderMessageContent = (message: Message, index: number) => {
+    const parsed = message.parsedContent
+
+    // Handle different message types based on parsed_content
+    if (!parsed) {
+      // Fallback to original rendering for messages without parsed_content
+      const content = message.content
+        .replace(extractThinkingPart(message.content) ?? '', '')
+        .replace('<think>', '')
+        .replace('</think>', '')
+
+      const isLong = content.length > 300
+      const displayContent = message.showToolDetails || !isLong ? content : truncateContent(content)
+
+      return (
+        <div>
+          <MarkdownRenderer>{displayContent}</MarkdownRenderer>
+          {isLong && (
+            <button
+              onClick={() => toggleToolDetails(index)}
+              className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+            >
+              {message.showToolDetails ? 'Show less' : 'Show more'}
+            </button>
+          )}
+        </div>
+      )
+    }
+
+    switch (parsed.type) {
+      case 'agent_response':
+        const agentContent =
+          parsed.content
+            ?.replace(extractThinkingPart(parsed.content) ?? '', '')
+            .replace('<think>', '')
+            .replace('</think>', '') || ''
+
+        const isAgentLong = agentContent.length > 300
+        const displayAgentContent =
+          message.showToolDetails || !isAgentLong ? agentContent : truncateContent(agentContent)
+
+        return (
+          <div>
+            <MarkdownRenderer>{displayAgentContent}</MarkdownRenderer>
+            {isAgentLong && (
+              <button
+                onClick={() => toggleToolDetails(index)}
+                className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+              >
+                {message.showToolDetails ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
+        )
+
+      case 'user_message':
+        return <MarkdownRenderer>{parsed.content || ''}</MarkdownRenderer>
+
+      case 'tool_result':
+        const resultStr =
+          typeof parsed.result === 'string' ? parsed.result : JSON.stringify(parsed.result, null, 2)
+        const isResultLong = resultStr.length > 300
+        const displayResult =
+          message.showToolDetails || !isResultLong ? resultStr : truncateContent(resultStr)
+
+        return (
+          <div className="rounded-r border-l-4 border-green-400 bg-green-50 p-3">
+            <div className="mb-1 text-xs font-medium text-green-700">
+              🔧 Tool Result: {parsed.toolName}
+            </div>
+            <div className="whitespace-pre-wrap font-mono text-sm text-green-800">
+              {displayResult}
+            </div>
+            {isResultLong && (
+              <button
+                onClick={() => toggleToolDetails(index)}
+                className="mt-2 text-xs text-green-600 hover:text-green-800"
+              >
+                {message.showToolDetails ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
+        )
+
+      case 'tool_call':
+        const argsStr = parsed.arguments
+        const isCallLong = argsStr.length > 200
+        const displayArgs =
+          message.showToolDetails || !isCallLong ? argsStr : truncateContent(argsStr, 200)
+
+        return (
+          <div className="rounded-r border-l-4 border-blue-400 bg-blue-50 p-3">
+            <div className="mb-1 text-xs font-medium text-blue-700">
+              🚀 Calling Tool: {parsed.function}
+            </div>
+            <div className="whitespace-pre-wrap font-mono text-sm text-blue-800">{displayArgs}</div>
+            {isCallLong && (
+              <button
+                onClick={() => toggleToolDetails(index)}
+                className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+              >
+                {message.showToolDetails ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
+        )
+
+      default:
+        return <div className="whitespace-pre-wrap">{parsed.content || message.content}</div>
+    }
+  }
+
   return (
     <div className="flex h-full">
       <Sidebar
@@ -286,25 +671,44 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
               <p>No Messages Yet</p>
             ) : (
               <div className="mx-auto max-w-3xl">
-                {messages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`mb-4 flex ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
+                {groupToolMessages(messages).map((item, index) => {
+                  // Handle tool groups
+                  if ('type' in item && item.type === 'tool_group') {
+                    const showCall = toolGroupStates[index] || false
+                    const content = renderToolGroup(item.toolCall, item.toolResult, showCall, index)
+
+                    return (
+                      <div key={index} className="mb-4 flex justify-start">
+                        <div className="max-w-[80%] text-left">{content}</div>
+                      </div>
+                    )
+                  }
+
+                  // Handle regular messages
+                  const message = item as Message
+                  const content = renderMessageContent(message, index)
+                  const parsed = message.parsedContent
+                  const isToolMessage =
+                    parsed?.type === 'tool_call' || parsed?.type === 'tool_result'
+                  const isUser = message.role === 'user'
+
+                  return (
                     <div
-                      className={`max-w-[80%] rounded-lg p-3 text-left ${
-                        message.role === 'user' ? 'bg-blue-50' : 'bg-gray-50'
-                      }`}
+                      key={index}
+                      className={`mb-4 flex ${isUser ? 'justify-end' : 'justify-start'}`}
                     >
-                      {message.content
-                        .replace(extractThinkingPart(message.content) ?? '', '')
-                        .replace('<think>', '')
-                        .replace('</think>', '')}
+                      <div
+                        className={`max-w-[80%] text-left ${
+                          isToolMessage
+                            ? '' // Tool messages have their own styling
+                            : `rounded-lg p-3 ${isUser ? 'bg-blue-50' : 'bg-gray-50'}`
+                        }`}
+                      >
+                        {content}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

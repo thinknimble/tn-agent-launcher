@@ -84,14 +84,21 @@ class AgentInstance(AbstractBaseModel):
         return create_agent(self.provider, self.model_name, self.api_key, self.target_url)
 
     async def agent(self):
+        from tn_agent_launcher.agent.tools import AgentDependencies, get_agent_tools
         from tn_agent_launcher.chat.models import PromptTemplate
 
         system_prompt = await PromptTemplate.objects.aget_assembled_prompt(agent_instance=self.id)
+
+        # Get dependencies and tools
+        deps, tools = get_agent_tools(user_id=str(self.user_id))
+
         return Agent(
             name=self.friendly_name,
             model=self.raw_agent,
             output_type=str,
             system_prompt=system_prompt,
+            tools=tools,
+            deps_type=AgentDependencies,
         )
 
 
@@ -302,6 +309,11 @@ class AgentTaskExecution(AbstractBaseModel):
     output_data = models.JSONField(null=True, blank=True, help_text="The response from the agent")
     error_message = models.TextField(blank=True)
     execution_time_seconds = models.FloatField(null=True, blank=True)
+    api_security_summary = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Summary of API calls, authentication methods, and security checks",
+    )
 
     background_task_id = models.CharField(
         max_length=100, blank=True, help_text="ID of the django-background-tasks task"

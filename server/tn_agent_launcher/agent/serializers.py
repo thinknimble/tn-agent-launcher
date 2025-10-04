@@ -160,6 +160,7 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
             "error_message",
             "execution_time_seconds",
             "duration_display",
+            "api_security_summary",
             "background_task_id",
             "created",
         ]
@@ -171,6 +172,7 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
             "output_data",
             "error_message",
             "execution_time_seconds",
+            "api_security_summary",
             "background_task_id",
             "created",
             "agent_task_name",
