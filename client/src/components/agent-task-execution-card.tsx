@@ -1,6 +1,7 @@
 import { AgentTaskExecution, executionStatusLabelMap } from 'src/services/agent-task-execution'
 import { Button } from './button'
 import { MarkdownRenderer } from './markdown-renderer'
+import { ApiSecuritySummary } from './api-security-summary'
 
 interface AgentTaskExecutionCardProps {
   execution: AgentTaskExecution
@@ -61,6 +62,12 @@ export const AgentTaskExecutionCard = ({ execution, onCancel }: AgentTaskExecuti
           {execution.errorMessage && (
             <div className="bg-error-50 text-error-700 mt-2 rounded p-2 text-sm">
               <span className="font-medium">Error:</span> {execution.errorMessage}
+            </div>
+          )}
+
+          {execution.apiSecuritySummary && (
+            <div className="mt-3">
+              <ApiSecuritySummary summary={execution.apiSecuritySummary} />
             </div>
           )}
 

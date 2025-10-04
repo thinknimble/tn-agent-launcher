@@ -9,12 +9,19 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .filters import AgentInstanceFilter
-from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution
+from .models import (
+    AgentInstance,
+    AgentProject,
+    AgentTask,
+    AgentTaskExecution,
+    ProjectEnvironmentSecret,
+)
 from .serializers import (
     AgentInstanceSerializer,
     AgentProjectSerializer,
     AgentTaskExecutionSerializer,
     AgentTaskSerializer,
+    ProjectEnvironmentSecretSerializer,
 )
 from .tasks import schedule_agent_task_execution
 
@@ -185,3 +192,21 @@ class AgentTaskExecutionViewSet(viewsets.ReadOnlyModelViewSet):
 
         serializer = self.get_serializer(execution)
         return Response(serializer.data)
+
+
+class ProjectEnvironmentSecretViewSet(viewsets.ModelViewSet):
+    queryset = ProjectEnvironmentSecret.objects.all()
+    serializer_class = ProjectEnvironmentSecretSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    filterset_fields = ["project"]
+    search_fields = ["key", "description"]
+
+    def get_queryset(self):
+        return ProjectEnvironmentSecret.objects.for_user(self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(user=self.request.user)

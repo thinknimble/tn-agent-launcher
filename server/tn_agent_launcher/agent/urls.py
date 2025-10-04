@@ -7,6 +7,7 @@ from .views import (
     AgentProjectViewSet,
     AgentTaskExecutionViewSet,
     AgentTaskViewSet,
+    ProjectEnvironmentSecretViewSet,
 )
 
 router = routers.SimpleRouter()
@@ -17,6 +18,7 @@ router.register("instances", AgentInstanceViewSet)
 router.register("projects", AgentProjectViewSet)
 router.register("tasks", AgentTaskViewSet)
 router.register("executions", AgentTaskExecutionViewSet)
+router.register("environment-secrets", ProjectEnvironmentSecretViewSet)
 
 urlpatterns = [
     path("api/agents/", include(router.urls)),

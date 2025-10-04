@@ -1,5 +1,6 @@
 import { GetInferredFromRaw } from '@thinknimble/tn-models'
 import { z } from 'zod'
+import { agentInstanceShape } from '../agent-instance'
 
 export const sourceTypeEnum = {
   PUBLIC_URL: 'public_url',
@@ -103,8 +104,9 @@ export const agentTaskShape = {
   name: z.string(),
   description: z.string().optional().nullable(),
   agentInstance: z.string().uuid(),
-  agentInstanceName: z.string().optional(),
+  agentInstanceRef: z.object(agentInstanceShape).optional().nullable(), // Expanded agent instance when included
   instruction: z.string(),
+  variables: z.record(z.any()).optional(),
   inputSources: z.array(z.object(inputSourceShape)).optional().nullable(),
   scheduleType: z.nativeEnum(scheduleTypeEnum),
   scheduledAt: z.string().datetime().or(z.string()).optional().nullable(),
@@ -127,6 +129,7 @@ export const createAgentTaskShape = {
   description: agentTaskShape.description,
   agentInstance: agentTaskShape.agentInstance,
   instruction: agentTaskShape.instruction,
+  variables: agentTaskShape.variables,
   inputSources: agentTaskShape.inputSources,
   scheduleType: agentTaskShape.scheduleType,
   scheduledAt: agentTaskShape.scheduledAt,

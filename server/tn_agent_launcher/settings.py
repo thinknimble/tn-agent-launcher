@@ -53,73 +53,83 @@ if "127.0.0.1" not in ALLOWED_HOSTS:
 # Container IP detection for AWS ECS
 EC2_PRIVATE_IP = None
 METADATA_URI_V4 = os.environ.get("ECS_CONTAINER_METADATA_URI_V4")
-METADATA_URI = os.environ.get("ECS_CONTAINER_METADATA_URI", "http://169.254.170.2/v2/metadata")
+METADATA_URI = os.environ.get("ECS_CONTAINER_METADATA_URI")
 
-print("=== CONTAINER IP DETECTION DEBUG ===")
-print(f"ECS_CONTAINER_METADATA_URI_V4: {METADATA_URI_V4}")
-print(f"ECS_CONTAINER_METADATA_URI: {METADATA_URI}")
+# Only perform dynamic IP detection in AWS environments (ECS/Fargate)
+# Skip this entirely for local Docker development
+IS_AWS_ENVIRONMENT = bool(METADATA_URI_V4 or METADATA_URI)
 
-# Method 1: Try ECS Metadata API v4 (newer)
-if METADATA_URI_V4:
-    try:
-        resp = requests.get(f"{METADATA_URI_V4}/task", timeout=5)
-        data = resp.json()
-        print(f"Metadata v4 response: {data}")
+if IS_AWS_ENVIRONMENT:
+    print("=== CONTAINER IP DETECTION DEBUG ===")
+    print(f"ECS_CONTAINER_METADATA_URI_V4: {METADATA_URI_V4}")
+    print(f"ECS_CONTAINER_METADATA_URI: {METADATA_URI}")
 
-        # Look for our container
-        for container in data.get("Containers", []):
-            if "server-" in container.get("Name", ""):
-                networks = container.get("Networks", [])
-                if networks:
-                    EC2_PRIVATE_IP = networks[0]["IPv4Addresses"][0]
-                    print(f"✅ Found container IP via metadata v4: {EC2_PRIVATE_IP}")
-                    break
-    except Exception as e:
-        print(f"❌ Metadata v4 failed: {e}")
+    # Method 1: Try ECS Metadata API v4 (newer)
+    if METADATA_URI_V4:
+        try:
+            resp = requests.get(f"{METADATA_URI_V4}/task", timeout=5)
+            data = resp.json()
+            print(f"Metadata v4 response: {data}")
 
-# Method 2: Try ECS Metadata API v2 (fallback)
-if not EC2_PRIVATE_IP:
-    try:
-        resp = requests.get(METADATA_URI, timeout=5)
-        data = resp.json()
-        print(f"Metadata v2 response: {data}")
+            # Look for our container
+            for container in data.get("Containers", []):
+                if "server-" in container.get("Name", ""):
+                    networks = container.get("Networks", [])
+                    if networks:
+                        EC2_PRIVATE_IP = networks[0]["IPv4Addresses"][0]
+                        print(f"✅ Found container IP via metadata v4: {EC2_PRIVATE_IP}")
+                        break
+        except Exception as e:
+            print(f"❌ Metadata v4 failed: {e}")
 
-        container_meta = data["Containers"][0]
-        EC2_PRIVATE_IP = container_meta["Networks"][0]["IPv4Addresses"][0]
-        print(f"✅ Found container IP via metadata v2: {EC2_PRIVATE_IP}")
-    except Exception as e:
-        print(f"❌ Metadata v2 failed: {e}")
+    # Method 2: Try ECS Metadata API v2 (fallback)
+    if not EC2_PRIVATE_IP and METADATA_URI:
+        try:
+            resp = requests.get(METADATA_URI, timeout=5)
+            data = resp.json()
+            print(f"Metadata v2 response: {data}")
 
-# Method 3: Try hostname -i command
-if not EC2_PRIVATE_IP:
-    try:
-        result = subprocess.run(["hostname", "-i"], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            EC2_PRIVATE_IP = result.stdout.strip().split()[0]
-            print(f"✅ Found container IP via hostname: {EC2_PRIVATE_IP}")
-    except Exception as e:
-        print(f"❌ Hostname method failed: {e}")
+            container_meta = data["Containers"][0]
+            EC2_PRIVATE_IP = container_meta["Networks"][0]["IPv4Addresses"][0]
+            print(f"✅ Found container IP via metadata v2: {EC2_PRIVATE_IP}")
+        except Exception as e:
+            print(f"❌ Metadata v2 failed: {e}")
 
-# Method 4: Try socket method
-if not EC2_PRIVATE_IP:
-    try:
-        hostname = socket.gethostname()
-        EC2_PRIVATE_IP = socket.gethostbyname(hostname)
-        print(f"✅ Found container IP via socket: {EC2_PRIVATE_IP}")
-    except Exception as e:
-        print(f"❌ Socket method failed: {e}")
+    # Method 3: Try hostname -i command
+    if not EC2_PRIVATE_IP:
+        try:
+            result = subprocess.run(["hostname", "-i"], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                EC2_PRIVATE_IP = result.stdout.strip().split()[0]
+                print(f"✅ Found container IP via hostname: {EC2_PRIVATE_IP}")
+        except Exception as e:
+            print(f"❌ Hostname method failed: {e}")
 
-# Add detected IP to ALLOWED_HOSTS
-if EC2_PRIVATE_IP:
-    if EC2_PRIVATE_IP not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(EC2_PRIVATE_IP)
-        print(f"✅ Added container IP to ALLOWED_HOSTS: {EC2_PRIVATE_IP}")
+    # Method 4: Try socket method
+    if not EC2_PRIVATE_IP:
+        try:
+            hostname = socket.gethostname()
+            EC2_PRIVATE_IP = socket.gethostbyname(hostname)
+            print(f"✅ Found container IP via socket: {EC2_PRIVATE_IP}")
+        except Exception as e:
+            print(f"❌ Socket method failed: {e}")
+
+    # Add detected IP to ALLOWED_HOSTS
+    if EC2_PRIVATE_IP:
+        if EC2_PRIVATE_IP not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(EC2_PRIVATE_IP)
+            print(f"✅ Added container IP to ALLOWED_HOSTS: {EC2_PRIVATE_IP}")
+    else:
+        print("❌ No container IP detected")
+
+    print(f"✅ Final ALLOWED_HOSTS: {ALLOWED_HOSTS}")
+    print("=== END CONTAINER IP DEBUG ===")
 else:
-    print("❌ No container IP detected")
+    print("💻 Skipping dynamic IP detection - not in AWS environment")
 
-# SECURE FALLBACK: Only add the specific VPC subnets for this deployment
+# SECURE FALLBACK: Only add the specific VPC subnets for this deployment (AWS only)
 # Get VPC CIDR from environment variable (set by Terraform)
-if os.environ.get("ECS_CONTAINER_METADATA_URI_V4") or os.environ.get("ECS_CONTAINER_METADATA_URI"):
+if IS_AWS_ENVIRONMENT:
     vpc_cidrs = config(
         "VPC_CIDRS",
         default="10.0.1.0/24,10.0.2.0/24",
@@ -130,12 +140,11 @@ if os.environ.get("ECS_CONTAINER_METADATA_URI_V4") or os.environ.get("ECS_CONTAI
             ALLOWED_HOSTS.append(cidr)
             print(f"✅ Added VPC subnet for health checks: {cidr}")
 
-print(f"✅ Final ALLOWED_HOSTS: {ALLOWED_HOSTS}")
-print("=== END CONTAINER IP DEBUG ===")
-
-# Additional debugging: Check if we're actually in ECS
-if METADATA_URI_V4 or os.path.exists("/.dockerenv"):
-    print("🐳 Detected containerized environment")
+# Additional debugging: Check if we're actually in ECS or Docker
+if IS_AWS_ENVIRONMENT:
+    print("☁️ Detected AWS ECS environment")
+elif os.path.exists("/.dockerenv"):
+    print("🐳 Detected local Docker environment")
 else:
     print("💻 Detected local development environment")
 

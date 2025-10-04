@@ -31,6 +31,7 @@ export const agentTaskExecutionShape = {
   errorMessage: z.string().optional().nullable(),
   executionTimeSeconds: z.number().optional().nullable(),
   durationDisplay: z.string().optional().nullable(),
+  apiSecuritySummary: z.record(z.any()).optional(),
   backgroundTaskId: z.string().optional().nullable(),
   created: z.string().datetime(),
 }

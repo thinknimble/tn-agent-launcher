@@ -25,21 +25,35 @@ from pydantic_ai.messages import (
 )
 
 from .models import Chat, ChatMessage, PromptTemplate
+from .websocket_diagnostics import add_websocket_diagnostics
 
 logger = logging.getLogger(__name__)
 
 
+@add_websocket_diagnostics
 class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
-        self.user = self.scope["user"]
-        self.current_chat = None
-        self.current_message_content = ""
-        self.tool_calls = {}  # Dictionary to track tool call IDs and names
-        await self.accept()
-        self.groups = ["agents"]
+        try:
+            self.user = self.scope["user"]
+            self.current_chat = None
+            self.current_message_content = ""
+            self.tool_calls = {}  # Dictionary to track tool call IDs and names
+            await self.accept()
+            self.groups = ["agents"]
+            logger.info(f"WebSocket connection accepted for user: {self.user}")
+        except Exception as e:
+            logger.error(f"Error during WebSocket connection: {e}")
+            await self.close(code=1011)  # Internal server error
 
     async def disconnect(self, close_code):
-        pass
+        try:
+            logger.info(f"WebSocket disconnecting with code: {close_code}")
+            # Clean up any resources here if needed
+        except Exception as e:
+            logger.error(f"Error during WebSocket disconnect: {e}")
+        finally:
+            # Ensure the connection is properly closed
+            pass
 
     async def receive_json(self, data: Dict[str, Any]):
         try:
@@ -80,7 +94,18 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
         except Exception as e:
             logger.error(f"Error in receive_json: {str(e)}")
-            await self.send_json({"error": "An error occurred while processing your request"})
+            logger.exception("Full traceback:")
+            try:
+                await self.send_json(
+                    {
+                        "error": "An error occurred while processing your request",
+                        "details": str(e) if logger.isEnabledFor(logging.DEBUG) else None,
+                    }
+                )
+            except Exception as send_error:
+                logger.error(f"Failed to send error message: {send_error}")
+                # If we can't send an error message, close the connection
+                await self.close(code=1011)
 
     async def process_model_event(self, event):
         """Process model generation events (text streaming)"""
@@ -157,11 +182,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             f"Using result_content: {result_content[:100] if isinstance(result_content, str) else result_content}"
         )
 
-        # Save tool result as message
-        tool_result_content = f"Tool result ({tool_name}): {str(result_content)}"
+        # Save tool result as message with clean content
         saved_result = await self.save_message(
             self.current_chat,
-            tool_result_content,
+            result_content,
             ChatMessage.MessageSender.TOOL,
         )
 
@@ -170,9 +194,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             {
                 "tool_message": {
                     "id": str(saved_result.id),
-                    "content": tool_result_content,
+                    "content": result_content,
                     "created": saved_result.created.isoformat(),
                     "type": "result",
+                    "tool_name": tool_name,
                 }
             }
         )
@@ -301,8 +326,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             # Get previous messages from the chat history
             message_history = await self.get_chat_history()
 
-            # Run the agent with message history
+            # Run the agent with message history and dependencies
             agent_instance = await sync_to_async(lambda: self.current_chat.agent_instance)()
+
+            # Get agent and dependencies
+            from tn_agent_launcher.agent.tools import get_agent_tools
+
+            deps, _ = get_agent_tools(user_id=str(self.user.id))
+
             agent = await agent_instance.agent()
             print(f"Using agent with model: {agent.model}")
             print(f"Message history length: {len(message_history)}")
@@ -313,6 +344,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             async with agent.iter(
                 query,
                 message_history=message_history,
+                deps=deps,
             ) as run:
                 async for node in run:
                     if Agent.is_model_request_node(node):
@@ -328,10 +360,21 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                                     await self.process_tool_result(tool_event)
 
             # Get final result and update the saved message
-            final_result = run.result.data if run.result else ""
+            final_result = run.result if run.result else ""
 
-            # Update saved message with extracted string content
-            await self.update_saved_message(assistant_message, final_result)
+            # Extract the actual content from the result if it's an AgentRunResult
+            if hasattr(final_result, "output"):
+                # If it's an AgentRunResult object, extract the output
+                content_to_save = str(final_result.output)
+            elif final_result:
+                # If it's already a string, use it directly
+                content_to_save = str(final_result)
+            else:
+                # Fallback to the streamed content we've been building
+                content_to_save = self.current_message_content
+
+            # Update saved message with clean content
+            await self.update_saved_message(assistant_message, content_to_save)
 
         except Exception as e:
             # TODO: For some reason error messages are sent 2-3 times

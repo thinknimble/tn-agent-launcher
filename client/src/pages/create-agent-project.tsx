@@ -49,9 +49,17 @@ const ProjectDetailsSection = ({
         <h1 className="text-3xl font-bold text-primary-600">{agentProject.title}</h1>
         <p className="mt-2 text-primary-400">{agentProject.description}</p>
       </div>
-      <Button onClick={onEdit} variant="secondary">
-        Edit Project
-      </Button>
+      <div className="flex space-x-3">
+        <Link
+          to={`/projects/${agentProject.id}/settings`}
+          className="hover:bg-primary-50 inline-flex items-center rounded-md border border-primary-300 bg-white px-3 py-2 text-sm font-medium text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        >
+          Settings
+        </Link>
+        <Button onClick={onEdit} variant="secondary">
+          Edit Project
+        </Button>
+      </div>
     </div>
   </div>
 )
@@ -253,7 +261,9 @@ const AgentInstanceInner = ({
 }) => {
   const { form, createFormFieldChangeHandler, overrideForm } = useTnForm<TAgentInstanceForm>()
   const isEditing = Boolean(editingInstance)
-  const [promptTemplateContent, setPromptTemplateContent] = useState<string | null>(null)
+  const [promptTemplateVariables, setPromptTemplateVariables] = useState<Record<string, any>>({})
+  const [showApiKeyValue, setShowApiKeyValue] = useState(false)
+  const [apiKeyJustCreated, setApiKeyJustCreated] = useState<string | null>(null)
   const queryClient = useQueryClient()
   useEffect(() => {
     if (editingInstance) {
@@ -264,49 +274,33 @@ const AgentInstanceInner = ({
         value: editingInstance.provider,
       }
       updatedForm.modelName.value = editingInstance.modelName
-      updatedForm.apiKey.value = editingInstance.apiKey
+      updatedForm.apiKey.value = '' // Don't prefill API key for security
       updatedForm.targetUrl.value = editingInstance.targetUrl || ''
       updatedForm.agentType.value = {
         label: agentTypeLabelMap[editingInstance.agentType],
         value: editingInstance.agentType,
       }
+      updatedForm.instruction.value = editingInstance.instruction || ''
       overrideForm(updatedForm)
-      setPromptTemplateContent(editingInstance.promptTemplate?.content || null)
     }
   }, [editingInstance, overrideForm])
-
-  const { mutate: createPrompt, isPending: isCreatingPrompt } = useMutation({
-    mutationFn: (data: CreatePromptTemplate) => promptTemplateApi.create(data),
-    onSuccess: (newPrompt) => {
-      queryClient.invalidateQueries({ queryKey: ['agent-instances'] })
-    },
-  })
-
-  const { mutate: updatePrompt, isPending: isUpdatingPrompt } = useMutation({
-    mutationFn: (data: PromptTemplate) => promptTemplateApi.update(data),
-    onSuccess: (newPrompt) => {
-      queryClient.invalidateQueries({ queryKey: ['agent-instances'] })
-    },
-  })
 
   const { mutate: create, isPending: isCreating } = useMutation({
     mutationFn: (data: any) => agentInstanceApi.create(data),
     onSuccess: (newInstance) => {
-      onInstanceSaved(newInstance)
-      overrideForm(new AgentInstanceForm() as TAgentInstanceForm)
-      if (editingInstance?.promptTemplate?.id) {
-        updatePrompt({
-          id: editingInstance.promptTemplate.id,
-          name: editingInstance.promptTemplate.name,
-          content: promptTemplateContent ?? '',
-          agentInstance: newInstance.id,
-        })
+      // Show the API key for a brief moment after creation if it was provided
+      if (form.apiKey.value && form.apiKey.value.trim()) {
+        setApiKeyJustCreated(form.apiKey.value)
+        setShowApiKeyValue(true)
+        setTimeout(() => {
+          setShowApiKeyValue(false)
+          setApiKeyJustCreated(null)
+          onInstanceSaved(newInstance)
+          overrideForm(new AgentInstanceForm() as TAgentInstanceForm)
+        }, 10000) // Show for 10 seconds
       } else {
-        createPrompt({
-          name: form.friendlyName.value ?? 'Default Prompt',
-          content: promptTemplateContent ?? '',
-          agentInstance: newInstance.id,
-        })
+        onInstanceSaved(newInstance)
+        overrideForm(new AgentInstanceForm() as TAgentInstanceForm)
       }
     },
   })
@@ -315,24 +309,10 @@ const AgentInstanceInner = ({
     mutationFn: (data: any) => agentInstanceApi.update(data),
     onSuccess: (updatedInstance) => {
       onInstanceSaved(updatedInstance)
-      if (editingInstance?.promptTemplate?.id) {
-        updatePrompt({
-          id: editingInstance.promptTemplate.id,
-          name: editingInstance.promptTemplate.name,
-          content: promptTemplateContent ?? '',
-          agentInstance: updatedInstance.id,
-        })
-      } else {
-        createPrompt({
-          name: form.friendlyName.value ?? 'Default Prompt',
-          content: promptTemplateContent ?? '',
-          agentInstance: updatedInstance.id,
-        })
-      }
     },
   })
 
-  const isPending = isCreating || isUpdating || isCreatingPrompt || isUpdatingPrompt
+  const isPending = isCreating || isUpdating
 
   const modelOptions = useMemo(() => {
     if (!form.provider.value) return []
@@ -380,11 +360,19 @@ const AgentInstanceInner = ({
     e.preventDefault()
     if (form.isValid) {
       const formValue = form.value
-      const data = {
-        ...formValue,
+      const data: any = {
+        friendlyName: formValue.friendlyName,
+        modelName: formValue.modelName,
+        targetUrl: formValue.targetUrl,
         projects: [agentProject.id],
         provider: formValue.provider?.value,
         agentType: formValue.agentType?.value,
+        instruction: formValue.instruction || null,
+      }
+
+      // Only include API key if it was provided
+      if (formValue.apiKey && formValue.apiKey.trim()) {
+        data.apiKey = formValue.apiKey
       }
 
       if (isEditing && editingInstance) {
@@ -393,6 +381,42 @@ const AgentInstanceInner = ({
         create(data)
       }
     }
+  }
+
+  if (apiKeyJustCreated && showApiKeyValue) {
+    return (
+      <div className="rounded-lg border border-green-200 bg-green-50 p-6 shadow-sm">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-green-800">Agent Created Successfully!</h3>
+          <p className="mt-1 text-sm text-green-600">
+            This is the only time you&apos;ll see the full API key. Please copy it now.
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <label className="mb-2 block text-sm font-medium text-green-700">
+            API Key (copy this now):
+          </label>
+          <div className="rounded border border-green-300 bg-white p-3 font-mono text-sm">
+            {apiKeyJustCreated}
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-3">
+          <Button
+            onClick={() => {
+              setShowApiKeyValue(false)
+              setApiKeyJustCreated(null)
+              onInstanceSaved(form.value as any)
+              overrideForm(new AgentInstanceForm() as TAgentInstanceForm)
+            }}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            I&apos;ve Copied It
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -474,14 +498,21 @@ const AgentInstanceInner = ({
         <div className="grid gap-6 md:grid-cols-2">
           <div>
             <Input
-              label={form.apiKey.label}
-              placeholder={form.apiKey.placeholder}
+              label={isEditing ? 'API Key (leave empty to keep current)' : form.apiKey.label}
+              placeholder={
+                isEditing ? 'Enter new API key to replace current...' : form.apiKey.placeholder
+              }
               value={form.apiKey.value ?? ''}
               onChange={(e) => createFormFieldChangeHandler(form.apiKey)(e.target.value)}
-              type="text"
+              type="password"
               className="bg-primary-50 border-primary-200 focus:border-primary-500"
             />
             <ErrorsList errors={form.apiKey.errors} />
+            {isEditing && editingInstance?.maskedApiKey && (
+              <p className="mt-1 text-xs text-gray-500">
+                Current API key: {editingInstance.maskedApiKey}
+              </p>
+            )}
           </div>
 
           <div>
@@ -497,9 +528,14 @@ const AgentInstanceInner = ({
         </div>
 
         <PromptBuilder
-          value={promptTemplateContent ?? ''}
-          onChange={setPromptTemplateContent}
+          value={form.instruction.value || ''}
+          onChange={(value: string) => {
+            createFormFieldChangeHandler(form.instruction)(value)
+          }}
+          onVariablesChange={setPromptTemplateVariables}
           placeholder="Enter the system prompt for this agent..."
+          projectId={agentProject.id}
+          enableVariableBinding={true}
         />
 
         <div className="flex justify-end space-x-3 border-t border-primary-200 pt-4">
