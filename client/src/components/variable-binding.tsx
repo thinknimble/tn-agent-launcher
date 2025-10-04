@@ -56,17 +56,17 @@ export const VariableBinding = ({
   const bindingButtonRefs = useRef<HTMLButtonElement[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Render a disabled textarea if the component is disabled
-  if (disabled) {
-    return (
-      <textarea
-        value={value}
-        placeholder={placeholder}
-        disabled
-        className={`resize-vertical min-h-[120px] w-full rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-sm text-gray-400 placeholder-gray-400 focus:border-primary-500 focus:outline-none ${className}`}
-      />
-    )
-  }
+  // // Render a disabled textarea if the component is disabled
+  // if (disabled) {
+  //   return (
+  //     <textarea
+  //       value={value}
+  //       placeholder={placeholder}
+  //       disabled
+  //       className={`resize-vertical min-h-[120px] w-full rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-sm text-gray-400 placeholder-gray-400 focus:border-primary-500 focus:outline-none ${className}`}
+  //     />
+  //   )
+  // }
 
   // Filter variables based on search term
   const filteredVariables = variables.filter(
@@ -112,23 +112,24 @@ export const VariableBinding = ({
       // Check for trigger pattern at cursor position
       const textBeforeCursor = newValue.slice(0, cursorPos)
       const lastTriggerIndex = textBeforeCursor.lastIndexOf(triggerPattern)
+      if (!disabled) {
+        if (lastTriggerIndex !== -1) {
+          const searchTerm = textBeforeCursor.slice(lastTriggerIndex + triggerPattern.length)
 
-      if (lastTriggerIndex !== -1) {
-        const searchTerm = textBeforeCursor.slice(lastTriggerIndex + triggerPattern.length)
-
-        // Check if we're still in a potential variable binding
-        if (!searchTerm.includes('}') && !searchTerm.includes('\n')) {
-          setShowSuggestions(true)
-          setCurrentSearch(searchTerm)
-          setSelectedSuggestionIndex(0)
+          // Check if we're still in a potential variable binding
+          if (!searchTerm.includes('}') && !searchTerm.includes('\n')) {
+            setShowSuggestions(true)
+            setCurrentSearch(searchTerm)
+            setSelectedSuggestionIndex(0)
+          } else {
+            setShowSuggestions(false)
+          }
         } else {
           setShowSuggestions(false)
         }
-      } else {
-        setShowSuggestions(false)
       }
     },
-    [onChange, triggerPattern],
+    [onChange, triggerPattern, disabled],
   )
 
   // Insert variable at current cursor position

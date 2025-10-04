@@ -285,7 +285,6 @@ const AgentInstanceInner = ({
     }
   }, [editingInstance, overrideForm])
 
-
   const { mutate: create, isPending: isCreating } = useMutation({
     mutationFn: (data: any) => agentInstanceApi.create(data),
     onSuccess: (newInstance) => {
