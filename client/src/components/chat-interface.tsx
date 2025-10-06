@@ -110,8 +110,7 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
   useEffect(() => {
     if (selectedChatId && existingMessages) {
       console.log('Loading existing messages for chat:', existingMessages)
-      const loadedMessages = existingMessages.results.map((msg) => {
-        debugger
+      const loadedMessages = existingMessages.results.map((msg) => {        
         return {
           content: msg.content,
           role: msg.role,
@@ -161,10 +160,10 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
         // Handling tool messages (calls and results)
         const toolMsg = data.tool_message
 
-        if (toolMsg.type === 'call') {
+        if (toolMsg.type === 'call') {          
           // Parse the tool call JSON
           try {
-            const callData = JSON.parse(toolMsg.content)
+            const callData = JSON.parse(toolMsg.content ?? '{}')
             setMessages((prev) => [
               ...prev,
               {
