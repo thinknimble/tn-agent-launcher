@@ -367,7 +367,7 @@ const CreateEditAgentTaskInner = ({
               createFormFieldChangeHandler(form.instruction)(value)
               // Extract variables from the instruction content
 
-              setInstructionVariables(extractedVariables)
+              // setInstructionVariables()
             }}
             variables={variables}
             placeholder="Write the prompt/instruction for the agent..."
