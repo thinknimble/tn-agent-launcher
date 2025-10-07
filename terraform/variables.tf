@@ -86,7 +86,7 @@ variable "db_name" {
   type        = string
   description = "The database name for the app service backend"
   sensitive   = true
-  default     = "tn_agent_launcher_db"
+  default     = "tnagentlauncherdb"
 }
 
 variable "db_user" {

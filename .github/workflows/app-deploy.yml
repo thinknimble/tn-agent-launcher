@@ -337,9 +337,9 @@ jobs:
           aws_secret_access_key = "${{ steps.secrets.outputs.aws_secret_access_key }}"
           playwright_test_user_pass = "${{ steps.secrets.outputs.playwright_test_user_pass }}"
           
-          # Database config
-          db_name = "${{ steps.env-vars.outputs.environment }}_db"
-          db_user = "${{ steps.env-vars.outputs.environment }}_user"
+          # Database config - RDS compliant names (alphanumeric only, start with letter)
+          db_name = "tnagentlauncher$(echo '${{ steps.env-vars.outputs.environment }}' | sed 's/[^a-zA-Z0-9]//g')db"
+          db_user = "tnagentlauncher$(echo '${{ steps.env-vars.outputs.environment }}' | sed 's/[^a-zA-Z0-9]//g')user"
           
           # App configuration from app-config.json
           debug = "${{ steps.app-config.outputs.debug }}"
@@ -603,9 +603,9 @@ jobs:
           aws_secret_access_key = ""
           playwright_test_user_pass = "cleanup_placeholder"
           
-          # Database config placeholders
-          db_name = "${ENVIRONMENT}_db"
-          db_user = "${ENVIRONMENT}_user"
+          # Database config placeholders - RDS compliant names
+          db_name = "tnagentlauncher$(echo "${ENVIRONMENT}" | sed 's/[^a-zA-Z0-9]//g')db"
+          db_user = "tnagentlauncher$(echo "${ENVIRONMENT}" | sed 's/[^a-zA-Z0-9]//g')user"
           
           # App configuration defaults
           debug = "false"
