@@ -338,8 +338,8 @@ jobs:
           playwright_test_user_pass = "${{ steps.secrets.outputs.playwright_test_user_pass }}"
           
           # Database config
-          db_name = "$DB_NAME"
-          db_user = "$DB_USER"
+          db_name = "${{ steps.env-vars.outputs.environment }}_db"
+          db_user = "${{ steps.env-vars.outputs.environment }}_user"
           
           # App configuration from app-config.json
           debug = "${{ steps.app-config.outputs.debug }}"
