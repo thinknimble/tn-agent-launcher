@@ -131,8 +131,8 @@ jobs:
 
       - name: Create ECR repository if it doesn't exist
         run: |
-          aws ecr describe-repositories --repository-names ${{ vars.ECR_REPOSITORY_NAME || '{{cookiecutter.sanitized_tf_service_name}}-app' }} || \
-          aws ecr create-repository --repository-name ${{ vars.ECR_REPOSITORY_NAME || '{{cookiecutter.sanitized_tf_service_name}}-app' }}
+          aws ecr describe-repositories --repository-names ${{ vars.ECR_REPOSITORY_NAME || 'tn-agent-launcher-app' }} || \
+          aws ecr create-repository --repository-name ${{ vars.ECR_REPOSITORY_NAME || 'tn-agent-launcher-app' }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -145,8 +145,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ steps.env-vars.outputs.ecr_registry }}/${{ vars.ECR_REPOSITORY_NAME || '{{cookiecutter.sanitized_tf_service_name}}-app' }}:${{ steps.env-vars.outputs.image_tag }}
-            ${{ steps.env-vars.outputs.ecr_registry }}/${{ vars.ECR_REPOSITORY_NAME || '{{cookiecutter.sanitized_tf_service_name}}-app' }}:${{ steps.env-vars.outputs.environment }}-latest
+            ${{ steps.env-vars.outputs.ecr_registry }}/${{ vars.ECR_REPOSITORY_NAME || 'tn-agent-launcher-app' }}:${{ steps.env-vars.outputs.image_tag }}
+            ${{ steps.env-vars.outputs.ecr_registry }}/${{ vars.ECR_REPOSITORY_NAME || 'tn-agent-launcher-app' }}:${{ steps.env-vars.outputs.environment }}-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -180,7 +180,7 @@ jobs:
         run: |
           cd terraform
           # Use the init_backend script with environment-specific configuration
-          ./scripts/init_backend.sh -e "${{ steps.env-vars.outputs.environment }}" -s "${{ vars.SERVICE_NAME || '{{cookiecutter.sanitized_tf_service_name}}' }}"
+          ./scripts/init_backend.sh -e "${{ steps.env-vars.outputs.environment }}" -s "${{ vars.SERVICE_NAME || 'tn-agent-launcher' }}"
 
       - name: Check if Terraform workspace exists
         id: workspace-check

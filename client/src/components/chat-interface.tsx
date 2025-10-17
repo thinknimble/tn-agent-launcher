@@ -531,7 +531,7 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
     }
 
     switch (parsed.type) {
-      case 'agent_response':
+      case 'agent_response': {
         const agentContent =
           parsed.content
             ?.replace(extractThinkingPart(parsed.content) ?? '', '')
@@ -555,11 +555,12 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
             )}
           </div>
         )
+      }
 
       case 'user_message':
         return <MarkdownRenderer>{parsed.content || ''}</MarkdownRenderer>
 
-      case 'tool_result':
+      case 'tool_result': {
         const resultStr =
           typeof parsed.result === 'string' ? parsed.result : JSON.stringify(parsed.result, null, 2)
         const isResultLong = resultStr.length > 300
@@ -584,8 +585,9 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
             )}
           </div>
         )
+      }
 
-      case 'tool_call':
+      case 'tool_call': {
         const argsStr = parsed.arguments
         const isCallLong = argsStr.length > 200
         const displayArgs =
@@ -607,6 +609,7 @@ export const ChatInterface = ({ agentId }: ChatInterfaceProps) => {
             )}
           </div>
         )
+      }
 
       default:
         return <div className="whitespace-pre-wrap">{parsed.content || message.content}</div>
