@@ -51,6 +51,7 @@ if settings.IN_REVIEW:
     ]
 
 urlpatterns += [
+    path("health/", common_views.health_check, name="health_check"),
     path("", common_views.index),
     re_path(r".*/$", common_views.index),
 ]
