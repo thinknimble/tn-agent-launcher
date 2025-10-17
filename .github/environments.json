@@ -8,11 +8,11 @@
       "secrets_bucket": "tn-agent-launcher-secrets-prod",
       "description": "Production environment - isolated account",
       "domain": {
-        "base_domain": "kanw.3leafcoder.com",
+        "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z06118351LUGXMN4X34BT",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
     },
     "staging": {
@@ -23,11 +23,11 @@
       "secrets_bucket": "tn-agent-launcher-secrets-prod",
       "description": "Staging environment - isolated account",
       "domain": {
-        "base_domain": "kanw.3leafcoder.com",
+        "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z06118351LUGXMN4X34BT",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
     },
     "development": {
@@ -38,11 +38,11 @@
       "secrets_bucket": "tn-agent-launcher-secrets-prod",
       "description": "Staging environment - isolated account",
       "domain": {
-        "base_domain": "kanw.3leafcoder.com",
+        "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z06118351LUGXMN4X34BT",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
     }
   },
@@ -55,11 +55,11 @@
       "secrets_bucket": "tn-agent-launcher-secrets-prod",
       "description": "Production environment - isolated account",
       "domain": {
-        "base_domain": "kanw.3leafcoder.com",
+        "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z06118351LUGXMN4X34BT",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
     },
     "main": {
@@ -70,11 +70,11 @@
       "secrets_bucket": "tn-agent-launcher-secrets-prod",
       "description": "Staging environment - isolated account",
       "domain": {
-        "base_domain": "kanw.3leafcoder.com",
+        "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z06118351LUGXMN4X34BT",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
     }
   },
@@ -86,11 +86,11 @@
       "secrets_bucket": "tn-agent-launcher-secrets-prod",
       "description": "Production environment - isolated account",
       "domain": {
-        "base_domain": "kanw.3leafcoder.com",
+        "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z06118351LUGXMN4X34BT",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/ef8fc192-5e26-4470-bd13-0b93fa3b8a0d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
   }
 }
