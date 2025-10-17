@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from pydantic_ai import Agent
+from encrypted_model_fields.fields import EncryptedTextField
 
 from tn_agent_launcher.common.models import AbstractBaseModel
 
@@ -28,7 +29,7 @@ class AgentInstance(AbstractBaseModel):
     friendly_name = models.CharField(max_length=255)
     provider = models.CharField(max_length=50, choices=ProviderChoices.choices)
     model_name = models.CharField(max_length=100)
-    api_key = models.TextField(blank=True, default="")
+    api_key = EncryptedTextField(blank=True, default="")
     target_url = models.URLField(
         null=True, blank=True, help_text="Optional base URL for the model API, if applicable"
     )
@@ -361,7 +362,7 @@ class ProjectEnvironmentSecret(AbstractBaseModel):
     key = models.CharField(
         max_length=255, help_text="Environment variable name (e.g., 'API_KEY', 'DATABASE_URL')"
     )
-    value = models.TextField(help_text="Encrypted secret value")
+    value = EncryptedTextField(help_text="Encrypted secret value")
     description = models.TextField(
         blank=True, help_text="Optional description of what this secret is used for"
     )
