@@ -12,7 +12,7 @@
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z0866327MJWJLQRXUT5E",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/9dd53529-c6f8-4776-8851-7fe4c0a55d6e"
       }
     },
     "staging": {
@@ -27,7 +27,7 @@
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z0866327MJWJLQRXUT5E",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/9dd53529-c6f8-4776-8851-7fe4c0a55d6e"
       }
     },
     "development": {
@@ -42,7 +42,7 @@
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z0866327MJWJLQRXUT5E",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/9dd53529-c6f8-4776-8851-7fe4c0a55d6e"
       }
     }
   },
@@ -59,7 +59,7 @@
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z0866327MJWJLQRXUT5E",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/9dd53529-c6f8-4776-8851-7fe4c0a55d6e"
       }
     },
     "main": {
@@ -74,7 +74,7 @@
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z0866327MJWJLQRXUT5E",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/9dd53529-c6f8-4776-8851-7fe4c0a55d6e"
       }
     }
   },
@@ -90,7 +90,7 @@
         "use_custom_domain": false,
         "custom_domain": "",
         "route53_zone_id": "Z0866327MJWJLQRXUT5E",
-        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
+        "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/9dd53529-c6f8-4776-8851-7fe4c0a55d6e"
       }
   }
 }
