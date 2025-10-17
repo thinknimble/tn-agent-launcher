@@ -238,3 +238,4 @@ tags
 .pytest_cache/
 
 samples/
+docs/
