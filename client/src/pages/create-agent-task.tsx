@@ -1,7 +1,7 @@
 import { FormProvider, useTnForm } from '@thinknimble/tn-forms-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
-import { useCallback, useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Pagination } from '@thinknimble/tn-models'
 import Select from 'react-dropdown-select'
 
@@ -10,6 +10,7 @@ import { Input } from 'src/components/input'
 import { ErrorsList } from 'src/components/errors'
 import { InputSourceUploader } from 'src/components/input-source-uploader'
 import { DocumentProcessingConfigModal } from 'src/components/document-processing-config'
+import { VariableBinding, Variable } from 'src/components/variable-binding'
 import {
   AgentTask,
   AgentTaskForm,
@@ -24,6 +25,9 @@ import {
 } from 'src/services/agent-task'
 import { AgentInstance, agentInstanceQueries, agentTypeEnum } from 'src/services/agent-instance'
 import { SelectOption } from 'src/services/base-model'
+import { environmentSecretQueries } from 'src/services/environment-secrets'
+import { useAtomValue } from 'jotai'
+import { projectAtom } from 'src/stores/project-atom'
 
 const CreateEditAgentTaskInner = ({
   onSuccess,
@@ -44,13 +48,35 @@ const CreateEditAgentTaskInner = ({
   const queryClient = useQueryClient()
   const [urlConfigModalOpen, setUrlConfigModalOpen] = useState(false)
   const [currentUrlIndex, setCurrentUrlIndex] = useState<number | null>(null)
-
+  const [instructionVariables, setInstructionVariables] = useState<Record<string, any>>({})
+  const selectedProject = useAtomValue(projectAtom)
   const { data: agentInstances } = useQuery(
     agentInstanceQueries.list(new Pagination(), {
       projects: [],
       agentType: agentTypeEnum.ONE_SHOT as string,
     }),
   )
+
+  // Fetch environment secrets for the project
+  const { data: secretsData } = useQuery({
+    ...environmentSecretQueries.list({
+      pagination: new Pagination({ page: 1, size: 100 }),
+      filters: { project: selectedProject?.id ?? '', search: '' },
+    }),
+    enabled: !!selectedProject,
+  })
+
+  // Transform environment secrets into variables for binding component
+  const variables = useMemo<Variable[]>(() => {
+    if (!secretsData?.results) return []
+
+    return secretsData.results.map((secret) => ({
+      label: secret.key,
+      value: secret.key,
+      description: secret.description || `Environment secret: ${secret.key}`,
+      category: 'Environment Variables',
+    }))
+  }, [secretsData?.results])
 
   // Get all agent tasks for trigger selection TODO: filter by current project
   const { data: agentTasks } = useQuery(
@@ -123,7 +149,7 @@ const CreateEditAgentTaskInner = ({
 
       if (initialData.agentInstance) {
         updatedForm.agentInstance.value = {
-          label: initialData.agentInstanceName || 'Agent',
+          label: initialData.agentInstanceRef?.friendlyName || 'Agent',
           value: initialData.agentInstance,
         }
       }
@@ -201,9 +227,14 @@ const CreateEditAgentTaskInner = ({
     }
   }, [preselectedAgent, overrideForm, isEditing, duplicateFrom])
 
-  const isScheduleTypeOnce = form.scheduleType.value?.value === scheduleTypeEnum.ONCE
-  const isScheduleTypeCustom = form.scheduleType.value?.value === scheduleTypeEnum.CUSTOM_INTERVAL
-  const isScheduleTypeAgent = form.scheduleType.value?.value === scheduleTypeEnum.AGENT
+  const { isScheduleTypeOnce, isScheduleTypeCustom, isScheduleTypeAgent } = useMemo(() => {
+    const scheduleValue = form.scheduleType.value?.value
+    return {
+      isScheduleTypeOnce: scheduleValue === scheduleTypeEnum.ONCE,
+      isScheduleTypeCustom: scheduleValue === scheduleTypeEnum.CUSTOM_INTERVAL,
+      isScheduleTypeAgent: scheduleValue === scheduleTypeEnum.AGENT,
+    }
+  }, [form.scheduleType.value?.value])
 
   // Helper function to create InputSource object from URL
   const createInputSourceFromUrl = (url: string): InputSource => {
@@ -249,6 +280,7 @@ const CreateEditAgentTaskInner = ({
         description: formValue.description || '',
         agentInstance: formValue.agentInstance?.value || '',
         instruction: formValue.instruction || '',
+        variables: instructionVariables,
         inputSources: (formValue.inputSources || []).filter((source) => source.url.trim() !== ''),
         scheduleType: (formValue.scheduleType?.value || '') as ScheduleTypeValues,
         scheduledAt: formValue.scheduledAt || undefined,
@@ -280,7 +312,7 @@ const CreateEditAgentTaskInner = ({
           {isEditing
             ? 'Update your scheduled task configuration'
             : duplicateFrom
-              ? `Creating a copy of "${duplicateFrom.name}"`
+              ? `Creating a copy of &ldquo;${duplicateFrom.name}&rdquo;`
               : 'Schedule automated tasks for your one-shot agents'}
         </p>
       </div>
@@ -329,13 +361,41 @@ const CreateEditAgentTaskInner = ({
 
         <div>
           <label className="mb-2 block text-sm font-medium text-primary-600">Instruction</label>
-          <textarea
+          <VariableBinding
+            value={form.instruction.value || ''}
+            onChange={(value) => {
+              createFormFieldChangeHandler(form.instruction)(value)
+              // Extract variables from the instruction content
+
+              // setInstructionVariables()
+            }}
+            variables={variables}
             placeholder="Write the prompt/instruction for the agent..."
-            className="bg-primary-50 resize-vertical h-32 w-full rounded-md border border-primary-200 p-3 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            value={form.instruction.value}
-            onChange={(e) => createFormFieldChangeHandler(form.instruction)(e.target.value)}
-          />
+          >
+            {({ value, onChange, onKeyDown, textareaRef }) => (
+              <textarea
+                ref={textareaRef}
+                value={value}
+                onChange={onChange}
+                onKeyDown={onKeyDown}
+                placeholder="Write the prompt/instruction for the agent..."
+                className="bg-primary-50 resize-vertical min-h-[128px] w-full rounded-md border border-primary-200 p-3 font-mono text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+              />
+            )}
+          </VariableBinding>
           <ErrorsList errors={form.instruction.errors} />
+          {variables.length > 0 && (
+            <p className="mt-1 text-xs text-gray-500">
+              Type <code className="rounded bg-gray-100 px-1">{'{{'}</code> to insert environment
+              variables ({variables.length} available)
+            </p>
+          )}
+          {selectedProject?.id && variables.length === 0 && (
+            <p className="mt-1 text-xs text-gray-400">
+              No environment variables available for this agent&apos;s project. You can add them in
+              project settings.
+            </p>
+          )}
         </div>
 
         <div>

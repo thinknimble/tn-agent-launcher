@@ -1,13 +1,16 @@
 from rest_framework import serializers
 
-from tn_agent_launcher.chat.serializers import SystemPromptSerializer
-
-from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution
+from .models import (
+    AgentInstance,
+    AgentProject,
+    AgentTask,
+    AgentTaskExecution,
+    ProjectEnvironmentSecret,
+)
 
 
 class AgentInstanceSerializer(serializers.ModelSerializer):
     masked_api_key = serializers.SerializerMethodField()
-    prompt_template = serializers.SerializerMethodField()
 
     class Meta:
         model = AgentInstance
@@ -24,17 +27,12 @@ class AgentInstanceSerializer(serializers.ModelSerializer):
             "api_key",
             "user",
             "masked_api_key",
-            "prompt_template",
+            "instruction",
         ]
-        read_only_fields = ["id", "created", "last_edited"]
-
-    extra_kwargs = {
-        "api_key": {"write_only": True},
-    }
-
-    def get_prompt_template(self, obj):
-        template = obj.prompt_templates.first()
-        return SystemPromptSerializer(template).data if template else None
+        read_only_fields = ["id", "created", "last_edited", "masked_api_key"]
+        extra_kwargs = {
+            "api_key": {"write_only": True},
+        }
 
     def get_masked_api_key(self, obj):
         if obj.api_key:
@@ -58,9 +56,7 @@ class AgentProjectSerializer(serializers.ModelSerializer):
 
 
 class AgentTaskSerializer(serializers.ModelSerializer):
-    agent_instance_name = serializers.CharField(
-        source="agent_instance.friendly_name", read_only=True
-    )
+    agent_instance_ref = serializers.CharField(source="agent_instance", read_only=True)
     triggered_by_task_name = serializers.CharField(source="triggered_by_task.name", read_only=True)
     next_execution_display = serializers.SerializerMethodField()
     last_execution_display = serializers.SerializerMethodField()
@@ -72,7 +68,7 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "agent_instance",
-            "agent_instance_name",
+            "agent_instance_ref",
             "instruction",
             "input_sources",
             "schedule_type",
@@ -164,6 +160,7 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
             "error_message",
             "execution_time_seconds",
             "duration_display",
+            "api_security_summary",
             "background_task_id",
             "created",
         ]
@@ -175,6 +172,7 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
             "output_data",
             "error_message",
             "execution_time_seconds",
+            "api_security_summary",
             "background_task_id",
             "created",
             "agent_task_name",
@@ -198,3 +196,70 @@ class AgentTaskExecutionSerializer(serializers.ModelSerializer):
         if obj.completed_at:
             return obj.completed_at.strftime("%Y-%m-%d %H:%M:%S UTC")
         return None
+
+
+class ProjectEnvironmentSecretSerializer(serializers.ModelSerializer):
+    masked_value = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProjectEnvironmentSecret
+        fields = [
+            "id",
+            "project",
+            "key",
+            "value",
+            "masked_value",
+            "description",
+            "created",
+            "last_edited",
+        ]
+        read_only_fields = ["id", "created", "last_edited", "masked_value"]
+        extra_kwargs = {
+            "value": {"write_only": True},
+        }
+
+    def get_masked_value(self, obj):
+        return obj.masked_value
+
+    def to_internal_value(self, data):
+        data["user"] = self.context["request"].user.id
+        return super().to_internal_value(data)
+
+    def validate_key(self, value):
+        """Validate that the key follows environment variable naming conventions"""
+        if not value:
+            raise serializers.ValidationError("Key is required")
+
+        # Remove underscores for alphanumeric check
+        if not value.replace("_", "").isalnum():
+            raise serializers.ValidationError(
+                "Key must contain only letters, numbers, and underscores"
+            )
+
+        # Check if it starts with a number
+        if value[0].isdigit():
+            raise serializers.ValidationError("Key cannot start with a number")
+
+        # Convert to uppercase for consistency
+        return value.upper()
+
+    def validate(self, data):
+        """Validate unique key per project for the user"""
+        project = data.get("project")
+        key = data.get("key")
+        user = self.context["request"].user
+
+        if project and key:
+            # Check for existing secret with same key in same project for same user
+            existing = ProjectEnvironmentSecret.objects.filter(project=project, key=key, user=user)
+
+            # If updating, exclude current instance
+            if self.instance:
+                existing = existing.exclude(id=self.instance.id)
+
+            if existing.exists():
+                raise serializers.ValidationError(
+                    {"key": f"Environment secret with key '{key}' already exists for this project"}
+                )
+
+        return data

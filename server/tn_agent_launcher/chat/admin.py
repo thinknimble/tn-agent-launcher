@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import Feedback, Fingerprint, PromptTemplate
+from .models import Chat, ChatMessage, Feedback, Fingerprint, PromptTemplate
 
 
 @admin.register(Fingerprint)
@@ -47,3 +47,7 @@ class PromptTemplateAdmin(admin.ModelAdmin):
         ("Settings", {"fields": ("description", "order")}),
         ("Metadata", {"fields": ("created", "last_edited"), "classes": ("collapse",)}),
     )
+
+
+admin.site.register(Chat)
+admin.site.register(ChatMessage)

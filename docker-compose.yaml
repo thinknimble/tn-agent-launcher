@@ -33,15 +33,23 @@ services:
       - .:/app
     depends_on:
       - postgres
+      - redis
     env_file:
       - ".env"
     environment:
       - DB_HOST=postgres
+      - REDIS_HOST=redis
       - ENABLE_DOC_PREPROCESSING=true
     ports:
       - "8000:8000"
       - "5678:5678"
     user: ${DOCKER_UID}
+    # Add health check for the server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   client:
     build:

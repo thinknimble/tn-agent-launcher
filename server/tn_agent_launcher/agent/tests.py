@@ -31,6 +31,7 @@ def test_agent_viewset_create(api_client, sample_user, sample_agent_project):
         "agent_type": "chat",
         "api_key": "some_test",
         "projects": [sample_agent_project.id],
+        "instruction": "You are a helpful assistant.",
     }
     response = api_client.post("/api/agents/instances/", data, format="json")
     assert response.status_code == 201
@@ -120,6 +121,7 @@ class TestAgentInstanceCRUD:
             "target_url": "https://api.openai.com",
             "agent_type": "chat",
             "projects": [],
+            "instruction": "You are a helpful assistant.",
         }
 
         response = api_client.post("/api/agents/instances/", data, format="json")

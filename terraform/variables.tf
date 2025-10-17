@@ -1,7 +1,7 @@
 variable "service" {
   type        = string
   description = "The service name for AWS resources (lowercase, alphanumeric and hyphens only, no underscores)"
-  default     = "{{ cookiecutter.sanitized_tf_service_name }}"
+  default     = "tn-agent-launcher"
   
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.service))
@@ -27,7 +27,7 @@ variable "aws_region" {
 variable "ecr_app_repository_name" {
   type        = string
   description = "The ECR repository name for the app service backend"
-  default     = "{{ cookiecutter.sanitized_tf_service_name }}-app"
+  default     = "tn-agent-launcher-app"
 }
 
 
@@ -55,7 +55,7 @@ variable "secret_key" {
   type        = string
   description = "SECRET_KEY for the app service backend"
   sensitive   = true
-  default     = "{{ random_ascii_string(50) }}"
+  default     = "default_secret_key_change_me_in_production"
 }
 
 variable "debug" {
@@ -86,21 +86,21 @@ variable "db_name" {
   type        = string
   description = "The database name for the app service backend"
   sensitive   = true
-  default     = "{{ cookiecutter.project_slug }}_db"
+  default     = "tnagentlauncherdb"
 }
 
 variable "db_user" {
   type        = string
   description = "The database user for the app service backend"
   sensitive   = true
-  default     = "{{ cookiecutter.project_slug }}_user"
+  default     = "tn_agent_launcher_user"
 }
 
 variable "db_pass" {
   type        = string
   description = "The database password for the app service backend"
   sensitive   = true
-  default     = "{{ random_ascii_string(50) }}"
+  default     = "default_db_password_change_me_in_production"
 }
 
 variable "use_aws_storage" {
@@ -145,21 +145,21 @@ variable "enable_emails" {
 variable "staff_email" {
   type        = string
   description = "The staff email for the app service backend"
-  default     = "{{ cookiecutter.author_name }} <{{ cookiecutter.email }}>"
+  default     = "admin@example.com"
 }
 
 variable "django_superuser_password" {
   type        = string
   description = "The password for the Django superuser"
   sensitive   = true
-  default     = "{{ random_ascii_string(50) }}"
+  default     = "default_superuser_password_change_me_in_production"
 }
 
 variable "playwright_test_user_pass" {
   type        = string
   description = "The password for the Playwright test user"
   sensitive   = true
-  default     = "{{ random_ascii_string(50) }}"
+  default     = "default_test_password_change_me_in_production"
 }
 variable "playwright_test_base_url" {
   type        = string

@@ -35,7 +35,7 @@ export const agentInstanceShape = {
   targetUrl: z.string().optional().nullable(),
   agentType: z.nativeEnum(agentTypeEnum),
   user: z.string().uuid(),
-  promptTemplate: z.object(promptTemplateShape).nullable().optional(),
+  instruction: z.string().optional().nullable(),
   maskedApiKey: z.string().optional(),
   projects: z.string().array().default([]),
 }
@@ -48,6 +48,7 @@ export const createAgentInstanceShape = {
   targetUrl: agentInstanceShape.targetUrl,
   agentType: agentInstanceShape.agentType,
   projects: agentInstanceShape.projects,
+  instruction: agentInstanceShape.instruction,
 }
 
 export const agentInstanceFiltersShape = {

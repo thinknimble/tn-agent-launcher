@@ -41,7 +41,7 @@ resource "aws_secretsmanager_secret" "db_name" {
 
 resource "aws_secretsmanager_secret_version" "db_name" {
   secret_id     = aws_secretsmanager_secret.db_name.id
-  secret_string = var.db_name
+  secret_string = var.db_name != "" ? var.db_name : "tn_agent_launcher_db"
 }
 
 
@@ -51,7 +51,7 @@ resource "aws_secretsmanager_secret" "db_user" {
 
 resource "aws_secretsmanager_secret_version" "db_user" {
   secret_id     = aws_secretsmanager_secret.db_user.id
-  secret_string = var.db_user
+  secret_string = var.db_user != "" ? var.db_user : "tn_agent_launcher_user"
 }
 
 resource "aws_secretsmanager_secret" "db_pass" {

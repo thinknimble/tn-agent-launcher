@@ -43,6 +43,7 @@ class AgentInstance(AbstractBaseModel):
         help_text="Execute this agent using AWS Lambda (admin only). Auto-enabled for Bedrock providers.",
     )
     user = models.ForeignKey("core.User", on_delete=models.CASCADE, related_name="agent_instances")
+    instruction = models.TextField(help_text="The prompt/instruction to send to the agent")
 
     def __str__(self):
         return self.friendly_name
@@ -83,14 +84,21 @@ class AgentInstance(AbstractBaseModel):
         return create_agent(self.provider, self.model_name, self.api_key, self.target_url)
 
     async def agent(self):
+        from tn_agent_launcher.agent.tools import AgentDependencies, get_agent_tools
         from tn_agent_launcher.chat.models import PromptTemplate
 
         system_prompt = await PromptTemplate.objects.aget_assembled_prompt(agent_instance=self.id)
+
+        # Get dependencies and tools
+        deps, tools = get_agent_tools(user_id=str(self.user_id))
+
         return Agent(
             name=self.friendly_name,
             model=self.raw_agent,
             output_type=str,
             system_prompt=system_prompt,
+            tools=tools,
+            deps_type=AgentDependencies,
         )
 
 
@@ -301,6 +309,11 @@ class AgentTaskExecution(AbstractBaseModel):
     output_data = models.JSONField(null=True, blank=True, help_text="The response from the agent")
     error_message = models.TextField(blank=True)
     execution_time_seconds = models.FloatField(null=True, blank=True)
+    api_security_summary = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Summary of API calls, authentication methods, and security checks",
+    )
 
     background_task_id = models.CharField(
         max_length=100, blank=True, help_text="ID of the django-background-tasks task"
@@ -317,3 +330,74 @@ class AgentTaskExecution(AbstractBaseModel):
         if self.started_at and self.completed_at:
             return self.completed_at - self.started_at
         return None
+
+
+class ProjectEnvironmentSecretQuerySet(models.QuerySet):
+    def for_user(self, user):
+        """Filter environment secrets for a specific user"""
+        return self.filter(user=user)
+
+
+class ProjectEnvironmentSecretManager(models.Manager):
+    def get_queryset(self):
+        return ProjectEnvironmentSecretQuerySet(self.model, using=self._db)
+
+    def for_user(self, user):
+        return self.get_queryset().for_user(user)
+
+
+class ProjectEnvironmentSecret(AbstractBaseModel):
+    """
+    Environment secrets for projects that can be used in agent prompts.
+    Secrets are encrypted and only show masked values after creation.
+    """
+
+    project = models.ForeignKey(
+        AgentProject, on_delete=models.CASCADE, related_name="environment_secrets"
+    )
+    user = models.ForeignKey(
+        "core.User", on_delete=models.CASCADE, related_name="project_environment_secrets"
+    )
+    key = models.CharField(
+        max_length=255, help_text="Environment variable name (e.g., 'API_KEY', 'DATABASE_URL')"
+    )
+    value = models.TextField(help_text="Encrypted secret value")
+    description = models.TextField(
+        blank=True, help_text="Optional description of what this secret is used for"
+    )
+
+    objects = ProjectEnvironmentSecretManager()
+
+    class Meta:
+        ordering = ["key"]
+        unique_together = [["project", "key", "user"]]
+
+    def __str__(self):
+        return f"{self.project.title}: {self.key}"
+
+    @property
+    def masked_value(self):
+        """Return masked version of the secret (last 4 characters)"""
+        if self.value and len(self.value) > 4:
+            return "****" + self.value[-4:]
+        elif self.value:
+            return "****"
+        return ""
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        errors = {}
+
+        # Validate key format (alphanumeric and underscores only)
+        if self.key and not self.key.replace("_", "").isalnum():
+            errors["key"] = "Key must contain only letters, numbers, and underscores"
+
+        # Validate key doesn't start with number
+        if self.key and self.key[0].isdigit():
+            errors["key"] = "Key cannot start with a number"
+
+        if errors:
+            raise ValidationError(errors)
+
+        super().clean()

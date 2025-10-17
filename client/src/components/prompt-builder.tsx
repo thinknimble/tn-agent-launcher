@@ -1,12 +1,19 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { Pagination } from '@thinknimble/tn-models'
 import { Button } from './button'
 import { Textarea } from './textarea'
+import { VariableBinding, Variable } from './variable-binding'
+import { environmentSecretQueries } from 'src/services/environment-secrets'
 
 interface PromptBuilderProps {
   value: string
   onChange: (value: string) => void
+  onVariablesChange?: (variables: Record<string, any>) => void // Callback when variables are extracted
   placeholder?: string
+  projectId?: string // Optional project ID to load environment variables
+  enableVariableBinding?: boolean // Whether to enable environment variable binding
 }
 
 interface StanceSection {
@@ -193,11 +200,72 @@ const stanceSections: StanceSection[] = [
   },
 ]
 
-export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderProps) => {
+// Utility function to extract variables from content
+const extractVariablesFromContent = (content: string): Record<string, any> => {
+  if (!content) return {}
+
+  // Pattern to match {{VARIABLE_NAME}} - allows letters, numbers, underscores
+  const pattern = /\{\{([A-Z_][A-Z0-9_]*)\}\}/g
+  const matches = content.matchAll(pattern)
+
+  // Create a dictionary with variable metadata
+  const variables: Record<string, any> = {}
+  matches.forEach(([, varName]) => {
+    variables[varName] = {
+      name: varName,
+      required: true,
+      type: 'environment_secret',
+    }
+  })
+
+  return variables
+}
+
+export const PromptBuilder = ({
+  value,
+  onChange,
+  onVariablesChange,
+  placeholder,
+  projectId,
+  enableVariableBinding = false,
+}: PromptBuilderProps) => {
   const [isImprovePromptActive, setIsImprovePromptActive] = useState(false)
   const [selectedStances, setSelectedStances] = useState<Set<string>>(new Set())
   const [stanceContents, setStanceContents] = useState<Record<string, string>>({})
   const [expandedHelpers, setExpandedHelpers] = useState<Set<string>>(new Set())
+
+  // Fetch environment variables if project ID is provided
+  const { data: secretsData } = useQuery({
+    ...environmentSecretQueries.list({
+      pagination: new Pagination({ page: 1, size: 100 }),
+      filters: {},
+    }),
+    enabled: !!projectId && enableVariableBinding,
+  })
+
+  // Transform environment variables for the variable binding component
+  const projectSecrets =
+    secretsData?.results?.filter((secret: any) => secret.project === projectId) || []
+  const variables: Variable[] = projectSecrets.map((secret: any) => ({
+    label: secret.key,
+    value: secret.key,
+    description: secret.description,
+    category: 'Environment Secrets',
+  }))
+
+  // Handle content changes and extract variables
+  const handleContentChange = useCallback(
+    (newValue: string) => {
+      onChange(newValue)
+
+      // Extract variables and notify parent component
+      if (onVariablesChange) {
+        const extractedVariables = extractVariablesFromContent(newValue)
+        onVariablesChange(extractedVariables)
+      }
+    },
+    [onChange, onVariablesChange],
+  )
 
   const toggleImprovePrompt = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
@@ -245,7 +313,7 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
 
     if (prompts.length > 0) {
       const combinedPrompt = prompts.join('\n\n---\n\n')
-      onChange(combinedPrompt)
+      handleContentChange(combinedPrompt)
     }
   }
 
@@ -253,7 +321,7 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
     setSelectedStances(new Set())
     setStanceContents({})
     setExpandedHelpers(new Set())
-    onChange('')
+    handleContentChange('')
   }
 
   const selectedStancesArray = Array.from(selectedStances)
@@ -404,25 +472,44 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
                   </div>
                 )}
 
-                <Textarea
-                  placeholder={stance.placeholder}
-                  value={stanceContents[stance.id] || ''}
-                  onChange={(e) => updateStanceContent(stance.id, e.target.value)}
-                  className="resize-vertical font-inherit min-h-[100px] w-full rounded-md border border-gray-200 bg-white p-3 text-sm placeholder-neutral-400 transition-colors focus:border-neutral-400 focus:outline-none"
-                />
+                {enableVariableBinding && projectId ? (
+                  <VariableBinding
+                    value={stanceContents[stance.id] || ''}
+                    onChange={(newValue) => updateStanceContent(stance.id, newValue)}
+                    variables={variables}
+                    placeholder={stance.placeholder}
+                    className="resize-vertical font-inherit min-h-[100px] bg-white text-sm placeholder-neutral-400 transition-colors focus:border-neutral-400 focus:outline-none"
+                  />
+                ) : (
+                  <Textarea
+                    placeholder={stance.placeholder}
+                    value={stanceContents[stance.id] || ''}
+                    onChange={(e) => updateStanceContent(stance.id, e.target.value)}
+                    className="resize-vertical font-inherit min-h-[100px] w-full rounded-md border border-gray-200 bg-white p-3 text-sm placeholder-neutral-400 transition-colors focus:border-neutral-400 focus:outline-none"
+                  />
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {!isImprovePromptActive && (
-          <Textarea
-            placeholder={placeholder || 'Enter the system prompt for this agent...'}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="resize-vertical font-inherit min-h-[120px] w-full rounded-md border border-gray-200 bg-white p-3 text-sm placeholder-neutral-400 transition-colors focus:border-neutral-400 focus:outline-none"
-          />
-        )}
+        {!isImprovePromptActive &&
+          (enableVariableBinding && projectId ? (
+            <VariableBinding
+              value={value}
+              onChange={handleContentChange}
+              variables={variables}
+              placeholder={placeholder || 'Enter the system prompt for this agent...'}
+              className="resize-vertical font-inherit min-h-[120px] bg-white text-sm placeholder-neutral-400 transition-colors focus:border-neutral-400 focus:outline-none"
+            />
+          ) : (
+            <Textarea
+              placeholder={placeholder || 'Enter the system prompt for this agent...'}
+              value={value}
+              onChange={(e) => handleContentChange(e.target.value)}
+              className="resize-vertical font-inherit min-h-[120px] w-full rounded-md border border-gray-200 bg-white p-3 text-sm placeholder-neutral-400 transition-colors focus:border-neutral-400 focus:outline-none"
+            />
+          ))}
 
         {(isImprovePromptActive || selectedStancesArray.length > 0) && (
           <div className="flex justify-end gap-2 border-t border-gray-200 pt-5">
@@ -442,6 +529,12 @@ export const PromptBuilder = ({ value, onChange, placeholder }: PromptBuilderPro
         {!isImprovePromptActive && (
           <p className="mt-2 text-xs text-neutral-400">
             Define the behavior and personality of your AI agent
+            {enableVariableBinding && projectId && (
+              <span className="mt-1 block">
+                Type <code className="rounded bg-gray-100 px-1">{'{{'}</code> to insert environment
+                variables
+              </span>
+            )}
           </p>
         )}
       </div>

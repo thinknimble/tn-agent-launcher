@@ -236,9 +236,9 @@ resource "aws_db_instance" "postgres" {
   db_subnet_group_name   = aws_db_subnet_group.database.name
   storage_encrypted      = true
 
-  # tags = {
-  #   Name = "db-${var.service}-${var.environment}}"
-  # }
+  tags = {
+    Name = "db-${var.service}-${var.environment}"
+  }
 }
 
 
@@ -287,8 +287,18 @@ resource "aws_lb_listener" "http" {
   protocol          = "HTTP"
 
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    type = var.enable_https ? "redirect" : "forward"
+    
+    dynamic "redirect" {
+      for_each = var.enable_https ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+    
+    target_group_arn = var.enable_https ? null : aws_lb_target_group.app.arn
   }
 }
 
