@@ -11,7 +11,7 @@
         "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
-        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "route53_zone_id": "Z0866327MJWJLQRXUT5E",
         "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
     },
@@ -26,7 +26,7 @@
         "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
-        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "route53_zone_id": "Z0866327MJWJLQRXUT5E",
         "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
     },
@@ -41,7 +41,7 @@
         "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
-        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "route53_zone_id": "Z0866327MJWJLQRXUT5E",
         "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
     }
@@ -58,7 +58,7 @@
         "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
-        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "route53_zone_id": "Z0866327MJWJLQRXUT5E",
         "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
     },
@@ -73,7 +73,7 @@
         "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
-        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "route53_zone_id": "Z0866327MJWJLQRXUT5E",
         "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
     }
@@ -89,7 +89,7 @@
         "base_domain": "apps.tnapp.io",
         "use_custom_domain": false,
         "custom_domain": "",
-        "route53_zone_id": "Z06118351LUGXMN4X34BT",
+        "route53_zone_id": "Z0866327MJWJLQRXUT5E",
         "certificate_arn": "arn:aws:acm:us-east-1:458029411633:certificate/7479851d-fd7a-424e-8a22-23c49eb2783d"
       }
   }
