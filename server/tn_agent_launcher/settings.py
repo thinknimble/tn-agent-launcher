@@ -23,6 +23,9 @@ IN_REVIEW = ENVIRONMENT == "review" or IS_REVIEW_APP
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config("SECRET_KEY")
 
+# Field encryption key for django-encrypted-model-fields
+FIELD_ENCRYPTION_KEY = config("FIELD_ENCRYPTION_KEY")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
@@ -187,6 +190,7 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     # Third Party
+    "encrypted_model_fields",
     "corsheaders",
     "drf_spectacular",
     "rest_framework",

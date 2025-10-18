@@ -230,3 +230,9 @@ variable "enable_doc_preprocessing" {
   description = "Enable document preprocessing for the app service backend - not available in heroku"
   default     = false
 }
+variable "field_encryption_key" {
+  type        = string
+  description = "Hash secrets in db"
+  sensitive   = true
+}
+

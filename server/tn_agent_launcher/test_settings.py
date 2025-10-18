@@ -29,3 +29,4 @@ LOGGING["loggers"]["tn_agent_launcher"]["propagate"] = True
 
 # Disable email allowlist by default in tests unless explicitly testing it
 USE_EMAIL_ALLOWLIST = False
+FIELD_ENCRYPTION_KEY = "MN22phsuOGfZJfH1ly_cXMUmrnVM-XFJc96V1Q429yB="

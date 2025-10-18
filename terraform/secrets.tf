@@ -73,3 +73,13 @@ resource "aws_secretsmanager_secret_version" "rollbar_access_token" {
   secret_string = var.rollbar_access_token
 
 }
+
+resource "aws_secretsmanager_secret" "field_encryption_key" {
+  name = "${var.service}-${var.environment}-field_encryption_key"
+}
+
+resource "aws_secretsmanager_secret_version" "field_encryption_key" {
+  secret_id     = aws_secretsmanager_secret.field_encryption_key.id
+  secret_string = var.field_encryption_key
+}
+

@@ -37,3 +37,4 @@ playwright_test_user_pass     = "QISDXjDoffSCiblFrutkMJBkMhhiIxMszImalFKnpRhQTBE
 playwright_test_base_url      = "http://localhost:8080"
 rollbar_access_token          = "your_rollbar_token"
 
+field_encryption_key = ""
