@@ -10,21 +10,25 @@ export const Dashboard = () => {
   const { data: projects } = useQuery(agentProjectQueries.list(new Pagination()))
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <header className="relative mx-auto flex h-32 w-full flex-col justify-center bg-primary sm:h-48">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h1 className="mb-6 text-left text-3xl font-bold uppercase text-white">Dashboard</h1>
+    <div className="flex min-h-screen flex-1 flex-col bg-gradient-to-br from-primary to-primaryLight">
+      <header className="relative mx-auto flex w-full flex-col justify-center px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl">
+          <h1 className="mb-3 text-left text-4xl font-extrabold text-white drop-shadow-lg sm:text-5xl">
+            Your Projects
+          </h1>
+          <p className="text-lg text-white/80">
+            Manage your AI agents and automated workflows
+          </p>
         </div>
       </header>
-      <div className="h-full min-h-full p-4 sm:px-16 sm:py-4">
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-9">
+      <div className="mx-auto w-full max-w-7xl flex-1 px-4 pb-12 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <Button
-            variant="card"
             onClick={() => navigate('/projects/')}
-            className="flex h-full flex-col items-center justify-center text-center text-gray-500"
+            className="flex min-h-[200px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 bg-white/10 p-8 text-center backdrop-blur-md transition-all hover:border-accent hover:bg-white/15 hover:shadow-2xl hover:-translate-y-1"
           >
-            <h2 className="text-xl font-bold">+</h2>
-            <p>Create New Project</p>
+            <div className="mb-3 text-5xl">+</div>
+            <p className="font-semibold text-white">Create New Project</p>
           </Button>
           {projects?.results.map((project) => (
             <ProjectCard key={project.id} project={project} />

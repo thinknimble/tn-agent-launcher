@@ -189,56 +189,57 @@ const AgentInstanceCard = ({
   onChat: (instance: AgentInstance) => void
   onTasks: (instance: AgentInstance) => void
 }) => (
-  <div className="rounded-lg border border-primary-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-    <div className="flex items-start justify-between">
-      <div className="flex-1">
-        <h3 className="font-semibold text-primary-600">{instance.friendlyName}</h3>
-        <div className="mt-2 space-y-1 text-sm text-primary-400">
-          <p>
-            <span className="font-medium">Provider:</span> {providerLabelMap[instance.provider]}
+  <div className="flex flex-col overflow-hidden rounded-2xl border-2 border-primary-200 bg-white shadow-lg transition-all hover:shadow-2xl hover:-translate-y-1">
+    <div className={`p-4 ${instance.agentType === agentTypeEnum.CHAT ? 'bg-gradient-to-br from-success/20 to-success/5' : 'bg-gradient-to-br from-accent/20 to-accent/5'}`}>
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="font-bold text-primary-600">{instance.friendlyName}</h3>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${instance.agentType === agentTypeEnum.CHAT ? 'bg-success/20 text-success' : 'bg-accent/20 text-accent'}`}>
+          {instance.agentType === agentTypeEnum.CHAT ? '💬 Chat' : '⚡ One-shot'}
+        </span>
+      </div>
+      <div className="space-y-1 text-sm text-primary-400">
+        <p>
+          <span className="font-medium">{providerLabelMap[instance.provider]}</span> • {instance.modelName}
+        </p>
+      </div>
+    </div>
+    <div className="flex flex-1 flex-col justify-between p-4">
+      <div className="mb-3">
+        {instance.targetUrl && (
+          <p className="text-xs text-primary-400">
+            <span className="font-medium">URL:</span> {instance.targetUrl}
           </p>
-          <p>
-            <span className="font-medium">Model:</span> {instance.modelName}
-          </p>
-          <p>
-            <span className="font-medium">Type:</span> {agentTypeLabelMap[instance.agentType]}
-          </p>
-          {instance.targetUrl && (
-            <p>
-              <span className="font-medium">URL:</span> {instance.targetUrl}
-            </p>
-          )}
-        </div>
+        )}
       </div>
       <div className="flex flex-col space-y-2">
         {instance.agentType === agentTypeEnum.CHAT && (
           <Button
             onClick={() => onChat(instance)}
-            className="bg-accent-600 px-3 py-1 text-xs text-white hover:bg-accent-700"
+            className="w-full bg-success px-3 py-2 text-sm text-white hover:bg-success/80"
           >
-            💬 Chat
+            💬 Open Chat
           </Button>
         )}
         {instance.agentType === agentTypeEnum.ONE_SHOT && (
           <Button
             onClick={() => onTasks(instance)}
-            className="bg-accent-600 px-3 py-1 text-xs text-white hover:bg-accent-700"
+            className="w-full bg-accent px-3 py-2 text-sm text-white hover:bg-accent-700"
           >
-            ⏰ Tasks
+            ⚡ Manage Tasks
           </Button>
         )}
         <div className="flex space-x-2">
           <Button
             onClick={() => onEdit(instance)}
             variant="ghost"
-            className="hover:bg-primary-50 border-primary-300 px-2 py-1 text-xs text-primary-600"
+            className="flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600 hover:bg-primary-50"
           >
             Edit
           </Button>
           <Button
             onClick={() => onDelete(instance.id)}
             variant="ghost"
-            className="border-error px-2 py-1 text-xs text-error hover:bg-red-50"
+            className="flex-1 border border-error px-2 py-1 text-xs text-error hover:bg-red-50"
           >
             Delete
           </Button>
@@ -636,13 +637,13 @@ export const CreateAgentProject = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
       <div className="mx-auto max-w-6xl px-4 py-8">
         <div className="mb-8">
           <Button
             onClick={() => navigate('/dashboard')}
             variant="ghost"
-            className="mb-4 border-primary-300 text-primary-600 hover:bg-primary-100"
+            className="mb-4 border-white/30 text-white hover:bg-white/10"
           >
             ← Back to Dashboard
           </Button>
@@ -673,17 +674,17 @@ export const CreateAgentProject = () => {
           {/* Agent Instances Section */}
           {agentProject && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between rounded-2xl bg-white/10 p-6 backdrop-blur-md">
                 <div>
-                  <h2 className="text-2xl font-bold text-primary-600">Agent Instances</h2>
-                  <p className="mt-1 text-sm text-primary-400">
+                  <h2 className="text-2xl font-bold text-white">Agent Instances</h2>
+                  <p className="mt-1 text-sm text-white/80">
                     Manage your AI agents and their configurations
                   </p>
                 </div>
                 {!showInstanceForm && (
                   <Button
                     onClick={() => setShowInstanceForm(true)}
-                    className="bg-primary-600 hover:bg-primary-700"
+                    className="bg-accent hover:bg-accent-700"
                   >
                     + Add New Agent
                   </Button>
@@ -707,15 +708,15 @@ export const CreateAgentProject = () => {
               )}
 
               {instances.length === 0 && !showInstanceForm && (
-                <div className="rounded-lg border-2 border-dashed border-primary-200 bg-white p-12 text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100">
-                    <span className="text-2xl text-primary-600">🤖</span>
+                <div className="rounded-2xl border-2 border-dashed border-white/30 bg-white/10 p-12 text-center backdrop-blur-md">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
+                    <span className="text-2xl">🤖</span>
                   </div>
-                  <h3 className="mb-2 text-lg font-medium text-primary-600">No agents yet</h3>
-                  <p className="mb-6 text-primary-400">Create your first AI agent to get started</p>
+                  <h3 className="mb-2 text-lg font-medium text-white">No agents yet</h3>
+                  <p className="mb-6 text-white/80">Create your first AI agent to get started</p>
                   <Button
                     onClick={() => setShowInstanceForm(true)}
-                    className="bg-primary-600 hover:bg-primary-700"
+                    className="bg-accent hover:bg-accent-700"
                   >
                     Create First Agent
                   </Button>

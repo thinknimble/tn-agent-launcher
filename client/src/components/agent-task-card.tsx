@@ -38,69 +38,76 @@ export const AgentTaskCard = ({
   }
 
   return (
-    <div className="rounded-lg border border-primary-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
+    <div className="flex flex-col overflow-hidden rounded-2xl border-2 border-primary-200 bg-white shadow-lg transition-all hover:shadow-2xl hover:-translate-y-1">
+      <div className={`p-4 ${getStatusColor(task.status)}`}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-primary-600">{task.name}</h3>
+          <span className="rounded-full bg-white/50 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+            {taskStatusLabelMap[task.status]}
+          </span>
+        </div>
+        {task.description && (
+          <p className="mt-2 line-clamp-2 text-sm text-primary-500">{task.description}</p>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col p-4">
+        <div className="mb-4 space-y-2 text-sm">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-primary-600">{task.name}</h3>
-            <span
-              className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(task.status)}`}
-            >
-              {taskStatusLabelMap[task.status]}
+            <span className="font-medium text-primary-600">Agent:</span>
+            <span className="text-primary-400">
+              {task.agentInstanceRef?.friendlyName || task.agentInstance}
             </span>
           </div>
-
-          {task.description && (
-            <p className="mt-1 line-clamp-2 text-sm text-primary-400">{task.description}</p>
-          )}
-
-          <div className="mt-2 space-y-1 text-xs text-primary-400">
-            <p>
-              <span className="font-medium">Agent:</span>{' '}
-              {task.agentInstanceRef?.friendlyName || task.agentInstance}
-            </p>
-            <p>
-              <span className="font-medium">Schedule:</span>{' '}
-              {scheduleTypeLabelMap[task.scheduleType]}
-            </p>
-            <p>
-              <span className="font-medium">Executions:</span> {task.executionCount}
-              {task.maxExecutions && ` / ${task.maxExecutions}`}
-            </p>
-            {task.nextExecutionDisplay && (
-              <p>
-                <span className="font-medium">Next:</span> {task.nextExecutionDisplay}
-              </p>
-            )}
-            {task.lastExecutionDisplay && (
-              <p>
-                <span className="font-medium">Last:</span> {task.lastExecutionDisplay}
-              </p>
-            )}
-            {task.triggeredByTaskName && (
-              <p>
-                <span className="font-medium">Triggered by:</span> {task.triggeredByTaskName}
-              </p>
-            )}
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-primary-600">Schedule:</span>
+            <span className="text-primary-400">{scheduleTypeLabelMap[task.scheduleType]}</span>
           </div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-primary-600">Executions:</span>
+            <span className="text-primary-400">
+              {task.executionCount}
+              {task.maxExecutions && ` / ${task.maxExecutions}`}
+            </span>
+          </div>
+          {task.nextExecutionDisplay && (
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-primary-600">Next:</span>
+              <span className="text-primary-400">{task.nextExecutionDisplay}</span>
+            </div>
+          )}
+          {task.lastExecutionDisplay && (
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-primary-600">Last:</span>
+              <span className="text-primary-400">{task.lastExecutionDisplay}</span>
+            </div>
+          )}
+          {task.triggeredByTaskName && (
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-primary-600">Triggered by:</span>
+              <span className="rounded-full bg-primary-50 px-2 py-0.5 text-xs text-primary-600">
+                {task.triggeredByTaskName}
+              </span>
+            </div>
+          )}
         </div>
 
-        <div className="flex flex-col space-y-2">
+        <div className="mt-auto space-y-2">
           {task.status === 'active' && onExecute && (
             <Button
               onClick={() => onExecute(task)}
-              className="bg-accent-600 px-3 py-1 text-xs text-white hover:bg-accent-700"
+              className="w-full bg-accent px-3 py-2 text-sm text-white hover:bg-accent-700"
             >
-              ▶Run Now
+              ▶ Run Now
             </Button>
           )}
 
-          <div className="flex space-x-1">
+          <div className="flex flex-wrap gap-2">
             {task.status === 'active' && onPause && (
               <Button
                 onClick={() => onPause(task)}
                 variant="ghost"
-                className="hover:bg-warning-50 border-warning px-2 py-1 text-xs text-warning"
+                className="flex-1 border border-warning px-2 py-1 text-xs text-warning hover:bg-warning/10"
               >
                 Pause
               </Button>
@@ -110,7 +117,7 @@ export const AgentTaskCard = ({
               <Button
                 onClick={() => onResume(task)}
                 variant="ghost"
-                className="hover:bg-accent-50 border-accent px-2 py-1 text-xs text-accent"
+                className="flex-1 border border-accent px-2 py-1 text-xs text-accent hover:bg-accent/10"
               >
                 Resume
               </Button>
@@ -120,7 +127,7 @@ export const AgentTaskCard = ({
               <Button
                 onClick={() => onEdit(task)}
                 variant="ghost"
-                className="hover:bg-primary-50 border-primary-300 px-2 py-1 text-xs text-primary-600"
+                className="flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600 hover:bg-primary-50"
               >
                 Edit
               </Button>
@@ -130,7 +137,7 @@ export const AgentTaskCard = ({
               <Button
                 onClick={() => onDuplicate(task)}
                 variant="ghost"
-                className="border-blue-300 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                className="flex-1 border border-blue-300 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
               >
                 Duplicate
               </Button>
@@ -140,7 +147,7 @@ export const AgentTaskCard = ({
               <Button
                 onClick={() => onShowHistory(task)}
                 variant="ghost"
-                className="hover:bg-primary-50 border-primary-300 px-2 py-1 text-xs text-primary-600"
+                className="flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600 hover:bg-primary-50"
               >
                 History
               </Button>
@@ -150,7 +157,7 @@ export const AgentTaskCard = ({
               <Button
                 onClick={() => onDelete(task.id)}
                 variant="ghost"
-                className="border-error px-2 py-1 text-xs text-error hover:bg-red-50"
+                className="flex-1 border border-error px-2 py-1 text-xs text-error hover:bg-red-50"
               >
                 Delete
               </Button>
