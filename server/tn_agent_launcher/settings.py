@@ -48,11 +48,7 @@ ALLOWED_HOSTS = []
 ALLOWED_HOSTS += config("ALLOWED_HOSTS", cast=lambda v: [s.strip() for s in v.split(",")])
 if CURRENT_DOMAIN and CURRENT_DOMAIN not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(CURRENT_DOMAIN)
-# Add localhost for local development
-if "localhost" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append("localhost")
-if "127.0.0.1" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append("127.0.0.1")
+
 # Container IP detection for AWS ECS
 EC2_PRIVATE_IP = None
 METADATA_URI_V4 = os.environ.get("ECS_CONTAINER_METADATA_URI_V4")

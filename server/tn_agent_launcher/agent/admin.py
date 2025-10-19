@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 
 from tn_agent_launcher.chat.models import PromptTemplate
 
-from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution
+from .models import AgentInstance, AgentProject, AgentTask, AgentTaskExecution, ProjectEnvironmentSecret
 
 # Register your models here.
 
@@ -83,6 +83,57 @@ class AgentInstanceAdmin(admin.ModelAdmin):
         )
 
         return fieldsets
+
+
+@admin.register(ProjectEnvironmentSecret)
+class ProjectEnvironmentSecretAdmin(admin.ModelAdmin):
+    list_display = ("key", "project", "masked_value_display", "created")
+    search_fields = ("key", "project__title")
+    readonly_fields = ("created", "last_edited", "masked_value_display")
+    ordering = ("-created",)
+
+    fieldsets = [
+        (
+            None,
+            {
+                "fields": (
+                    "project",
+                    "key",
+                    "value",
+                    "description",
+                )
+            },
+        ),
+        (
+            "Metadata",
+            {
+                "fields": ("created", "last_edited", "masked_value_display"),
+                "classes": ("collapse",)
+            }
+        ),
+    ]
+
+    def masked_value_display(self, obj):
+        """Display masked value in read-only field"""
+        if obj and obj.value:
+            # Show first 4 and last 4 characters
+            value = str(obj.value)
+            if len(value) <= 8:
+                return "•" * len(value)
+            return f"{value[:4]}{'•' * (len(value) - 8)}{value[-4:]}"
+        return "No value set"
+    masked_value_display.short_description = "Masked Value"
+
+    def get_form(self, request, obj=None, **kwargs):
+        """Customize form to use password input for value field"""
+        form = super().get_form(request, obj, **kwargs)
+        if 'value' in form.base_fields:
+            form.base_fields['value'].widget = forms.PasswordInput(render_value=True)
+            if obj:
+                # When editing, show placeholder instead of actual value
+                form.base_fields['value'].help_text = "Leave blank to keep current value. Current value is encrypted."
+                form.base_fields['value'].required = False
+        return form
 
 
 admin.site.register(AgentTask)
