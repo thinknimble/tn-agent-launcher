@@ -189,17 +189,22 @@ const AgentInstanceCard = ({
   onChat: (instance: AgentInstance) => void
   onTasks: (instance: AgentInstance) => void
 }) => (
-  <div className="flex flex-col overflow-hidden rounded-2xl border-2 border-primary-200 bg-white shadow-lg transition-all hover:shadow-2xl hover:-translate-y-1">
-    <div className={`p-4 ${instance.agentType === agentTypeEnum.CHAT ? 'bg-gradient-to-br from-success/20 to-success/5' : 'bg-gradient-to-br from-accent/20 to-accent/5'}`}>
+  <div className="flex flex-col overflow-hidden rounded-2xl border-2 border-primary-200 bg-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl">
+    <div
+      className={`p-4 ${instance.agentType === agentTypeEnum.CHAT ? 'bg-gradient-to-br from-success/20 to-success/5' : 'bg-gradient-to-br from-accent/20 to-accent/5'}`}
+    >
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-bold text-primary-600">{instance.friendlyName}</h3>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${instance.agentType === agentTypeEnum.CHAT ? 'bg-success/20 text-success' : 'bg-accent/20 text-accent'}`}>
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${instance.agentType === agentTypeEnum.CHAT ? 'bg-success/20 text-success' : 'bg-accent/20 text-accent'}`}
+        >
           {instance.agentType === agentTypeEnum.CHAT ? '💬 Chat' : '⚡ One-shot'}
         </span>
       </div>
       <div className="space-y-1 text-sm text-primary-400">
         <p>
-          <span className="font-medium">{providerLabelMap[instance.provider]}</span> • {instance.modelName}
+          <span className="font-medium">{providerLabelMap[instance.provider]}</span> •{' '}
+          {instance.modelName}
         </p>
       </div>
     </div>
@@ -232,7 +237,7 @@ const AgentInstanceCard = ({
           <Button
             onClick={() => onEdit(instance)}
             variant="ghost"
-            className="flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600 hover:bg-primary-50"
+            className="hover:bg-primary-50 flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600"
           >
             Edit
           </Button>

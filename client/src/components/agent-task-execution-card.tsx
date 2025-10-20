@@ -35,7 +35,9 @@ export const AgentTaskExecutionCard = ({ execution, onCancel }: AgentTaskExecuti
               {executionStatusLabelMap[execution.status]}
             </span>
             {execution.durationDisplay && (
-              <span className="text-sm font-medium text-primary-600">⏱️ {execution.durationDisplay}</span>
+              <span className="text-sm font-medium text-primary-600">
+                ⏱️ {execution.durationDisplay}
+              </span>
             )}
           </div>
           {canCancel && onCancel && (
@@ -75,7 +77,7 @@ export const AgentTaskExecutionCard = ({ execution, onCancel }: AgentTaskExecuti
         {execution.errorMessage && (
           <div className="mb-3 rounded-xl border-2 border-error/20 bg-error/5 p-3 text-sm">
             <span className="font-semibold text-error">Error:</span>
-            <p className="mt-1 text-error-700">{execution.errorMessage}</p>
+            <p className="text-error-700 mt-1">{execution.errorMessage}</p>
           </div>
         )}
 
@@ -86,7 +88,7 @@ export const AgentTaskExecutionCard = ({ execution, onCancel }: AgentTaskExecuti
         )}
 
         {execution.outputData && (
-          <details className="rounded-xl border border-primary-200 bg-primary-50/50 text-left">
+          <details className="bg-primary-50/50 rounded-xl border border-primary-200 text-left">
             <summary className="cursor-pointer p-3 font-semibold text-primary-600 hover:bg-primary-100/50">
               📄 View Output
             </summary>

@@ -132,9 +132,7 @@ export const AgentTasks = () => {
                 <span className="text-2xl">❌</span>
               </div>
               <h3 className="mb-2 text-lg font-medium text-white">Agent Not Found</h3>
-              <p className="mb-6 text-white/80">
-                The specified agent instance could not be found.
-              </p>
+              <p className="mb-6 text-white/80">The specified agent instance could not be found.</p>
               <Button
                 onClick={() => navigate('/dashboard')}
                 className="bg-accent hover:bg-accent-700"
@@ -210,7 +208,9 @@ export const AgentTasks = () => {
               <h1 className="mb-3 text-left text-4xl font-extrabold text-white drop-shadow-lg sm:text-5xl">
                 {pageTitle}
               </h1>
-              <p className="mb-4 text-lg text-white/80">Manage scheduled tasks for your AI agents</p>
+              <p className="mb-4 text-lg text-white/80">
+                Manage scheduled tasks for your AI agents
+              </p>
               <div className="flex gap-3">
                 <Button
                   onClick={() => {
@@ -236,7 +236,8 @@ export const AgentTasks = () => {
                       : 'border-2 border-white/30 bg-white/10 text-white backdrop-blur-md hover:bg-white/20'
                   }
                 >
-                  📋 {selectedTaskForHistory
+                  📋{' '}
+                  {selectedTaskForHistory
                     ? `History: ${selectedTaskForHistory.name}`
                     : `Executions (${executions?.results?.length || 0})`}
                 </Button>
@@ -246,7 +247,7 @@ export const AgentTasks = () => {
               onClick={() => {
                 setCreating(true)
               }}
-              className="bg-accent hover:bg-accent-700 shadow-xl"
+              className="bg-accent shadow-xl hover:bg-accent-700"
             >
               + Create Task
             </Button>

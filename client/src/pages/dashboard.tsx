@@ -16,16 +16,14 @@ export const Dashboard = () => {
           <h1 className="mb-3 text-left text-4xl font-extrabold text-white drop-shadow-lg sm:text-5xl">
             Your Projects
           </h1>
-          <p className="text-lg text-white/80">
-            Manage your AI agents and automated workflows
-          </p>
+          <p className="text-lg text-white/80">Manage your AI agents and automated workflows</p>
         </div>
       </header>
       <div className="mx-auto w-full max-w-7xl flex-1 px-4 pb-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <Button
             onClick={() => navigate('/projects/')}
-            className="flex min-h-[200px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 bg-white/10 p-8 text-center backdrop-blur-md transition-all hover:border-accent hover:bg-white/15 hover:shadow-2xl hover:-translate-y-1"
+            className="flex min-h-[200px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 bg-white/10 p-8 text-center backdrop-blur-md transition-all hover:-translate-y-1 hover:border-accent hover:bg-white/15 hover:shadow-2xl"
           >
             <div className="mb-3 text-5xl">+</div>
             <p className="font-semibold text-white">Create New Project</p>

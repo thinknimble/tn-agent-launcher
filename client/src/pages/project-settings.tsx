@@ -27,7 +27,7 @@ const EnvironmentSecretCard = ({
   onEdit: (secret: ProjectEnvironmentSecret) => void
   onDelete: (id: string) => void
 }) => (
-  <div className="flex flex-col overflow-hidden rounded-2xl border-2 border-primary-200 bg-white shadow-lg transition-all hover:shadow-2xl hover:-translate-y-1">
+  <div className="flex flex-col overflow-hidden rounded-2xl border-2 border-primary-200 bg-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl">
     <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4">
       <div className="mb-2 flex items-center gap-2">
         <span className="text-xl">🔐</span>
@@ -38,9 +38,7 @@ const EnvironmentSecretCard = ({
       </p>
     </div>
     <div className="flex flex-1 flex-col p-4">
-      {secret.description && (
-        <p className="mb-3 text-sm text-gray-600">{secret.description}</p>
-      )}
+      {secret.description && <p className="mb-3 text-sm text-gray-600">{secret.description}</p>}
       <p className="mb-3 text-xs text-gray-400">
         Created: {new Date(secret.created).toLocaleDateString()}
       </p>
@@ -48,7 +46,7 @@ const EnvironmentSecretCard = ({
         <Button
           onClick={() => onEdit(secret)}
           variant="ghost"
-          className="flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600 hover:bg-primary-50"
+          className="hover:bg-primary-50 flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600"
         >
           Edit
         </Button>
@@ -200,71 +198,70 @@ const EnvironmentSecretFormComponent = ({
         </p>
       </div>
       <div className="p-6">
-
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        <div>
-          <Input
-            label="Variable Name"
-            placeholder="e.g., API_KEY, DATABASE_URL"
-            value={form.key.value ?? ''}
-            onChange={(e) => createFormFieldChangeHandler(form.key)(e.target.value)}
-            className="bg-primary-50 border-primary-200 focus:border-primary-500"
-          />
-          <ErrorsList errors={form.key.errors} />
-          <p className="mt-1 text-xs text-gray-500">
-            Use uppercase with underscores (e.g., MY_API_KEY)
-          </p>
-        </div>
-
-        <div>
-          <Input
-            label={isEditing ? 'Secret Value (leave empty to keep current)' : 'Secret Value'}
-            type="password"
-            placeholder={
-              isEditing ? 'Enter new value to replace current...' : 'Enter the secret value...'
-            }
-            value={form.secretValue.value ?? ''}
-            onChange={(e) => createFormFieldChangeHandler(form.secretValue)(e.target.value)}
-            className="bg-primary-50 border-primary-200 focus:border-primary-500"
-          />
-          <ErrorsList errors={form.secretValue.errors || []} />
-          {isEditing && (
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <Input
+              label="Variable Name"
+              placeholder="e.g., API_KEY, DATABASE_URL"
+              value={form.key.value ?? ''}
+              onChange={(e) => createFormFieldChangeHandler(form.key)(e.target.value)}
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+            />
+            <ErrorsList errors={form.key.errors} />
             <p className="mt-1 text-xs text-gray-500">
-              Current value: {editingSecret?.maskedValue}
+              Use uppercase with underscores (e.g., MY_API_KEY)
             </p>
-          )}
-        </div>
+          </div>
 
-        <div>
-          <Textarea
-            label="Description (Optional)"
-            placeholder="What is this secret used for?"
-            value={form.description.value ?? ''}
-            onChange={(e) => createFormFieldChangeHandler(form.description)(e.target.value)}
-            className="bg-primary-50 border-primary-200 focus:border-primary-500"
-            rows={3}
-          />
-          <ErrorsList errors={form.description.errors || []} />
-        </div>
+          <div>
+            <Input
+              label={isEditing ? 'Secret Value (leave empty to keep current)' : 'Secret Value'}
+              type="password"
+              placeholder={
+                isEditing ? 'Enter new value to replace current...' : 'Enter the secret value...'
+              }
+              value={form.secretValue.value ?? ''}
+              onChange={(e) => createFormFieldChangeHandler(form.secretValue)(e.target.value)}
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+            />
+            <ErrorsList errors={form.secretValue.errors || []} />
+            {isEditing && (
+              <p className="mt-1 text-xs text-gray-500">
+                Current value: {editingSecret?.maskedValue}
+              </p>
+            )}
+          </div>
 
-        <div className="flex justify-end gap-3 border-t border-primary-200 pt-4">
-          <Button
-            type="button"
-            onClick={onCancel}
-            variant="ghost"
-            className="border-primary-300 text-primary-600 hover:bg-primary-50"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isPending || !form.isValid}
-            className="bg-accent hover:bg-accent-700"
-          >
-            {isPending ? 'Saving...' : isEditing ? 'Update Secret' : 'Create Secret'}
-          </Button>
-        </div>
-      </form>
+          <div>
+            <Textarea
+              label="Description (Optional)"
+              placeholder="What is this secret used for?"
+              value={form.description.value ?? ''}
+              onChange={(e) => createFormFieldChangeHandler(form.description)(e.target.value)}
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+              rows={3}
+            />
+            <ErrorsList errors={form.description.errors || []} />
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-primary-200 pt-4">
+            <Button
+              type="button"
+              onClick={onCancel}
+              variant="ghost"
+              className="hover:bg-primary-50 border-primary-300 text-primary-600"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isPending || !form.isValid}
+              className="bg-accent hover:bg-accent-700"
+            >
+              {isPending ? 'Saving...' : isEditing ? 'Update Secret' : 'Create Secret'}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   )

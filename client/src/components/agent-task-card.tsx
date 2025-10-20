@@ -38,7 +38,7 @@ export const AgentTaskCard = ({
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border-2 border-primary-200 bg-white shadow-lg transition-all hover:shadow-2xl hover:-translate-y-1">
+    <div className="flex flex-col overflow-hidden rounded-2xl border-2 border-primary-200 bg-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl">
       <div className={`p-4 ${getStatusColor(task.status)}`}>
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-primary-600">{task.name}</h3>
@@ -85,7 +85,7 @@ export const AgentTaskCard = ({
           {task.triggeredByTaskName && (
             <div className="flex items-center gap-2">
               <span className="font-medium text-primary-600">Triggered by:</span>
-              <span className="rounded-full bg-primary-50 px-2 py-0.5 text-xs text-primary-600">
+              <span className="bg-primary-50 rounded-full px-2 py-0.5 text-xs text-primary-600">
                 {task.triggeredByTaskName}
               </span>
             </div>
@@ -127,7 +127,7 @@ export const AgentTaskCard = ({
               <Button
                 onClick={() => onEdit(task)}
                 variant="ghost"
-                className="flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600 hover:bg-primary-50"
+                className="hover:bg-primary-50 flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600"
               >
                 Edit
               </Button>
@@ -147,7 +147,7 @@ export const AgentTaskCard = ({
               <Button
                 onClick={() => onShowHistory(task)}
                 variant="ghost"
-                className="flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600 hover:bg-primary-50"
+                className="hover:bg-primary-50 flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600"
               >
                 History
               </Button>
