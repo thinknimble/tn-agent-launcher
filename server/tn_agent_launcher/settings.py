@@ -23,6 +23,9 @@ IN_REVIEW = ENVIRONMENT == "review" or IS_REVIEW_APP
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config("SECRET_KEY")
 
+# Field encryption key for django-encrypted-model-fields
+FIELD_ENCRYPTION_KEY = config("FIELD_ENCRYPTION_KEY")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
@@ -45,11 +48,7 @@ ALLOWED_HOSTS = []
 ALLOWED_HOSTS += config("ALLOWED_HOSTS", cast=lambda v: [s.strip() for s in v.split(",")])
 if CURRENT_DOMAIN and CURRENT_DOMAIN not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(CURRENT_DOMAIN)
-# Add localhost for local development
-if "localhost" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append("localhost")
-if "127.0.0.1" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append("127.0.0.1")
+
 # Container IP detection for AWS ECS
 EC2_PRIVATE_IP = None
 METADATA_URI_V4 = os.environ.get("ECS_CONTAINER_METADATA_URI_V4")
@@ -187,6 +186,7 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     # Third Party
+    "encrypted_model_fields",
     "corsheaders",
     "drf_spectacular",
     "rest_framework",
