@@ -124,20 +124,18 @@ export const AgentTasks = () => {
   // Handle agent not found or error
   if (agentError || (!loadingAgent && !agentInstance)) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="bg-error-100 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-                <span className="text-error-600 text-2xl">❌</span>
+            <div className="rounded-2xl bg-white/10 p-12 text-center backdrop-blur-md">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-error/20">
+                <span className="text-2xl">❌</span>
               </div>
-              <h3 className="text-error-600 mb-2 text-lg font-medium">Agent Not Found</h3>
-              <p className="text-error-400 mb-6">
-                The specified agent instance could not be found.
-              </p>
+              <h3 className="mb-2 text-lg font-medium text-white">Agent Not Found</h3>
+              <p className="mb-6 text-white/80">The specified agent instance could not be found.</p>
               <Button
                 onClick={() => navigate('/dashboard')}
-                className="bg-primary-600 hover:bg-primary-700"
+                className="bg-accent hover:bg-accent-700"
               >
                 Back to Dashboard
               </Button>
@@ -151,28 +149,28 @@ export const AgentTasks = () => {
   // Handle chat agents (not allowed for tasks)
   if (agentInstance && agentInstance.agentType === agentTypeEnum.CHAT) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="bg-warning-100 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-                <span className="text-warning-600 text-2xl">💬</span>
+            <div className="rounded-2xl bg-white/10 p-12 text-center backdrop-blur-md">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warning/20">
+                <span className="text-2xl">💬</span>
               </div>
-              <h3 className="text-warning-600 mb-2 text-lg font-medium">Chat Agent Detected</h3>
-              <p className="text-warning-400 mb-6">
+              <h3 className="mb-2 text-lg font-medium text-white">Chat Agent Detected</h3>
+              <p className="mb-6 text-white/80">
                 Tasks are only available for one-shot agents. This is a chat agent.
               </p>
-              <div className="space-x-4">
+              <div className="flex justify-center gap-4">
                 <Button
                   onClick={() => navigate(`/chat/agent/${agentInstanceId}`)}
-                  className="bg-accent-600 hover:bg-accent-700"
+                  className="bg-success hover:bg-success/80"
                 >
                   Go to Chat
                 </Button>
                 <Button
                   onClick={() => navigate('/dashboard')}
                   variant="ghost"
-                  className="border-primary-300 text-primary-600 hover:bg-primary-100"
+                  className="border-white/30 text-white hover:bg-white/10"
                 >
                   Back to Dashboard
                 </Button>
@@ -186,12 +184,12 @@ export const AgentTasks = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent"></div>
-              <p className="mt-4 text-primary-600">Loading tasks...</p>
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+              <p className="mt-4 text-white">Loading tasks...</p>
             </div>
           </div>
         </div>
@@ -202,16 +200,18 @@ export const AgentTasks = () => {
   const pageTitle = agentInstance ? `Tasks for ${agentInstance.friendlyName}` : 'All Agent Tasks'
 
   return (
-    <div className="min-h-screen">
-      <header className="relative mx-auto flex h-32 w-full flex-col justify-center bg-primary sm:h-48">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
+      <header className="relative mx-auto flex w-full flex-col justify-center px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="mb-2 text-left text-3xl font-bold uppercase text-white">
+              <h1 className="mb-3 text-left text-4xl font-extrabold text-white drop-shadow-lg sm:text-5xl">
                 {pageTitle}
               </h1>
-              <p className="text-primary-200">Manage scheduled tasks for your AI agents</p>
-              <div className="mt-4 flex gap-2">
+              <p className="mb-4 text-lg text-white/80">
+                Manage scheduled tasks for your AI agents
+              </p>
+              <div className="flex gap-3">
                 <Button
                   onClick={() => {
                     setShowExecutions(false)
@@ -219,11 +219,11 @@ export const AgentTasks = () => {
                   }}
                   className={
                     !showExecutions
-                      ? 'bg-white text-primary-600'
-                      : 'border border-white text-white hover:bg-white hover:text-primary-600'
+                      ? 'bg-white text-primary-600 shadow-lg'
+                      : 'border-2 border-white/30 bg-white/10 text-white backdrop-blur-md hover:bg-white/20'
                   }
                 >
-                  Tasks ({tasks?.results?.length || 0})
+                  ⚡ Tasks ({tasks?.results?.length || 0})
                 </Button>
                 <Button
                   onClick={() => {
@@ -232,13 +232,14 @@ export const AgentTasks = () => {
                   }}
                   className={
                     showExecutions
-                      ? 'bg-white text-primary-600'
-                      : 'border border-white text-white hover:bg-white hover:text-primary-600'
+                      ? 'bg-white text-primary-600 shadow-lg'
+                      : 'border-2 border-white/30 bg-white/10 text-white backdrop-blur-md hover:bg-white/20'
                   }
                 >
+                  📋{' '}
                   {selectedTaskForHistory
                     ? `History: ${selectedTaskForHistory.name}`
-                    : `All Executions (${executions?.results?.length || 0})`}
+                    : `Executions (${executions?.results?.length || 0})`}
                 </Button>
               </div>
             </div>
@@ -246,8 +247,7 @@ export const AgentTasks = () => {
               onClick={() => {
                 setCreating(true)
               }}
-              variant="card"
-              className="text-accent-600"
+              className="bg-accent shadow-xl hover:bg-accent-700"
             >
               + Create Task
             </Button>
@@ -255,12 +255,12 @@ export const AgentTasks = () => {
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
         <div className="mb-8">
           <Button
             onClick={() => navigate('/dashboard')}
             variant="ghost"
-            className="mb-4 border-primary-300 text-primary-600 hover:bg-primary-100"
+            className="mb-4 border-white/30 text-white hover:bg-white/10"
           >
             ← Back to Dashboard
           </Button>
@@ -284,19 +284,19 @@ export const AgentTasks = () => {
               ))}
             </div>
           ) : (
-            <div className="rounded-lg border-2 border-dashed border-primary-200 bg-white p-12 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100">
-                <span className="text-2xl text-primary-600">⏰</span>
+            <div className="rounded-2xl border-2 border-dashed border-white/30 bg-white/10 p-12 text-center backdrop-blur-md">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
+                <span className="text-2xl">⏰</span>
               </div>
-              <h3 className="mb-2 text-lg font-medium text-primary-600">No tasks yet</h3>
-              <p className="mb-6 text-primary-400">
+              <h3 className="mb-2 text-lg font-medium text-white">No tasks yet</h3>
+              <p className="mb-6 text-white/80">
                 Create your first scheduled task to automate your AI agents
               </p>
               <Button
                 onClick={() => {
                   setCreating(true)
                 }}
-                className="bg-primary-600 hover:bg-primary-700"
+                className="bg-accent hover:bg-accent-700"
               >
                 Create First Task
               </Button>
@@ -314,12 +314,12 @@ export const AgentTasks = () => {
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border-2 border-dashed border-primary-200 bg-white p-12 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100">
-              <span className="text-2xl text-primary-600">📋</span>
+          <div className="rounded-2xl border-2 border-dashed border-white/30 bg-white/10 p-12 text-center backdrop-blur-md">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
+              <span className="text-2xl">📋</span>
             </div>
-            <h3 className="mb-2 text-lg font-medium text-primary-600">No executions yet</h3>
-            <p className="mb-6 text-primary-400">
+            <h3 className="mb-2 text-lg font-medium text-white">No executions yet</h3>
+            <p className="mb-6 text-white/80">
               Task executions will appear here when tasks are run
             </p>
           </div>

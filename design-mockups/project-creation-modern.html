@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Project - Modern Cards Design</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #042642 0%, #183A56 100%);
+            min-height: 100vh;
+            color: #2a2d2e;
+        }
+
+        .navbar {
+            background: rgba(4, 38, 66, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo::before {
+            content: '🤖';
+            font-size: 2rem;
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: color 0.3s;
+            font-weight: 500;
+        }
+
+        .back-button:hover {
+            color: white;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .creation-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .creation-title {
+            font-size: 3rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .creation-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.125rem;
+        }
+
+        .progress-bar-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            z-index: 0;
+        }
+
+        .progress-line-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #d93a00 0%, #f4b942 100%);
+            width: 50%;
+            transition: width 0.5s ease;
+            border-radius: 4px;
+        }
+
+        .progress-step {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            transition: all 0.3s;
+        }
+
+        .step-circle.active {
+            background: #d93a00;
+            box-shadow: 0 0 0 4px rgba(217, 58, 0, 0.3);
+        }
+
+        .step-circle.completed {
+            background: #4faf64;
+        }
+
+        .step-circle.completed::after {
+            content: '✓';
+        }
+
+        .step-label {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 500;
+        }
+
+        .step-label.active {
+            color: white;
+            font-weight: 600;
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            margin-bottom: 2rem;
+        }
+
+        .form-section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #042642;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-section-description {
+            color: #687d8e;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #042642;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .form-label.required::after {
+            content: '*';
+            color: #d93a00;
+            margin-left: 0.25rem;
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: #d93a00;
+            box-shadow: 0 0 0 4px rgba(217, 58, 0, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-hint {
+            font-size: 0.875rem;
+            color: #687d8e;
+            margin-top: 0.5rem;
+        }
+
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .template-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .template-card:hover {
+            border-color: #d93a00;
+            box-shadow: 0 4px 12px rgba(217, 58, 0, 0.1);
+        }
+
+        .template-card.selected {
+            border-color: #d93a00;
+            background: #fff5f0;
+            box-shadow: 0 0 0 4px rgba(217, 58, 0, 0.1);
+        }
+
+        .template-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .template-name {
+            font-weight: 600;
+            color: #042642;
+            margin-bottom: 0.5rem;
+        }
+
+        .template-description {
+            font-size: 0.875rem;
+            color: #687d8e;
+        }
+
+        .agent-builder {
+            border: 2px dashed #e5e7eb;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 1rem;
+        }
+
+        .agent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .agent-item {
+            background: #f8f9fa;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .agent-info {
+            flex: 1;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            color: #042642;
+            margin-bottom: 0.25rem;
+        }
+
+        .agent-meta {
+            font-size: 0.875rem;
+            color: #687d8e;
+        }
+
+        .agent-type-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-right: 1rem;
+        }
+
+        .agent-type-badge.chat {
+            background: #e6f4ea;
+            color: #1e7e34;
+        }
+
+        .agent-type-badge.oneshot {
+            background: #fef3e6;
+            color: #b95000;
+        }
+
+        .agent-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .add-agent-button {
+            width: 100%;
+            padding: 1.25rem;
+            border: 2px dashed #d93a00;
+            background: #fff5f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: #d93a00;
+        }
+
+        .add-agent-button:hover {
+            background: #ffeee5;
+            border-style: solid;
+        }
+
+        .btn {
+            padding: 0.875rem 2rem;
+            border-radius: 12px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #d93a00;
+            color: white;
+            box-shadow: 0 4px 12px rgba(217, 58, 0, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: #ae2e00;
+            box-shadow: 0 6px 16px rgba(217, 58, 0, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #f0f4f8;
+            color: #042642;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: #687d8e;
+            border: 2px solid #e5e7eb;
+        }
+
+        .btn-ghost:hover {
+            background: #f3f4f6;
+            border-color: #687d8e;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #f3f4f6;
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            background: white;
+            color: #687d8e;
+            border: 1px solid #e5e7eb;
+        }
+
+        .icon-btn:hover {
+            background: #f3f4f6;
+            color: #d93a00;
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .toggle-option {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .toggle-option:hover {
+            border-color: #d93a00;
+        }
+
+        .toggle-option.selected {
+            border-color: #d93a00;
+            background: #fff5f0;
+        }
+
+        .toggle-option-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .toggle-option-label {
+            font-weight: 600;
+            color: #042642;
+        }
+
+        .summary-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: #687d8e;
+            font-weight: 500;
+        }
+
+        .summary-value {
+            color: #042642;
+            font-weight: 600;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4faf64 0%, #2d7a3f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 10px 30px rgba(79, 175, 100, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #687d8e;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(4, 38, 66, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 2rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            padding: 2rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #042642;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: #f3f4f6;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #687d8e;
+            font-size: 1.25rem;
+        }
+
+        .modal-close:hover {
+            background: #e5e7eb;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .provider-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .provider-card:hover {
+            border-color: #d93a00;
+        }
+
+        .provider-card.selected {
+            border-color: #d93a00;
+            background: #fff5f0;
+        }
+
+        .provider-logo {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .provider-name {
+            font-weight: 600;
+            color: #042642;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Agent Launcher</div>
+        <a href="#" class="back-button">← Back to Dashboard</a>
+    </nav>
+
+    <div class="container">
+        <div class="creation-header">
+            <h1 class="creation-title">Create New Project</h1>
+            <p class="creation-subtitle">Set up your AI agent workspace in a few simple steps</p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar-container">
+            <div class="progress-steps">
+                <div class="progress-line">
+                    <div class="progress-line-fill"></div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle active">1</div>
+                    <div class="step-label active">Project Info</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Choose Template</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Add Agents</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Review & Create</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Project Information -->
+        <div class="form-card" id="step1">
+            <h2 class="form-section-title">Project Information</h2>
+            <p class="form-section-description">Give your project a name and description to help you organize your agents</p>
+
+            <div class="form-group">
+                <label class="form-label required">Project Name</label>
+                <input type="text" class="form-input" placeholder="e.g., E-commerce Assistant" value="E-commerce Assistant">
+                <p class="form-hint">Choose a descriptive name that reflects the purpose of this project</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label required">Description</label>
+                <textarea class="form-textarea" placeholder="Describe what this project does...">Automated customer support and order processing system for our online store</textarea>
+                <p class="form-hint">Explain what this project will accomplish and how it fits into your workflow</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Tags</label>
+                <input type="text" class="form-input" placeholder="e.g., customer-support, automation, sales">
+                <p class="form-hint">Add tags to help organize and find this project later (comma separated)</p>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-ghost">Cancel</button>
+                <button class="btn btn-primary">Next: Choose Template →</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Choose Template (Hidden by default) -->
+        <div class="form-card" id="step2" style="display: none;">
+            <h2 class="form-section-title">Choose a Template</h2>
+            <p class="form-section-description">Start with a pre-configured template or build from scratch</p>
+
+            <div class="template-grid">
+                <div class="template-card">
+                    <div class="template-icon">📋</div>
+                    <div class="template-name">Blank Project</div>
+                    <div class="template-description">Start fresh with an empty project</div>
+                </div>
+
+                <div class="template-card selected">
+                    <div class="template-icon">🛒</div>
+                    <div class="template-name">E-commerce Suite</div>
+                    <div class="template-description">Customer support + order processing</div>
+                </div>
+
+                <div class="template-card">
+                    <div class="template-icon">✍️</div>
+                    <div class="template-name">Content Pipeline</div>
+                    <div class="template-description">Generate, review, and publish content</div>
+                </div>
+
+                <div class="template-card">
+                    <div class="template-icon">📊</div>
+                    <div class="template-name">Data Processing</div>
+                    <div class="template-description">ETL workflows and transformations</div>
+                </div>
+
+                <div class="template-card">
+                    <div class="template-icon">📧</div>
+                    <div class="template-name">Email Automation</div>
+                    <div class="template-description">Automated email campaigns</div>
+                </div>
+
+                <div class="template-card">
+                    <div class="template-icon">📱</div>
+                    <div class="template-name">Social Media</div>
+                    <div class="template-description">Post scheduling and engagement</div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-ghost">← Back</button>
+                <button class="btn btn-primary">Next: Add Agents →</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Add Agents (Hidden by default) -->
+        <div class="form-card" id="step3" style="display: none;">
+            <h2 class="form-section-title">Add Agents</h2>
+            <p class="form-section-description">Create chat agents for prototyping and one-shot agents for automated tasks</p>
+
+            <div class="agent-builder">
+                <div class="agent-list">
+                    <div class="agent-item">
+                        <div style="display: flex; align-items: center; flex: 1;">
+                            <span class="agent-type-badge chat">💬 Chat</span>
+                            <div class="agent-info">
+                                <div class="agent-name">Customer Support Assistant</div>
+                                <div class="agent-meta">OpenAI GPT-4 • Interactive chat interface</div>
+                            </div>
+                        </div>
+                        <div class="agent-actions">
+                            <button class="icon-btn">✏️</button>
+                            <button class="icon-btn">🗑️</button>
+                        </div>
+                    </div>
+
+                    <div class="agent-item">
+                        <div style="display: flex; align-items: center; flex: 1;">
+                            <span class="agent-type-badge oneshot">⚡ One-shot</span>
+                            <div class="agent-info">
+                                <div class="agent-name">Order Processor</div>
+                                <div class="agent-meta">Anthropic Claude 3.5 • Scheduled daily at 9:00 AM</div>
+                            </div>
+                        </div>
+                        <div class="agent-actions">
+                            <button class="icon-btn">✏️</button>
+                            <button class="icon-btn">🗑️</button>
+                        </div>
+                    </div>
+
+                    <div class="agent-item">
+                        <div style="display: flex; align-items: center; flex: 1;">
+                            <span class="agent-type-badge oneshot">⚡ One-shot</span>
+                            <div class="agent-info">
+                                <div class="agent-name">Email Notification Sender</div>
+                                <div class="agent-meta">OpenAI GPT-4 • Triggered by Order Processor</div>
+                            </div>
+                        </div>
+                        <div class="agent-actions">
+                            <button class="icon-btn">✏️</button>
+                            <button class="icon-btn">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="add-agent-button" onclick="document.getElementById('agentModal').classList.add('active')">
+                    <span style="font-size: 1.5rem;">+</span>
+                    <span>Add New Agent</span>
+                </button>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-ghost">← Back</button>
+                <button class="btn btn-primary">Next: Review →</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Review & Create (Hidden by default) -->
+        <div class="form-card" id="step4" style="display: none;">
+            <h2 class="form-section-title">Review Your Project</h2>
+            <p class="form-section-description">Double-check everything before creating your project</p>
+
+            <div class="summary-card">
+                <div class="summary-row">
+                    <span class="summary-label">Project Name</span>
+                    <span class="summary-value">E-commerce Assistant</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Description</span>
+                    <span class="summary-value">Automated customer support and order processing</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Template</span>
+                    <span class="summary-value">E-commerce Suite</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Total Agents</span>
+                    <span class="summary-value">3 agents (1 chat, 2 one-shot)</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1.125rem; font-weight: 600; color: #042642; margin-bottom: 1rem;">Agents Included</h3>
+
+            <div class="agent-list" style="margin-bottom: 0;">
+                <div class="agent-item">
+                    <div style="display: flex; align-items: center; flex: 1;">
+                        <span class="agent-type-badge chat">💬 Chat</span>
+                        <div class="agent-info">
+                            <div class="agent-name">Customer Support Assistant</div>
+                            <div class="agent-meta">OpenAI GPT-4</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="agent-item">
+                    <div style="display: flex; align-items: center; flex: 1;">
+                        <span class="agent-type-badge oneshot">⚡ One-shot</span>
+                        <div class="agent-info">
+                            <div class="agent-name">Order Processor</div>
+                            <div class="agent-meta">Anthropic Claude 3.5 • Daily at 9:00 AM</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="agent-item">
+                    <div style="display: flex; align-items: center; flex: 1;">
+                        <span class="agent-type-badge oneshot">⚡ One-shot</span>
+                        <div class="agent-info">
+                            <div class="agent-name">Email Notification Sender</div>
+                            <div class="agent-meta">OpenAI GPT-4 • Triggered by Order Processor</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-ghost">← Back</button>
+                <button class="btn btn-primary" onclick="showSuccess()">Create Project ✓</button>
+            </div>
+        </div>
+
+        <!-- Success State (Hidden by default) -->
+        <div class="form-card" id="success" style="display: none; text-align: center;">
+            <div class="success-icon">✓</div>
+            <h2 class="form-section-title">Project Created Successfully!</h2>
+            <p class="form-section-description" style="margin-bottom: 2rem;">Your E-commerce Assistant project is ready to go</p>
+
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn btn-primary">Go to Project →</button>
+                <button class="btn btn-secondary">Create Another Project</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Agent Modal -->
+    <div class="modal-overlay" id="agentModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Agent</h2>
+                <button class="modal-close" onclick="document.getElementById('agentModal').classList.remove('active')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label required">Agent Type</label>
+                    <div class="toggle-group">
+                        <div class="toggle-option selected">
+                            <div class="toggle-option-icon">💬</div>
+                            <div class="toggle-option-label">Chat Agent</div>
+                            <div class="form-hint">Interactive prototyping</div>
+                        </div>
+                        <div class="toggle-option">
+                            <div class="toggle-option-icon">⚡</div>
+                            <div class="toggle-option-label">One-shot Agent</div>
+                            <div class="form-hint">Automated tasks</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Agent Name</label>
+                    <input type="text" class="form-input" placeholder="e.g., Customer Support Bot">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">AI Provider</label>
+                    <div class="provider-grid">
+                        <div class="provider-card selected">
+                            <div class="provider-logo">🤖</div>
+                            <div class="provider-name">OpenAI</div>
+                        </div>
+                        <div class="provider-card">
+                            <div class="provider-logo">🧠</div>
+                            <div class="provider-name">Anthropic</div>
+                        </div>
+                        <div class="provider-card">
+                            <div class="provider-logo">☁️</div>
+                            <div class="provider-name">Google AI</div>
+                        </div>
+                        <div class="provider-card">
+                            <div class="provider-logo">🔷</div>
+                            <div class="provider-name">Azure</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Model</label>
+                    <select class="form-select">
+                        <option>GPT-4</option>
+                        <option>GPT-4 Turbo</option>
+                        <option>GPT-3.5 Turbo</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">System Prompt</label>
+                    <textarea class="form-textarea" placeholder="Enter the system instructions for this agent..."></textarea>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button class="btn btn-ghost" style="flex: 1;" onclick="document.getElementById('agentModal').classList.remove('active')">Cancel</button>
+                    <button class="btn btn-primary" style="flex: 1;" onclick="document.getElementById('agentModal').classList.remove('active')">Add Agent</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSuccess() {
+            document.getElementById('step4').style.display = 'none';
+            document.getElementById('success').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

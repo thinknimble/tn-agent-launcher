@@ -27,28 +27,33 @@ const EnvironmentSecretCard = ({
   onEdit: (secret: ProjectEnvironmentSecret) => void
   onDelete: (id: string) => void
 }) => (
-  <div className="rounded-lg border border-primary-200 bg-white p-4 shadow-sm">
-    <div className="flex items-start justify-between">
-      <div className="flex-1">
-        <h3 className="font-semibold text-primary-600">{secret.key}</h3>
-        <p className="mt-1 font-mono text-sm text-primary-400">{secret.maskedValue}</p>
-        {secret.description && <p className="mt-2 text-sm text-gray-600">{secret.description}</p>}
-        <p className="mt-2 text-xs text-gray-400">
-          Created: {new Date(secret.created).toLocaleDateString()}
-        </p>
+  <div className="flex flex-col overflow-hidden rounded-2xl border-2 border-primary-200 bg-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl">
+    <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="text-xl">🔐</span>
+        <h3 className="font-bold text-primary-600">{secret.key}</h3>
       </div>
-      <div className="flex space-x-2">
+      <p className="rounded-lg bg-primary-900/10 p-2 font-mono text-sm text-primary-500">
+        {secret.maskedValue}
+      </p>
+    </div>
+    <div className="flex flex-1 flex-col p-4">
+      {secret.description && <p className="mb-3 text-sm text-gray-600">{secret.description}</p>}
+      <p className="mb-3 text-xs text-gray-400">
+        Created: {new Date(secret.created).toLocaleDateString()}
+      </p>
+      <div className="mt-auto flex gap-2">
         <Button
           onClick={() => onEdit(secret)}
           variant="ghost"
-          className="hover:bg-primary-50 border-primary-300 px-2 py-1 text-xs text-primary-600"
+          className="hover:bg-primary-50 flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600"
         >
           Edit
         </Button>
         <Button
           onClick={() => onDelete(secret.id)}
           variant="ghost"
-          className="border-error px-2 py-1 text-xs text-error hover:bg-red-50"
+          className="flex-1 border border-error px-2 py-1 text-xs text-error hover:bg-red-50"
         >
           Delete
         </Button>
@@ -142,116 +147,122 @@ const EnvironmentSecretFormComponent = ({
 
   if (secretJustCreated && showSecretValue) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-6 shadow-sm">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-green-800">Secret Created Successfully!</h3>
-          <p className="mt-1 text-sm text-green-600">
-            This is the only time you&apos;ll see the full secret value. Please copy it now.
-          </p>
-        </div>
-
-        <div className="mb-4">
-          <label className="mb-2 block text-sm font-medium text-green-700">
-            Secret Value (copy this now):
-          </label>
-          <div className="rounded border border-green-300 bg-white p-3 font-mono text-sm">
-            {secretJustCreated}
+      <div className="overflow-hidden rounded-2xl border-2 border-success bg-success/10 shadow-xl">
+        <div className="bg-gradient-to-br from-success/20 to-success/5 p-6">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="text-3xl">✅</span>
+            <div>
+              <h3 className="text-lg font-bold text-success">Secret Created Successfully!</h3>
+              <p className="mt-1 text-sm text-success/80">
+                This is the only time you&apos;ll see the full secret value. Please copy it now.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-end space-x-3">
-          <Button
-            onClick={() => {
-              setShowSecretValue(false)
-              setSecretJustCreated(null)
-              onSuccess({ ...form.modelValue } as ProjectEnvironmentSecret)
-            }}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            I&apos;ve Copied It
-          </Button>
+        <div className="p-6">
+          <label className="mb-2 block text-sm font-semibold text-success">
+            Secret Value (copy this now):
+          </label>
+          <div className="rounded-xl border-2 border-success/20 bg-white p-4 font-mono text-sm">
+            {secretJustCreated}
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <Button
+              onClick={() => {
+                setShowSecretValue(false)
+                setSecretJustCreated(null)
+                onSuccess({ ...form.modelValue } as ProjectEnvironmentSecret)
+              }}
+              className="bg-success hover:bg-success/80"
+            >
+              ✓ I&apos;ve Copied It
+            </Button>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="rounded-lg border border-primary-200 bg-white p-6 shadow-sm">
-      <div className="mb-6">
+    <div className="overflow-hidden rounded-2xl border-2 border-primary-200 bg-white shadow-xl">
+      <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-6">
         <h3 className="text-xl font-bold text-primary-600">
           {isEditing ? 'Edit Environment Secret' : 'Add New Environment Secret'}
         </h3>
-        <p className="mt-2 text-sm text-primary-400">
+        <p className="mt-2 text-sm text-primary-500">
           {isEditing
             ? 'Update your environment secret (leave value empty to keep current)'
             : 'Add a new environment secret that can be used in agent prompts'}
         </p>
       </div>
-
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        <div>
-          <Input
-            label="Variable Name"
-            placeholder="e.g., API_KEY, DATABASE_URL"
-            value={form.key.value ?? ''}
-            onChange={(e) => createFormFieldChangeHandler(form.key)(e.target.value)}
-            className="bg-primary-50 border-primary-200 focus:border-primary-500"
-          />
-          <ErrorsList errors={form.key.errors} />
-          <p className="mt-1 text-xs text-gray-500">
-            Use uppercase with underscores (e.g., MY_API_KEY)
-          </p>
-        </div>
-
-        <div>
-          <Input
-            label={isEditing ? 'Secret Value (leave empty to keep current)' : 'Secret Value'}
-            type="password"
-            placeholder={
-              isEditing ? 'Enter new value to replace current...' : 'Enter the secret value...'
-            }
-            value={form.secretValue.value ?? ''}
-            onChange={(e) => createFormFieldChangeHandler(form.secretValue)(e.target.value)}
-            className="bg-primary-50 border-primary-200 focus:border-primary-500"
-          />
-          <ErrorsList errors={form.secretValue.errors || []} />
-          {isEditing && (
+      <div className="p-6">
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <Input
+              label="Variable Name"
+              placeholder="e.g., API_KEY, DATABASE_URL"
+              value={form.key.value ?? ''}
+              onChange={(e) => createFormFieldChangeHandler(form.key)(e.target.value)}
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+            />
+            <ErrorsList errors={form.key.errors} />
             <p className="mt-1 text-xs text-gray-500">
-              Current value: {editingSecret?.maskedValue}
+              Use uppercase with underscores (e.g., MY_API_KEY)
             </p>
-          )}
-        </div>
+          </div>
 
-        <div>
-          <Textarea
-            label="Description (Optional)"
-            placeholder="What is this secret used for?"
-            value={form.description.value ?? ''}
-            onChange={(e) => createFormFieldChangeHandler(form.description)(e.target.value)}
-            className="bg-primary-50 border-primary-200 focus:border-primary-500"
-            rows={3}
-          />
-          <ErrorsList errors={form.description.errors || []} />
-        </div>
+          <div>
+            <Input
+              label={isEditing ? 'Secret Value (leave empty to keep current)' : 'Secret Value'}
+              type="password"
+              placeholder={
+                isEditing ? 'Enter new value to replace current...' : 'Enter the secret value...'
+              }
+              value={form.secretValue.value ?? ''}
+              onChange={(e) => createFormFieldChangeHandler(form.secretValue)(e.target.value)}
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+            />
+            <ErrorsList errors={form.secretValue.errors || []} />
+            {isEditing && (
+              <p className="mt-1 text-xs text-gray-500">
+                Current value: {editingSecret?.maskedValue}
+              </p>
+            )}
+          </div>
 
-        <div className="flex justify-end space-x-3 border-t border-primary-200 pt-4">
-          <Button
-            type="button"
-            onClick={onCancel}
-            variant="ghost"
-            className="hover:bg-primary-50 border-primary-300 text-primary-600"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isPending || !form.isValid}
-            className="bg-primary-600 hover:bg-primary-700"
-          >
-            {isPending ? 'Saving...' : isEditing ? 'Update Secret' : 'Create Secret'}
-          </Button>
-        </div>
-      </form>
+          <div>
+            <Textarea
+              label="Description (Optional)"
+              placeholder="What is this secret used for?"
+              value={form.description.value ?? ''}
+              onChange={(e) => createFormFieldChangeHandler(form.description)(e.target.value)}
+              className="bg-primary-50 border-primary-200 focus:border-primary-500"
+              rows={3}
+            />
+            <ErrorsList errors={form.description.errors || []} />
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-primary-200 pt-4">
+            <Button
+              type="button"
+              onClick={onCancel}
+              variant="ghost"
+              className="hover:bg-primary-50 border-primary-300 text-primary-600"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isPending || !form.isValid}
+              className="bg-accent hover:bg-accent-700"
+            >
+              {isPending ? 'Saving...' : isEditing ? 'Update Secret' : 'Create Secret'}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
@@ -315,12 +326,12 @@ export const ProjectSettings = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent"></div>
-              <p className="mt-4 text-primary-600">Loading project settings...</p>
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+              <p className="mt-4 text-white">Loading project settings...</p>
             </div>
           </div>
         </div>
@@ -330,9 +341,9 @@ export const ProjectSettings = () => {
 
   if (!project) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
         <div className="mx-auto max-w-6xl px-4 py-8">
-          <div className="py-20 text-center">
+          <div className="rounded-2xl bg-white/10 p-12 text-center backdrop-blur-md">
             <p className="text-error">Project not found</p>
           </div>
         </div>
@@ -341,13 +352,13 @@ export const ProjectSettings = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
       <div className="mx-auto max-w-6xl px-4 py-8">
         <div className="mb-8">
           <Button
             onClick={() => navigate(`/projects/${id}`)}
             variant="ghost"
-            className="mb-4 border-primary-300 text-primary-600 hover:bg-primary-100"
+            className="mb-4 border-white/30 text-white hover:bg-white/10"
           >
             ← Back to Project
           </Button>
@@ -355,25 +366,34 @@ export const ProjectSettings = () => {
 
         <div className="space-y-8">
           {/* Project Header */}
-          <div className="rounded-lg border border-primary-200 bg-white p-6 shadow-sm">
-            <h1 className="text-3xl font-bold text-primary-600">{project.title} Settings</h1>
-            <p className="mt-2 text-primary-400">Manage environment secrets for your project</p>
+          <div className="overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="bg-gradient-to-br from-primary to-primary-700 p-8">
+              <h1 className="text-4xl font-extrabold text-white drop-shadow-lg">
+                {project.title} Settings
+              </h1>
+              <p className="mt-2 text-lg text-white/90">
+                Manage environment secrets for your project
+              </p>
+            </div>
           </div>
 
           {/* Environment Secrets Section */}
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between rounded-2xl bg-white/10 p-6 backdrop-blur-md">
               <div>
-                <h2 className="text-2xl font-bold text-primary-600">Environment Secrets</h2>
-                <p className="mt-1 text-sm text-primary-400">
+                <h2 className="text-2xl font-bold text-white">Environment Secrets</h2>
+                <p className="mt-1 text-sm text-white/80">
                   Secure variables that can be used in your agent prompts with{' '}
-                  <code className="rounded bg-gray-100 px-1">{'{{VARIABLE_NAME}}'}</code> syntax
+                  <code className="rounded bg-white/20 px-2 py-0.5 font-mono text-white">
+                    {'{{VARIABLE_NAME}}'}
+                  </code>{' '}
+                  syntax
                 </p>
               </div>
               {!showSecretForm && (
                 <Button
                   onClick={() => setShowSecretForm(true)}
-                  className="bg-primary-600 hover:bg-primary-700"
+                  className="bg-accent hover:bg-accent-700"
                 >
                   + Add Secret
                 </Button>
@@ -382,7 +402,7 @@ export const ProjectSettings = () => {
 
             {/* Environment Secret Cards */}
             {secrets.length > 0 && (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {secrets.map((secret) => (
                   <EnvironmentSecretCard
                     key={secret.id}
@@ -395,17 +415,17 @@ export const ProjectSettings = () => {
             )}
 
             {secrets.length === 0 && !showSecretForm && (
-              <div className="rounded-lg border-2 border-dashed border-primary-200 bg-white p-12 text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100">
-                  <span className="text-2xl text-primary-600">🔐</span>
+              <div className="rounded-2xl border-2 border-dashed border-white/30 bg-white/10 p-12 text-center backdrop-blur-md">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
+                  <span className="text-2xl">🔐</span>
                 </div>
-                <h3 className="mb-2 text-lg font-medium text-primary-600">No secrets yet</h3>
-                <p className="mb-6 text-primary-400">
+                <h3 className="mb-2 text-lg font-medium text-white">No secrets yet</h3>
+                <p className="mb-6 text-white/80">
                   Add environment secrets to use in your agent prompts
                 </p>
                 <Button
                   onClick={() => setShowSecretForm(true)}
-                  className="bg-primary-600 hover:bg-primary-700"
+                  className="bg-accent hover:bg-accent-700"
                 >
                   Add First Secret
                 </Button>
