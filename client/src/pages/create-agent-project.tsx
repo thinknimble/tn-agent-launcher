@@ -179,12 +179,14 @@ const CreateAgentProjectForm = ({
 const AgentInstanceCard = ({
   instance,
   onEdit,
+  onDuplicate,
   onDelete,
   onChat,
   onTasks,
 }: {
   instance: AgentInstance
   onEdit: (instance: AgentInstance) => void
+  onDuplicate: (instance: AgentInstance) => void
   onDelete: (id: string) => void
   onChat: (instance: AgentInstance) => void
   onTasks: (instance: AgentInstance) => void
@@ -233,13 +235,20 @@ const AgentInstanceCard = ({
             ⚡ Manage Tasks
           </Button>
         )}
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={() => onEdit(instance)}
             variant="ghost"
             className="hover:bg-primary-50 flex-1 border border-primary-300 px-2 py-1 text-xs text-primary-600"
           >
             Edit
+          </Button>
+          <Button
+            onClick={() => onDuplicate(instance)}
+            variant="ghost"
+            className="flex-1 border border-blue-300 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+          >
+            Duplicate
           </Button>
           <Button
             onClick={() => onDelete(instance.id)}
@@ -266,7 +275,8 @@ const AgentInstanceInner = ({
   editingInstance?: AgentInstance
 }) => {
   const { form, createFormFieldChangeHandler, overrideForm } = useTnForm<TAgentInstanceForm>()
-  const isEditing = Boolean(editingInstance)
+  const isEditing = Boolean(editingInstance && editingInstance.id)
+  const isDuplicating = Boolean(editingInstance && !editingInstance.id)
   const [promptTemplateVariables, setPromptTemplateVariables] = useState<Record<string, any>>({})
   const [showApiKeyValue, setShowApiKeyValue] = useState(false)
   const [apiKeyJustCreated, setApiKeyJustCreated] = useState<string | null>(null)
@@ -429,12 +439,18 @@ const AgentInstanceInner = ({
     <div className="rounded-lg border border-primary-200 bg-white p-6 shadow-sm">
       <div className="mb-6">
         <h3 className="text-xl font-bold text-primary-600">
-          {isEditing ? 'Edit Agent Instance' : 'Add New Agent Instance'}
+          {isEditing
+            ? 'Edit Agent Instance'
+            : isDuplicating
+              ? 'Duplicate Agent Instance'
+              : 'Add New Agent Instance'}
         </h3>
         <p className="mt-2 text-sm text-primary-400">
           {isEditing
             ? 'Update your agent configuration'
-            : 'Configure a new AI agent for your project'}
+            : isDuplicating
+              ? 'Create a copy of this agent with your modifications'
+              : 'Configure a new AI agent for your project'}
         </p>
       </div>
       <form className="space-y-6" onSubmit={handleSubmit}>
@@ -504,9 +520,19 @@ const AgentInstanceInner = ({
         <div className="grid gap-6 md:grid-cols-2">
           <div>
             <Input
-              label={isEditing ? 'API Key (leave empty to keep current)' : form.apiKey.label}
+              label={
+                isEditing
+                  ? 'API Key (leave empty to keep current)'
+                  : isDuplicating
+                    ? 'API Key (required for duplicate)'
+                    : form.apiKey.label
+              }
               placeholder={
-                isEditing ? 'Enter new API key to replace current...' : form.apiKey.placeholder
+                isEditing
+                  ? 'Enter new API key to replace current...'
+                  : isDuplicating
+                    ? 'Enter API key for the duplicate agent...'
+                    : form.apiKey.placeholder
               }
               value={form.apiKey.value ?? ''}
               onChange={(e) => createFormFieldChangeHandler(form.apiKey)(e.target.value)}
@@ -558,7 +584,13 @@ const AgentInstanceInner = ({
             disabled={isPending || !form.isValid}
             className="bg-primary-600 hover:bg-primary-700"
           >
-            {isPending ? 'Saving...' : isEditing ? 'Update Agent' : 'Create Agent'}
+            {isPending
+              ? 'Saving...'
+              : isEditing
+                ? 'Update Agent'
+                : isDuplicating
+                  ? 'Create Duplicate'
+                  : 'Create Agent'}
           </Button>
         </div>
       </form>
@@ -608,6 +640,19 @@ export const CreateAgentProject = () => {
 
   const handleEditInstance = (instance: AgentInstance) => {
     setEditingInstance(instance)
+    setShowInstanceForm(true)
+  }
+
+  const handleDuplicateInstance = (instance: AgentInstance) => {
+    // Create a copy of the instance without the id and with a modified name
+    const { id, maskedApiKey, ...instanceData } = instance
+    const duplicatedInstance = {
+      ...instanceData,
+      friendlyName: `${instance.friendlyName} (Copy)`,
+    } as Partial<AgentInstance>
+
+    // Set the duplicated instance as editing so the form opens with pre-filled data
+    setEditingInstance(duplicatedInstance as AgentInstance)
     setShowInstanceForm(true)
   }
 
@@ -704,6 +749,7 @@ export const CreateAgentProject = () => {
                       key={instance.id}
                       instance={instance}
                       onEdit={handleEditInstance}
+                      onDuplicate={handleDuplicateInstance}
                       onDelete={handleDeleteInstance}
                       onChat={handleChatWithAgent}
                       onTasks={handleTasksWithAgent}

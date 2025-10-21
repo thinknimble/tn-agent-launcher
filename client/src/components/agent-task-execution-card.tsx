@@ -88,11 +88,11 @@ export const AgentTaskExecutionCard = ({ execution, onCancel }: AgentTaskExecuti
         )}
 
         {execution.outputData && (
-          <details className="bg-primary-50/50 rounded-xl border border-primary-200 text-left">
-            <summary className="cursor-pointer p-3 font-semibold text-primary-600 hover:bg-primary-100/50">
+          <details className="rounded-xl border border-gray-600 bg-gray-800 text-left">
+            <summary className="cursor-pointer p-3 font-semibold text-gray-200 hover:bg-gray-700">
               📄 View Output
             </summary>
-            <div className="border-t border-primary-200 p-4 text-sm">
+            <div className="border-t border-gray-600 p-4 text-sm">
               <MarkdownRenderer content={execution.outputData?.result || ''} />
             </div>
           </details>

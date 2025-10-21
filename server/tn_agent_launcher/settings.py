@@ -59,10 +59,6 @@ METADATA_URI = os.environ.get("ECS_CONTAINER_METADATA_URI")
 IS_AWS_ENVIRONMENT = bool(METADATA_URI_V4 or METADATA_URI)
 
 if IS_AWS_ENVIRONMENT:
-    print("=== CONTAINER IP DETECTION DEBUG ===")
-    print(f"ECS_CONTAINER_METADATA_URI_V4: {METADATA_URI_V4}")
-    print(f"ECS_CONTAINER_METADATA_URI: {METADATA_URI}")
-
     # Method 1: Try ECS Metadata API v4 (newer)
     if METADATA_URI_V4:
         try:
@@ -123,8 +119,7 @@ if IS_AWS_ENVIRONMENT:
 
     print(f"✅ Final ALLOWED_HOSTS: {ALLOWED_HOSTS}")
     print("=== END CONTAINER IP DEBUG ===")
-else:
-    print("💻 Skipping dynamic IP detection - not in AWS environment")
+
 
 # SECURE FALLBACK: Only add the specific VPC subnets for this deployment (AWS only)
 # Get VPC CIDR from environment variable (set by Terraform)
@@ -137,15 +132,6 @@ if IS_AWS_ENVIRONMENT:
     for cidr in vpc_cidrs:
         if cidr and cidr not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(cidr)
-            print(f"✅ Added VPC subnet for health checks: {cidr}")
-
-# Additional debugging: Check if we're actually in ECS or Docker
-if IS_AWS_ENVIRONMENT:
-    print("☁️ Detected AWS ECS environment")
-elif os.path.exists("/.dockerenv"):
-    print("🐳 Detected local Docker environment")
-else:
-    print("💻 Detected local development environment")
 
 
 # Used by the corsheaders app/middleware (django-cors-headers) to allow multiple domains to access the backend
@@ -166,8 +152,6 @@ CORS_ALLOWED_ORIGINS = [f"https://{host}" for host in cors_allowed_hosts]
 CSRF_TRUSTED_ORIGINS = [f"http://{host}" for host in cors_allowed_hosts] + [
     f"https://{host}" for host in cors_allowed_hosts
 ]
-
-print(f"✅ CORS allowed hosts: {cors_allowed_hosts}")
 # Application definition
 
 INSTALLED_APPS = [

@@ -57,7 +57,12 @@ class AgentExecutor:
             return self._execute_via_lambda(agent_instance, enhanced_instruction, input_data)
         else:
             return self._execute_locally(
-                agent_instance, instruction, enhanced_instruction, multimodal_content, has_raw_files
+                agent_instance,
+                instruction,
+                enhanced_instruction,
+                multimodal_content,
+                has_raw_files,
+                input_data,
             )
 
     def _execute_via_lambda(
@@ -96,21 +101,31 @@ class AgentExecutor:
         enhanced_instruction: str,
         multimodal_content: List[Any],
         has_raw_files: bool,
+        input_data: Dict[str, Any] = None,
     ) -> AgentExecutionResult:
         """Execute agent locally with async handling."""
 
         async def run_agent():
+            from tn_agent_launcher.agent.tools import get_agent_tools
+
             agent = await agent_instance.agent()
+
+            # Get the dependencies for this execution
+            # Extract execution_id from input_data if available
+            execution_id = input_data.get("execution_id") if input_data else None
+            deps, _ = get_agent_tools(
+                user_id=str(agent_instance.user_id), execution_id=execution_id
+            )
 
             # If we have raw files, use multimodal content with PydanticAI
             if has_raw_files and multimodal_content:
                 # For multimodal content, we pass the instruction along with the media
                 # PydanticAI expects a list of content parts for multimodal messages
                 message_content = [instruction] + multimodal_content
-                return await agent.run(message_content)
+                return await agent.run(message_content, deps=deps)
             else:
                 # For text-only or preprocessed content, use enhanced instruction
-                return await agent.run(enhanced_instruction)
+                return await agent.run(enhanced_instruction, deps=deps)
 
         # Handle existing event loop by creating a new one in a separate thread
         def run_in_new_loop():

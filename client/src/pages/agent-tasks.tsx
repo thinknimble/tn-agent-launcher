@@ -14,6 +14,7 @@ import { CreateAgentTask } from 'src/pages/create-agent-task'
 export const AgentTasks = () => {
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>()
   const [editing, setEditing] = useState<AgentTask | null>(null)
+  const [duplicating, setDuplicating] = useState<AgentTask | null>(null)
   const [creating, setCreating] = useState(false)
   const [showExecutions, setShowExecutions] = useState(false)
   const [selectedTaskForHistory, setSelectedTaskForHistory] = useState<AgentTask | null>(null)
@@ -96,6 +97,10 @@ export const AgentTasks = () => {
 
   const handleEditTask = (task: AgentTask) => {
     setEditing(task)
+  }
+
+  const handleDuplicateTask = (task: AgentTask) => {
+    setDuplicating(task)
   }
 
   const handleDeleteTask = (taskId: string) => {
@@ -278,6 +283,7 @@ export const AgentTasks = () => {
                   onPause={handlePauseTask}
                   onResume={handleResumeTask}
                   onEdit={handleEditTask}
+                  onDuplicate={handleDuplicateTask}
                   onDelete={handleDeleteTask}
                   onShowHistory={handleShowHistory}
                 />
@@ -325,16 +331,19 @@ export const AgentTasks = () => {
           </div>
         )}
       </div>
-      {editing || creating ? (
+      {editing || duplicating || creating ? (
         <CreateAgentTask
           agent={agentInstance}
           task={editing || undefined}
+          duplicateFrom={duplicating || undefined}
           onSuccess={() => {
             setEditing(null)
+            setDuplicating(null)
             setCreating(false)
           }}
           onCancel={() => {
             setEditing(null)
+            setDuplicating(null)
             setCreating(false)
           }}
         />
