@@ -292,6 +292,7 @@ jobs:
             echo "aws_access_key_id=$(jq -r '.secrets.aws_access_key_id // ""' secrets.json)" >> $GITHUB_OUTPUT
             echo "aws_secret_access_key=$(jq -r '.secrets.aws_secret_access_key // ""' secrets.json)" >> $GITHUB_OUTPUT
             echo "playwright_test_user_pass=$(jq -r '.secrets.playwright_test_user_pass' secrets.json)" >> $GITHUB_OUTPUT
+            echo "field_encryption_key=$(jq -r '.secrets.field_encryption_key // ""' secrets.json)" >> $GITHUB_OUTPUT
             
             echo "✅ Secrets extracted and masked"
           else
@@ -336,6 +337,7 @@ jobs:
           aws_access_key_id = "${{ steps.secrets.outputs.aws_access_key_id }}"
           aws_secret_access_key = "${{ steps.secrets.outputs.aws_secret_access_key }}"
           playwright_test_user_pass = "${{ steps.secrets.outputs.playwright_test_user_pass }}"
+          field_encryption_key = "${{ steps.secrets.outputs.field_encryption_key }}"
           
           # Database config - RDS compliant names (alphanumeric only, start with letter)
           db_name = "tnagentlauncher$(echo '${{ steps.env-vars.outputs.environment }}' | sed 's/[^a-zA-Z0-9]//g')db"
@@ -622,6 +624,7 @@ jobs:
           aws_access_key_id = ""
           aws_secret_access_key = ""
           playwright_test_user_pass = "cleanup_placeholder"
+          field_encryption_key = "cleanup_placeholder"
           
           # Database config placeholders - RDS compliant names
           db_name = "tnagentlauncher$(echo "${ENVIRONMENT}" | sed 's/[^a-zA-Z0-9]//g')db"

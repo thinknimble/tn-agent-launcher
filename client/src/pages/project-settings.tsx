@@ -268,29 +268,31 @@ const EnvironmentSecretFormComponent = ({
 }
 
 export const ProjectSettings = () => {
-  const { id } = useParams<{ id: string }>()
+  const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const [secrets, setSecrets] = useState<ProjectEnvironmentSecret[]>([])
   const [showSecretForm, setShowSecretForm] = useState(false)
   const [editingSecret, setEditingSecret] = useState<ProjectEnvironmentSecret | null>(null)
   const queryClient = useQueryClient()
 
-  const { data: project, isLoading: loadingProject } = useQuery(agentProjectQueries.retrieve(id!))
+  const { data: project, isLoading: loadingProject } = useQuery(
+    agentProjectQueries.retrieve(projectId!),
+  )
 
   const { data: secretsData, isLoading: loadingSecrets } = useQuery({
     ...environmentSecretQueries.list({
       pagination: new Pagination({ page: 1, size: 100 }),
-      filters: { project: id!, search: '' },
+      filters: { project: projectId!, search: '' },
     }),
-    enabled: !!id,
+    enabled: !!projectId,
   })
 
   useEffect(() => {
     if (secretsData?.results) {
-      const filtered = secretsData.results.filter((secret: any) => secret.project === id)
+      const filtered = secretsData.results.filter((secret: any) => secret.project === projectId)
       setSecrets(filtered)
     }
-  }, [secretsData?.results, id])
+  }, [secretsData?.results, projectId])
 
   const { mutate: deleteSecret } = useMutation({
     mutationFn: (secretId: string) => environmentSecretApi.remove(secretId),
