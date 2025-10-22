@@ -3,7 +3,13 @@ import { agentTaskApi } from './api'
 import { AgentTaskFilter } from './models'
 
 export const agentTaskQueries = {
-  list: ({ filters, pagination }: { filters?: AgentTaskFilter; pagination: Pagination }) => ({
+  list: ({
+    filters,
+    pagination,
+  }: {
+    filters?: Partial<AgentTaskFilter>
+    pagination: Pagination
+  }) => ({
     queryKey: ['agent-tasks', filters, pagination],
     queryFn: () => agentTaskApi.list({ filters, pagination }),
   }),

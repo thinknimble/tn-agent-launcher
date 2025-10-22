@@ -140,6 +140,7 @@ export const createAgentTaskShape = {
 
 export const agentTaskFilterShape = {
   agentInstance: z.string(),
+  agentInstance__projects: z.string().array(),
 }
 
 export type InputSource = GetInferredFromRaw<typeof inputSourceShape>

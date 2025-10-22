@@ -26,8 +26,6 @@ import {
 import { AgentInstance, agentInstanceQueries, agentTypeEnum } from 'src/services/agent-instance'
 import { SelectOption } from 'src/services/base-model'
 import { environmentSecretQueries } from 'src/services/environment-secrets'
-import { useAtomValue } from 'jotai'
-import { projectAtom } from 'src/stores/project-atom'
 
 const CreateEditAgentTaskInner = ({
   onSuccess,
@@ -35,6 +33,7 @@ const CreateEditAgentTaskInner = ({
   preselectedAgent,
   initialData,
   duplicateFrom,
+  projectId,
   isEditing = false,
 }: {
   onSuccess: (task: AgentTask) => void
@@ -42,6 +41,7 @@ const CreateEditAgentTaskInner = ({
   preselectedAgent?: AgentInstance
   initialData?: AgentTask
   duplicateFrom?: AgentTask
+  projectId?: string
   isEditing?: boolean
 }) => {
   const { form, createFormFieldChangeHandler, overrideForm } = useTnForm<TAgentTaskForm>()
@@ -49,21 +49,24 @@ const CreateEditAgentTaskInner = ({
   const [urlConfigModalOpen, setUrlConfigModalOpen] = useState(false)
   const [currentUrlIndex, setCurrentUrlIndex] = useState<number | null>(null)
   const [instructionVariables, setInstructionVariables] = useState<Record<string, any>>({})
-  const selectedProject = useAtomValue(projectAtom)
-  const { data: agentInstances } = useQuery(
-    agentInstanceQueries.list(new Pagination(), {
-      projects: [],
-      agentType: agentTypeEnum.ONE_SHOT as string,
+
+  console.log('Agent Task Form State:', projectId)
+
+  const { data: agentInstances } = useQuery({
+    ...agentInstanceQueries.list(new Pagination(), {
+      projects: projectId ? [projectId] : [],
+      agentType: agentTypeEnum.ONE_SHOT,
     }),
-  )
+    enabled: !!projectId,
+  })
 
   // Fetch environment secrets for the project
   const { data: secretsData } = useQuery({
     ...environmentSecretQueries.list({
       pagination: new Pagination({ page: 1, size: 100 }),
-      filters: { project: selectedProject?.id ?? '', search: '' },
+      filters: { project: projectId ?? '', search: '' },
     }),
-    enabled: !!selectedProject,
+    enabled: !!projectId,
   })
 
   // Transform environment secrets into variables for binding component
@@ -78,10 +81,14 @@ const CreateEditAgentTaskInner = ({
     }))
   }, [secretsData?.results])
 
-  // Get all agent tasks for trigger selection TODO: filter by current project
-  const { data: agentTasks } = useQuery(
-    agentTaskQueries.list({ filters: undefined, pagination: new Pagination() }),
-  )
+  // Get all agent tasks for trigger selection filtered by current project
+  const { data: agentTasks } = useQuery({
+    ...agentTaskQueries.list({
+      filters: { agentInstance__projects: projectId ? [projectId] : [] },
+      pagination: new Pagination(),
+    }),
+    enabled: !!projectId,
+  })
 
   const { mutate: create, isPending: isCreating } = useMutation({
     mutationFn: agentTaskApi.create,
@@ -390,7 +397,7 @@ const CreateEditAgentTaskInner = ({
               variables ({variables.length} available)
             </p>
           )}
-          {selectedProject?.id && variables.length === 0 && (
+          {projectId && variables.length === 0 && (
             <p className="mt-1 text-xs text-gray-400">
               No environment variables available for this agent&apos;s project. You can add them in
               project settings.
@@ -637,6 +644,7 @@ const CreateEditAgentTaskInner = ({
               Cancel
             </Button>
           )}
+
           <Button
             type="submit"
             disabled={isPending || !form.isValid}
@@ -668,12 +676,14 @@ export const CreateAgentTask = ({
   task,
   agent,
   duplicateFrom,
+  projectId,
   onSuccess,
   onCancel,
 }: {
   task?: AgentTask
   agent?: AgentInstance
   duplicateFrom?: AgentTask
+  projectId?: string
   onSuccess?: () => void
   onCancel?: () => void
 }) => {
@@ -693,6 +703,7 @@ export const CreateAgentTask = ({
             preselectedAgent={agent || undefined}
             initialData={task}
             duplicateFrom={duplicateFrom}
+            projectId={projectId}
             isEditing={isEditing}
           />
         </FormProvider>

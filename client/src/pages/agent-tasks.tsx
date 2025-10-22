@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Pagination } from '@thinknimble/tn-models'
 
 import { Button } from 'src/components/button'
@@ -12,7 +12,9 @@ import { agentInstanceQueries, agentTypeEnum } from 'src/services/agent-instance
 import { CreateAgentTask } from 'src/pages/create-agent-task'
 
 export const AgentTasks = () => {
-  const { agentInstanceId } = useParams<{ agentInstanceId: string }>()
+  const { projectId } = useParams<{ projectId: string }>()
+  const [searchParams] = useSearchParams()
+  const agentId = searchParams.get('agent')
   const [editing, setEditing] = useState<AgentTask | null>(null)
   const [duplicating, setDuplicating] = useState<AgentTask | null>(null)
   const [creating, setCreating] = useState(false)
@@ -21,8 +23,11 @@ export const AgentTasks = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const filters = useMemo(() => {
-    return agentInstanceId ? { agentInstance: agentInstanceId } : undefined
-  }, [agentInstanceId])
+    if (agentId) {
+      return { agentInstance: agentId }
+    }
+    return projectId ? { project: projectId } : undefined
+  }, [projectId, agentId])
 
   // Filter tasks by agent instance
 
@@ -30,16 +35,21 @@ export const AgentTasks = () => {
     agentTaskQueries.list({ filters, pagination: new Pagination() }),
   )
 
-  const {
-    data: agentInstance,
-    isLoading: loadingAgent,
-    error: agentError,
-  } = useQuery(agentInstanceQueries.retrieve(agentInstanceId ?? ''))
+  // Get all agent instances for this project
+  const { data: agentInstances } = useQuery({
+    ...agentInstanceQueries.list(new Pagination(), {
+      projects: projectId ? [projectId] : [],
+      agentType: agentTypeEnum.ONE_SHOT as string,
+    }),
+    enabled: !!projectId,
+  })
 
-  // Get executions for this agent instance or selected task
+  // Get executions for selected task, specific agent, or all tasks in project
   const executionFilters = selectedTaskForHistory
     ? { agentTask: selectedTaskForHistory.id }
-    : { agentTask__agentInstance: agentInstanceId }
+    : agentId
+      ? { agentTask__agentInstance: agentId }
+      : { project: projectId }
 
   const { data: executions, isLoading: loadingExecutions } = useQuery(
     agentTaskExecutionQueries.list({
@@ -120,74 +130,12 @@ export const AgentTasks = () => {
     setShowExecutions(true)
   }
 
-  const isLoading = loadingTasks || loadingAgent
-
-  if (!agentInstanceId) {
+  if (!projectId) {
     navigate('/dashboard')
     return null
   }
-  // Handle agent not found or error
-  if (agentError || (!loadingAgent && !agentInstance)) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
-        <div className="mx-auto max-w-6xl px-4 py-8">
-          <div className="flex items-center justify-center py-20">
-            <div className="rounded-2xl bg-white/10 p-12 text-center backdrop-blur-md">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-error/20">
-                <span className="text-2xl">❌</span>
-              </div>
-              <h3 className="mb-2 text-lg font-medium text-white">Agent Not Found</h3>
-              <p className="mb-6 text-white/80">The specified agent instance could not be found.</p>
-              <Button
-                onClick={() => navigate('/dashboard')}
-                className="bg-accent hover:bg-accent-700"
-              >
-                Back to Dashboard
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
-  // Handle chat agents (not allowed for tasks)
-  if (agentInstance && agentInstance.agentType === agentTypeEnum.CHAT) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
-        <div className="mx-auto max-w-6xl px-4 py-8">
-          <div className="flex items-center justify-center py-20">
-            <div className="rounded-2xl bg-white/10 p-12 text-center backdrop-blur-md">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warning/20">
-                <span className="text-2xl">💬</span>
-              </div>
-              <h3 className="mb-2 text-lg font-medium text-white">Chat Agent Detected</h3>
-              <p className="mb-6 text-white/80">
-                Tasks are only available for one-shot agents. This is a chat agent.
-              </p>
-              <div className="flex justify-center gap-4">
-                <Button
-                  onClick={() => navigate(`/chat/agent/${agentInstanceId}`)}
-                  className="bg-success hover:bg-success/80"
-                >
-                  Go to Chat
-                </Button>
-                <Button
-                  onClick={() => navigate('/dashboard')}
-                  variant="ghost"
-                  className="border-white/30 text-white hover:bg-white/10"
-                >
-                  Back to Dashboard
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (isLoading) {
+  if (loadingTasks) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
         <div className="mx-auto max-w-6xl px-4 py-8">
@@ -202,7 +150,9 @@ export const AgentTasks = () => {
     )
   }
 
-  const pageTitle = agentInstance ? `Tasks for ${agentInstance.friendlyName}` : 'All Agent Tasks'
+  // Get the specific agent info if filtering by agent
+  const selectedAgent = agentId ? agentInstances?.results?.find((a) => a.id === agentId) : null
+  const pageTitle = selectedAgent ? `Tasks for ${selectedAgent.friendlyName}` : 'Project Tasks'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-primaryLight">
@@ -263,12 +213,35 @@ export const AgentTasks = () => {
       <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
         <div className="mb-8">
           <Button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(`/projects/${projectId}`)}
             variant="ghost"
             className="mb-4 border-white/30 text-white hover:bg-white/10"
           >
-            ← Back to Dashboard
+            ← Back to Project
           </Button>
+
+          {/* Filter Section */}
+          <div className="flex items-center gap-3 rounded-xl bg-white/10 p-4 backdrop-blur-md">
+            <span className="text-sm text-white/80">Viewing:</span>
+            {selectedAgent ? (
+              <>
+                <span className="rounded-full bg-accent/20 px-3 py-1 text-sm text-white">
+                  Tasks for {selectedAgent.friendlyName}
+                </span>
+                <Button
+                  onClick={() => navigate(`/projects/${projectId}/tasks`)}
+                  variant="ghost"
+                  className="text-xs text-white/80 hover:text-white"
+                >
+                  View All Project Tasks
+                </Button>
+              </>
+            ) : (
+              <span className="rounded-full bg-primary/20 px-3 py-1 text-sm text-white">
+                All Project Tasks
+              </span>
+            )}
+          </div>
         </div>
 
         {!showExecutions ? (
@@ -333,7 +306,7 @@ export const AgentTasks = () => {
       </div>
       {editing || duplicating || creating ? (
         <CreateAgentTask
-          agent={agentInstance}
+          projectId={projectId}
           task={editing || undefined}
           duplicateFrom={duplicating || undefined}
           onSuccess={() => {

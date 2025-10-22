@@ -16,7 +16,7 @@ export class InputSourceValidator extends PatternValidator {
   } = {}) {
     // URL pattern for validating URLs within input source objects
     const pattern =
-      /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-/]))?$/
+      /^(ftp|http|https|agent-output):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-/]))?$/
     super({ message, code, isRequired, pattern })
   }
 
