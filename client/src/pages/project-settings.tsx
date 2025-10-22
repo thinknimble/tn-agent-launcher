@@ -358,7 +358,7 @@ export const ProjectSettings = () => {
       <div className="mx-auto max-w-6xl px-4 py-8">
         <div className="mb-8">
           <Button
-            onClick={() => navigate(`/projects/${id}`)}
+            onClick={() => navigate(`/projects/${projectId}`)}
             variant="ghost"
             className="mb-4 border-white/30 text-white hover:bg-white/10"
           >
@@ -385,11 +385,7 @@ export const ProjectSettings = () => {
               <div>
                 <h2 className="text-2xl font-bold text-white">Environment Secrets</h2>
                 <p className="mt-1 text-sm text-white/80">
-                  Secure variables that can be used in your agent prompts with{' '}
-                  <code className="rounded bg-white/20 px-2 py-0.5 font-mono text-white">
-                    {'{{VARIABLE_NAME}}'}
-                  </code>{' '}
-                  syntax
+                  Secure variables that can be used in your agent prompts
                 </p>
               </div>
               {!showSecretForm && (
@@ -438,7 +434,7 @@ export const ProjectSettings = () => {
             {showSecretForm && (
               <FormProvider<EnvironmentSecretFormInputs> formClass={EnvironmentSecretForm}>
                 <EnvironmentSecretFormComponent
-                  projectId={id!}
+                  projectId={projectId!}
                   onSuccess={handleSecretSaved}
                   onCancel={() => {
                     setShowSecretForm(false)
