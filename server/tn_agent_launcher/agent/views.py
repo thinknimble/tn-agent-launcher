@@ -53,7 +53,7 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
     serializer_class = AgentTaskSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    filterset_fields = ["agent_instance", "status"]
+    filterset_fields = ["agent_instance", "status", "agent_instance__projects"]
 
     def get_queryset(self):
         return self.queryset.filter(agent_instance__user=self.request.user)

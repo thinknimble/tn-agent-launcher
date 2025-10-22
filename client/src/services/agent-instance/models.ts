@@ -54,6 +54,7 @@ export const createAgentInstanceShape = {
 export const agentInstanceFiltersShape = {
   projects: z.string().array(),
   agentType: z.string(),
+  oneShotProjectAgents: z.string().array(),
 }
 
 export type AgentInstance = GetInferredFromRaw<typeof agentInstanceShape>

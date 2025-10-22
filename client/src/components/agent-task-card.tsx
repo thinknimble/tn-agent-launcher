@@ -93,7 +93,7 @@ export const AgentTaskCard = ({
         </div>
 
         <div className="mt-auto space-y-2">
-          {task.status === 'active' && onExecute && (
+          {['active', 'failed'].includes(task.status) && onExecute && (
             <Button
               onClick={() => onExecute(task)}
               className="w-full bg-accent px-3 py-2 text-sm text-white hover:bg-accent-700"

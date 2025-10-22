@@ -23,7 +23,6 @@ class AgentExecutor:
         self,
         agent_instance: Any,
         instruction: str,
-        enhanced_instruction: str,
         multimodal_content: List[Any],
         has_raw_files: bool,
         input_data: Dict[str, Any],
@@ -34,8 +33,7 @@ class AgentExecutor:
 
         Args:
             agent_instance: The agent instance to execute
-            instruction: Base instruction
-            enhanced_instruction: Instruction with input sources
+            instruction: Complete instruction (includes agent instruction, task instruction, and input sources)
             multimodal_content: List of multimodal content for PydanticAI
             has_raw_files: Whether raw files are present
             input_data: Input data context
@@ -54,19 +52,18 @@ class AgentExecutor:
             )
 
         if use_lambda:
-            return self._execute_via_lambda(agent_instance, enhanced_instruction, input_data)
+            return self._execute_via_lambda(agent_instance, instruction, input_data)
         else:
             return self._execute_locally(
                 agent_instance,
                 instruction,
-                enhanced_instruction,
                 multimodal_content,
                 has_raw_files,
                 input_data,
             )
 
     def _execute_via_lambda(
-        self, agent_instance: Any, enhanced_instruction: str, input_data: Dict[str, Any]
+        self, agent_instance: Any, instruction: str, input_data: Dict[str, Any]
     ) -> AgentExecutionResult:
         """Execute agent via Lambda service."""
         from tn_agent_launcher.chat.models import PromptTemplate
@@ -79,12 +76,12 @@ class AgentExecutor:
         )
 
         # Invoke Lambda with provider configuration
-        # Note: Lambda doesn't support multimodal content yet, so always use enhanced_instruction
+        # Note: Lambda doesn't support multimodal content yet, so always use instruction
         response = lambda_agent_service.invoke_agent(
             provider=agent_instance.provider,
             model_name=agent_instance.model_name,
             api_key=agent_instance.api_key,
-            prompt=enhanced_instruction,
+            prompt=instruction,
             system_prompt=system_prompt,
             agent_type=agent_instance.agent_type,
             agent_name=agent_instance.friendly_name,
@@ -98,7 +95,6 @@ class AgentExecutor:
         self,
         agent_instance: Any,
         instruction: str,
-        enhanced_instruction: str,
         multimodal_content: List[Any],
         has_raw_files: bool,
         input_data: Dict[str, Any] = None,
@@ -124,8 +120,8 @@ class AgentExecutor:
                 message_content = [instruction] + multimodal_content
                 return await agent.run(message_content, deps=deps)
             else:
-                # For text-only or preprocessed content, use enhanced instruction
-                return await agent.run(enhanced_instruction, deps=deps)
+                # For text-only or preprocessed content, use instruction
+                return await agent.run(instruction, deps=deps)
 
         # Handle existing event loop by creating a new one in a separate thread
         def run_in_new_loop():

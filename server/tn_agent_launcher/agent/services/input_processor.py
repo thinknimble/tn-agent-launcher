@@ -122,18 +122,29 @@ class InputSourceProcessor:
         return url, source_type, filename, content_type, size, processing_config
 
     def create_enhanced_instruction(
-        self, base_instruction: str, input_sources_content: List[Dict]
+        self,
+        base_instruction: str,
+        input_sources_content: List[Dict],
+        agent_instruction: str = None,
     ) -> str:
-        """Create enhanced instruction with input sources content."""
+        """Create enhanced instruction with agent instruction and input sources content."""
+        # Start with agent instruction if provided
+        if agent_instruction and agent_instruction.strip():
+            combined_instruction = (
+                f"{agent_instruction.strip()}\n\n--- TASK INSTRUCTION ---\n{base_instruction}"
+            )
+        else:
+            combined_instruction = base_instruction
+
         if not input_sources_content:
-            return base_instruction
+            return combined_instruction
 
         sources_text = "\n\n--- INPUT SOURCES ---\n"
 
         for i, source in enumerate(input_sources_content, 1):
             sources_text += self._format_source_content(i, source)
 
-        return f"{base_instruction}\n{sources_text}"
+        return f"{combined_instruction}\n{sources_text}"
 
     def _format_source_content(self, index: int, source: Dict) -> str:
         """Format a single source's content for the instruction."""

@@ -63,9 +63,12 @@ class ExecutionManager:
         # Process input sources
         processed_inputs = self.input_processor.process_input_sources(task.input_sources or [])
 
-        # Create enhanced instruction
+        # Get agent instance instruction
+        agent_instruction = getattr(task.agent_instance, "instruction", None)
+
+        # Create enhanced instruction with agent instruction
         enhanced_instruction = self.input_processor.create_enhanced_instruction(
-            task.instruction, processed_inputs["input_sources_content"]
+            task.instruction, processed_inputs["input_sources_content"], agent_instruction
         )
 
         # Sanitize input sources for JSON storage
@@ -97,8 +100,7 @@ class ExecutionManager:
 
         return self.agent_executor.execute_agent(
             agent_instance=agent_instance,
-            instruction=input_data["instruction"],
-            enhanced_instruction=input_data["enhanced_instruction"],
+            instruction=input_data["enhanced_instruction"],
             multimodal_content=input_data["multimodal_content"],
             has_raw_files=input_data["has_raw_files"],
             input_data=input_data,

@@ -175,7 +175,20 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         tool_name = event.result.tool_name
         logger.info(f"Tool result for '{tool_name}' with ID: {tool_call_id}")
 
-        result_content = str(event.result.content)
+        # Handle different types of result content
+        raw_content = event.result.content
+
+        if isinstance(raw_content, dict):
+            # If content is a dict, convert to JSON string
+            result_content = json.dumps(raw_content, indent=2)
+            logger.warning(f"Tool result was a dict, converting to JSON: {tool_name}")
+        elif isinstance(raw_content, str):
+            # Normal case - content is already a string
+            result_content = raw_content
+        else:
+            # Fallback - convert to string
+            result_content = str(raw_content)
+            logger.warning(f"Tool result was unexpected type {type(raw_content)}: {tool_name}")
 
         # Log the final result content
         logger.info(

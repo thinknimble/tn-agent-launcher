@@ -666,7 +666,7 @@ export const CreateAgentProject = () => {
   }
 
   const handleTasksWithAgent = (instance: AgentInstance) => {
-    navigate(`/tasks/agent/${instance.id}`)
+    navigate(`/projects/${id}/tasks?agent=${instance.id}`)
   }
 
   const isLoading = loadingProject || loadingInstances
@@ -731,14 +731,23 @@ export const CreateAgentProject = () => {
                     Manage your AI agents and their configurations
                   </p>
                 </div>
-                {!showInstanceForm && (
+                <div className="flex gap-3">
                   <Button
-                    onClick={() => setShowInstanceForm(true)}
-                    className="bg-accent hover:bg-accent-700"
+                    onClick={() => navigate(`/projects/${id}/tasks`)}
+                    variant="ghost"
+                    className="border-white/30 text-white hover:bg-white/10"
                   >
-                    + Add New Agent
+                    📋 View All Tasks
                   </Button>
-                )}
+                  {!showInstanceForm && (
+                    <Button
+                      onClick={() => setShowInstanceForm(true)}
+                      className="bg-accent hover:bg-accent-700"
+                    >
+                      + Add New Agent
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Agent Instance Cards */}

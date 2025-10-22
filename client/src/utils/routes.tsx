@@ -23,11 +23,13 @@ const PrivateRoutes = () => {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/projects/">
         <Route index path=":id?" element={<CreateAgentProject />} />
-        <Route path=":id/settings" element={<ProjectSettings />} />
+        <Route path=":projectId/settings" element={<ProjectSettings />} />
+        <Route path=":projectId/tasks" element={<AgentTasks />} />
       </Route>
       <Route path="/chat" element={<ChatDemo />} />
       <Route path="/chat/agent/:agentId" element={<AgentChat />} />
-      <Route path="/tasks/agent/:agentInstanceId" element={<AgentTasks />} />
+      {/* Legacy route - redirect to nested structure */}
+      <Route path="/tasks/agent/:agentInstanceId" element={<Navigate to="/dashboard" />} />
     </>
   )
 }
