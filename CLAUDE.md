@@ -50,326 +50,304 @@ When building out API Services :
     always use tn-models with zods
     always use tanstack
 
+# LLM API Services Layer Instructions
 
-# TN-Models-FP Package Understanding Prompt
+Services
 
-You are working with the `@thinknimble/tn-models` package, a functional programming approach to API management with TypeScript that uses Zod for schema validation and type inference.
+Always use tn-models with zods to create the api, model layers
 
-## Key Concepts
+With tn-models: 
 
-### 1. **Core Philosophy**
-- Functional paradigm instead of classes to avoid TypeScript type issues
-- Prevents runtime field obfuscation by validating API responses against declared models
-- Uses Zod schemas for both compile-time types and runtime validation
-- Handles automatic camelCase ↔ snake_case conversion between frontend and API
+Models/Shapes
 
-### 2. **Main Components**
+- Uses pure zod shapes (not zod objects) as the main layer
+- Use custom native enums (provide example)
+- Filters only use: strings, numbers, arrays, boolean
+- All Filters are optional by default
 
-#### **createApi** - The primary function
-```typescript
-const api = createApi({
-  client: axios.create(),           // Axios instance
-  baseUri: "api/users/",           // Base endpoint URL
-  models: {
-    entity: userEntityShape,        // Main resource shape (enables built-in methods)
-    create: createUserShape,        // Optional: custom creation input shape
-  },
-  customCalls: {                   // Optional: additional API methods
-    login: loginCall,
-    customUpdate: updateCall,
-  }
-})
+API
 
-Zod Shapes** (not schemas)
-- Use raw Zod shapes (objects with Zod validators) instead of `z.object()`
-- Allows key manipulation for case conversion
-- Mark fields as readonly with `.readonly()` to exclude from create/update
+- typically the axios client already has the `api` prefix added to its route
+- Use the main createApi to create the base api - typically this maps to the model `viewsets` on django
+- Use `customCalls` to generate additional views such as actions
+- `customCalls` are added at the end as `customCalls` and are called using the modifier `.csc`
+- The base api class needs a base entity to be declared this will automatically be used for create, list and update methods
+- a `remove` method already exists as well
+- the `create` shape can also be customized
+- the `update` method does not take a custom shape so there is no reason to define it
 
-```typescript
-const userShape = {
-  id: z.string().uuid(),
-  firstName: z.string(),
-  lastName: z.string(),
-  fullName: z.string().readonly(),  // Excluded from create/update
-}
-```
+```tsx
+// api.ts
 
-#### **Built-in Methods** (when `entity` model is provided)
-- `api.create()` - POST to create resource
-- `api.retrieve(id)` - GET single resource by ID
-- `api.list({ pagination })` - GET paginated list
-- `api.update()` - PATCH/PUT to update resource
+import { createApi, createCustomServiceCall } from '@thinknimble/tn-models'
+import { axiosInstance } from 'src/services/axios-instance'
+import {
+  agentTaskShape,
+  createAgentTaskShape,
+  agentTaskFilterShape,
+} from './models'
+import { z } from 'zod'
+import { agentTaskExecutionShape } from '../agent-task-execution'
 
-#### **Custom Service Calls**
-```typescript
-const customCall = createCustomServiceCall({
-  inputShape: inputShape,
-  outputShape: outputShape,
-  filtersShape: filtersShape,      // Optional: for query parameters
-  cb: async ({ client, slashEndingBaseUri, input, utils: { toApi, fromApi } }) => {
-    // Your custom API logic here
-    const response = await client.post(`${slashEndingBaseUri}custom/`, toApi(input))
+const executeNowCall = createCustomServiceCall({
+  inputShape: z.string().uuid(),
+  outputShape: agentTaskExecutionShape,
+  cb: async ({ client, slashEndingBaseUri, input, utils: { fromApi } }) => {
+    const response = await client.post(`${slashEndingBaseUri}${input}/execute_now/`)
     return fromApi(response.data)
-  }
-})
-```
-
-### 3. **Utilities**
-
-#### **Type Inference**
-```typescript
-type User = GetInferredFromRaw<typeof userShape>
-```
-
-#### **Case Conversion**
-- `toApi(data)` - Converts camelCase to snake_case for API requests
-- `fromApi(data)` - Converts snake_case to camelCase for client use
-
-#### **Pagination**
-```typescript
-const pagination = new Pagination({ page: 1, size: 20 })
-```
-
-### 4. **Usage Patterns**
-
-#### **Basic CRUD**
-```typescript
-// Create
-const newUser = await api.create({ firstName: "John", lastName: "Doe" })
-
-// Read
-const user = await api.retrieve("user-id")
-const users = await api.list({ pagination: new Pagination() })
-
-// Update
-const updated = await api.update({ id: "user-id", firstName: "Jane" })
-```
-
-#### **Custom Calls**
-```typescript
-const loginResult = await api.csc.login({ email: "user@example.com", password: "password" })
-// or
-const loginResult = await api.customCalls.login({ email: "user@example.com", password: "password" })
-```
-
-### 5. **Integration with React Query**
-```typescript
-const { data: users } = useQuery({
-  queryKey: ['users', pagination],
-  queryFn: () => api.list({ pagination })
+  },
 })
 
-const { mutateAsync: createUser } = useMutation({
-  mutationFn: api.create
+export const agentTaskApi = createApi({
+  client: axiosInstance,
+  baseUri: '/agents/tasks/',
+  models: {
+    entity: agentTaskShape,
+    create: createAgentTaskShape,
+    extraFilters: agentTaskFilterShape,
+  },
+  customCalls: {
+    executeNow: executeNowCall,
+  },
 })
-```
 
-## When helping with this package:
-1. Always use Zod shapes (raw objects) instead of `z.object()` schemas
-2. Remember automatic case conversion between camelCase and snake_case
-3. Built-in methods are only available when `entity` model is declared
-4. Custom calls require `createCustomServiceCall` for type safety
-5. The `utils` object provides `toApi` and `fromApi` for case conversion
-6. Readonly fields are automatically excluded from create/update operations
+// models.ts
 
-This package prioritizes type safety, functional programming principles, and seamless API integration with automatic data transformation.
+import { GetInferredFromRaw } from '@thinknimble/tn-models'
+import { z } from 'zod'
+import { agentInstanceShape } from '../agent-instance'
 
-
-When using tn-models and zods for enums you should use this syntax
-
-export const connectionStatusKeyEnum = {
-  pending: 0,
+//custom native enums
+export const sourceTypeEnum = {
+  PUBLIC_URL: 'public_url',
+  OUR_S3: 'our_s3',
+  USER_S3: 'user_s3',
 } as const
 
-export type ConnectionStatusKeyValues =
-  (typeof connectionStatusKeyEnum)[keyof typeof connectionStatusKeyEnum]
+export type SourceTypeValues = (typeof sourceTypeEnum)[keyof typeof sourceTypeEnum]
 
-export const connectionStatusLabelMap = {
-  [connectionStatusKeyEnum.pending]: 'Pending',
-  [connectionStatusKeyEnum.accepted]: 'Accepted',
+export const sourceTypeLabelMap = {
+  [sourceTypeEnum.PUBLIC_URL]: 'Public URL',
+  [sourceTypeEnum.OUR_S3]: 'Our Storage',
+  [sourceTypeEnum.USER_S3]: 'Your S3',
 }
 
-
-export const someModel = {
- connectionStatus: z.nativeEnum(connectionStatusKeyEnum)
+export const inputSourceShape = {
+  url: z.string().url(),
+  sourceType: z.nativeEnum(sourceTypeEnum),
+  filename: z.string(), // Make filename required to match backend expectations
+  size: z.number().optional(),
+  contentType: z.string().optional(),
+  // Document processing configuration
+  skipPreprocessing: z.boolean().optional(),
+  // Image processing options (when skipPreprocessing is false)
+  preprocessImage: z.boolean().optional(),
+  isDocumentWithText: z.boolean().optional(),
+  replaceImagesWithDescriptions: z.boolean().optional(),
+  // PDF processing options (when skipPreprocessing is false)
+  containsImages: z.boolean().optional(),
+  extractImagesAsText: z.boolean().optional(),
 }
 
-# TN-FORMS
-TN Forms Library Reference**
+export const agentTaskShape = {
+  id: z.string().uuid(),
+  name: z.string(),
+  description: z.string().optional().nullable(),
+  agentInstance: z.string().uuid(),
+  agentInstanceRef: z.object(agentInstanceShape).optional().nullable(), // Expanded agent instance when included
+  instruction: z.string(),
+  variables: z.record(z.any()).optional(),
 
-You are working with the TN Forms library (@thinknimble/tn-forms), a TypeScript form management library designed for consistent form creation in web applications.
+export const createAgentTaskShape = {
+  name: agentTaskShape.name,
+  description: agentTaskShape.description,
+  agentInstance: agentTaskShape.agentInstance,
+  instruction: agentTaskShape.instruction,
+  variables: agentTaskShape.variables,
+}
 
-## Core Concepts
+export const agentTaskFilterShape = {
+  agentInstance: z.string(),
+}
 
-**Form Structure:**
-- Forms extend the base `Form<T>` class where T is the form inputs type
-- Form inputs are defined as interfaces with `IFormField<Type>` properties
-- Static properties on form classes define the actual form fields
-- Union types enable dot notation access to fields
+export type InputSource = GetInferredFromRaw<typeof inputSourceShape>
+export type AgentTask = GetInferredFromRaw<typeof agentTaskShape>
+export type CreateAgentTask = GetInferredFromRaw<typeof createAgentTaskShape>
+export type AgentTaskFilter = GetInferredFromRaw<typeof agentTaskFilterShape>
 
-**Basic Pattern:**
-```typescript
-// 1. Define form inputs type
-type LoginFormInputs = {
+export const presignedUrlRequestShape = {
+  filename: z.string(),
+  contentType: z.string().optional(),
+}
+
+```
+
+Always use the `tn-forms` library to generate forms this library is also accompanied by the `tn-forms-react` to deal with some of the reactivity in react 
+
+tn-forms
+
+- declare a base type for the inputs to enable dot notation on the forms
+- extend the base `Form` from `tn-forms`  that is typed by the base class
+- declare the form fields using the `FormField` class and add `validators`
+
+tn-forms-react
+
+- Declare a wrapper function with the input types and form class in a provider
+- Add a to the child function to get access to the form
+
+```tsx
+// forms.ts
+
+import {
+  Form,
+  EmailValidator,
+  FormField,
+  IFormField,
+  MinLengthValidator,
+  RequiredValidator,
+} from '@thinknimble/tn-forms'
+
+export type AccountFormInputs = {
+  firstName: IFormField<string>
+  lastName: IFormField<string>
   email: IFormField<string>
   password: IFormField<string>
+  confirmPassword: IFormField<string>
 }
 
-// 2. Create form class
-class LoginForm extends Form<LoginFormInputs> {
+export class AccountForm extends Form<AccountFormInputs> {
+  static firstName = FormField.create({
+    label: 'First name',
+    placeholder: 'First Name',
+    type: 'text',
+    validators: [new RequiredValidator({ message: 'Please enter your first' })],
+    value: '',
+  })
+
+  static lastName = FormField.create({
+    label: 'Last Name',
+    placeholder: 'Last Name',
+    type: 'text',
+    validators: [new RequiredValidator({ message: 'Please enter your last name' })],
+    value: '',
+  })
+
   static email = FormField.create({
-    validators: [new EmailValidator()]
+    label: 'Email',
+    placeholder: 'Email',
+    type: 'email',
+    value: '',
+    validators: [new EmailValidator({ message: 'Please enter a valid email' })],
   })
+
   static password = FormField.create({
-    validators: [new RequiredValidator()]
+    label: 'Password',
+    placeholder: 'Password',
+    type: 'password',
+
+    validators: [
+      new MinLengthValidator({
+        minLength: 6,
+        message: 'Please enter a password with a minimum of six characters',
+      }),
+    ],
+    value: '',
+  })
+
+  static confirmPassword = FormField.create({
+    label: 'Confirm Password',
+    placeholder: 'Confirm Password',
+    type: 'password',
+    value: '',
+    validators: [],
   })
 }
+export type TAccountForm = AccountForm & AccountFormInputs
 
-// 3. Create union type for dot notation
-type TLoginForm = LoginFormInputs & LoginForm
+// login.tsx
 
-// 4. Create instance and cast to union type
-const form = new LoginForm() as TLoginForm
-```
-
-## Key Components
-
-**FormField:** Individual form inputs with validation
-- `value` - current field value
-- `validators` - array of validator instances
-- `isValid` - boolean validity check
-- `validate()` - trigger validation
-- `errors` - validation error messages
-
-**FormArray:** Collections of sub-forms for dynamic content
-- `groups` - array of form instances
-- Used for repeatable form sections
-
-**Validators:** Built-in validation rules
-- `RequiredValidator()` - field is required
-- `EmailValidator()` - valid email format
-- `MinLengthValidator({minLength: n})` - minimum length
-- `MaxLengthValidator({maxLength: n})` - maximum length
-- `PatternValidator({pattern: regex})` - regex pattern matching
-- `UrlValidator()` - valid URL format
-- `MustMatchValidator({matcher: 'fieldName'})` - cross-field validation
-- `MinDateValidator({min: date})` - minimum date
-- `MaxDateValidator({max: date})` - maximum date
-
-## Common Operations
-
-**Form Usage:**
-```typescript
-const form = new MyForm()
-form.validate() // validate entire form
-form.isValid // check if form is valid
-form.value // get form values as object
-form.addFormLevelValidator('fieldName', validator) // add dynamic validator
-```
-
-**Field Usage:**
-```typescript
-const field = new FormField({
-  value: 'initial',
-  validators: [new RequiredValidator()],
-  name: 'fieldName'
-})
-field.validate()
-field.isValid
-field.errors
-```
-
-## Advanced Features
-
-**Cross-field Validation:**
-Use `dynamicFormValidators` static property for field dependencies:
-```typescript
-static dynamicFormValidators = {
-  confirmPassword: [new MustMatchValidator({ matcher: 'password' })]
-}
-```
-
-**Custom Validators:**
-Extend the `Validator` class:
-```typescript
-class MyValidator extends Validator {
-  constructor({ message = 'Custom error', code = 'custom' } = {}) {
-    super({ message, code })
-  }
-
-  call(value: any) {
-    if (/* validation logic */) {
-      throw new Error(JSON.stringify({ code: this.code, message: this.message }))
-    }
-  }
-}
-
-When working with TN Forms:
-1. Always define TypeScript interfaces for form inputs
-2. Use static properties to define form fields
-3. Remember to call `validate()` before checking `isValid`
-4. Use union types for better developer experience
-5. Leverage built-in validators before creating custom ones
-
----
-
-React Integration
-
-**Why React Integration is Needed:**
-React's state depends on referential equality, not deep equality. TN Forms classes don't work as React state out of the box, so the React integration provides utilities to handle this properly.
-
-**Core React Utils:**
-
-### FormProvider
-Context provider that allows using TN Forms as React state:
-
-```typescript
-return (
-  <FormProvider<TLoginFormInputs> formClass={LoginForm}>
-    <MyFormComponent />
-  </FormProvider>
-)
-```
-
-### useTnForm Hook
-Hook to consume form state within FormProvider descendants:
-
-```typescript
-const MyFormComponent = () => {
-  const {
-    form,
-    createFormFieldChangeHandler,
-    overrideForm,
-    setFields,
-    validate,
-  } = useTnForm<TLoginForm>();
-
-  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    createFormFieldChangeHandler(form.email)(e.target.value)
-  }
-
+ 
+ export const logInInner() {
+  // context
+  const { createFormFieldChangeHandler, form } = useTnForm<TLoginForm>()
   return (
-    <div>
-      <input
-        value={form.email.value}
-        onChange={handleEmailChange}
-      />
-      {/* For custom components that expect (value: string) => void */}
-      <CustomInput
-        value={form.password.value}
-        onChange={createFormFieldChangeHandler(form.password)}
-      />
-    </div>
+			  <>
+				   <Input placeholder="Enter email..."
+				     onChange={(e) => createFormFieldChangeHandler(form.email)(e.target.value)}
+		         value={form.email.value ?? ''}
+		         data-testid="email"
+		         id="id"
+		         label="Email address"
+		         type="email"
+		         autoComplete="email" />
+			  </>
+  
+	  )
+ 
+ }
+
+export const LogIn = () => {
+	// a wrapper 
+  return (
+    <FormProvider<LoginFormInputs> formClass={LoginForm}>
+      <LogInInner />
+    </FormProvider>
   )
 }
+
 ```
 
-**Important React Patterns:**
+Always use tanstack to build queries 
 
-1. **Type Safety:** Always provide the union type to `useTnForm<TFormType>` for proper typing
-2. **Immutability:** Only modify form state through `createFormFieldChangeHandler` - never mutate form directly
-3. **Event Handling:** `createFormFieldChangeHandler` returns `(v: T) => void`, not a React event handler
-4. **State Management:** The hook manages React re-renders automatically when form state changes
+- use the api methods we create in api.ts
+- use the pagination hook
+- make filters optional/partials
+
+```tsx
+// queries.ts
+
+import { queryOptions } from '@tanstack/react-query'
+import { expenseApi } from './api'
+import { ExpenseFilter } from './models'
+import { Pagination } from '@thinknimble/tn-models'
+
+export const expenseQueries = {
+  all: () => ['expenses'],
+  retrieve: (id: string) => {
+    return queryOptions({
+      queryKey: [...expenseQueries.all(), id],
+      queryFn: () => expenseApi.retrieve(id),
+      enabled: Boolean(id),
+    })
+  },
+  list: ({
+    filters,
+    pagination,
+    paginationCallback,
+  }: {
+    filters?: Partial<ExpenseFilter>
+    pagination?: Pagination
+    paginationCallback?: (pagination: Pagination) => void
+  }) => {
+    return queryOptions({
+      queryKey: [...expenseQueries.all(), { filters, pagination }],
+      queryFn: async () => {
+        const res = await expenseApi.list({
+          filters,
+          pagination,
+        })
+        const serverPagination = new Pagination({ ...res, totalCount: res.count })
+        paginationCallback?.(serverPagination)
+        return res
+      },
+      enabled: true,
+    })
+  },
+
+}
+
+```
+
 
 
 # Using the React Dropdown Select Component
