@@ -159,6 +159,7 @@ class AgentTaskExecutionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AgentTaskExecution.objects.all()
     serializer_class = AgentTaskExecutionSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ["agent_task", "agent_task__agent_instance__projects"]
 
     def get_queryset(self):
         return self.queryset.filter(agent_task__agent_instance__user=self.request.user)

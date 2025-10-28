@@ -6,6 +6,7 @@ bucket         = "458029411633-tn-agent-launcher-terraform-state"
 region         = "us-east-1"
 dynamodb_table = "tn-agent-launcher-terraform-state-lock"
 encrypt        = true
+key            = staging/terraform.tfstate
 
 # Note: The 'key' parameter is dynamically set based on:
 # environment/terraform.tfstate
