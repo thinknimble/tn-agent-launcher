@@ -179,6 +179,18 @@ variable "enable_https" {
   description = "Enable HTTPS for the load balancer"
   default     = true  # Enable by default for review apps
 }
+variable "enable_doc_preprocessing" {
+  type        = bool
+  description = "Enable document preprocessing for the app service backend - not available in heroku"
+  default     = false
+}
+variable "field_encryption_key" {
+  type        = string
+  description = "Hash secrets in db"
+  sensitive   = true
+}
+
+
 
 # Domain and DNS configuration
 variable "base_domain" {
@@ -223,16 +235,5 @@ variable "use_per_project_shared_vpc" {
   type        = bool
   description = "If true, create per-project shared VPCs (shared-dev-vpc-PROJECT). If false, use account-wide shared VPC (shared-dev-vpc)"
   default     = false
-}
-
-variable "enable_doc_preprocessing" {
-  type        = bool
-  description = "Enable document preprocessing for the app service backend - not available in heroku"
-  default     = false
-}
-variable "field_encryption_key" {
-  type        = string
-  description = "Hash secrets in db"
-  sensitive   = true
 }
 
