@@ -1,10 +1,13 @@
+import secrets
+from datetime import timedelta
+
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from encrypted_model_fields.fields import EncryptedTextField
 from pydantic_ai import Agent
 
 from tn_agent_launcher.common.models import AbstractBaseModel
-
 
 class AgentInstance(AbstractBaseModel):
     class ProviderChoices(models.TextChoices):
@@ -53,7 +56,7 @@ class AgentInstance(AbstractBaseModel):
         ordering = ["friendly_name"]
 
     def clean(self):
-        from django.core.exceptions import ValidationError
+
 
         errors = {}
 
@@ -126,6 +129,7 @@ class AgentTask(AbstractBaseModel):
         HOURLY = "hourly", "Hourly"
         CUSTOM_INTERVAL = "custom_interval", "Custom Interval"
         AGENT = "agent", "Agent Execution"
+        WEBHOOK = "webhook", "Webhook Trigger"
 
     class StatusChoices(models.TextChoices):
         ACTIVE = "active", "Active"
@@ -184,6 +188,16 @@ class AgentTask(AbstractBaseModel):
         help_text="Agent task that triggers this task (for AGENT schedule type)",
     )
 
+    # For WEBHOOK schedule type
+    webhook_secret = EncryptedTextField(
+        blank=True,
+        default="",
+        help_text="Secret key for webhook signature validation (auto-generated)",
+    )
+    webhook_validate_signature = models.BooleanField(
+        default=True, help_text="Whether to validate webhook signatures"
+    )
+
     class Meta:
         ordering = ["-created"]
 
@@ -193,6 +207,11 @@ class AgentTask(AbstractBaseModel):
     def save(self, *args, **kwargs):
         if self.pk is None:
             self._set_next_execution()
+            # Generate webhook secret for webhook tasks
+            if self.schedule_type == self.ScheduleTypeChoices.WEBHOOK and not self.webhook_secret:
+                
+
+                self.webhook_secret = secrets.token_urlsafe(32)
         else:
             # Handle state transitions for existing tasks
             self._handle_state_transitions()
@@ -216,8 +235,11 @@ class AgentTask(AbstractBaseModel):
         elif self.schedule_type == self.ScheduleTypeChoices.AGENT:
             # Agent executions are triggered by other agents, not scheduled
             return None
+        elif self.schedule_type == self.ScheduleTypeChoices.WEBHOOK:
+            # Webhook executions are triggered externally, not scheduled
+            return None
 
-        from datetime import timedelta
+
 
         base_time = self.last_executed_at or timezone.now()
 
@@ -277,6 +299,16 @@ class AgentTask(AbstractBaseModel):
             self.status = self.StatusChoices.ACTIVE
             self.next_execution_at = self.calculate_next_execution()
             self.save()
+
+    @property
+    def webhook_url(self):
+        """Get the webhook URL for this task."""
+        if self.schedule_type == self.ScheduleTypeChoices.WEBHOOK:
+            from tn_agent_launcher.utils.sites import get_site_url
+
+            base_url = get_site_url()
+            return f"{base_url}/api/webhooks/tasks/{self.id}/"
+        return None
 
     @property
     def is_ready_for_execution(self):

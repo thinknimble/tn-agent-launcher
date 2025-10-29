@@ -96,6 +96,7 @@ export type AgentTaskFormInputs = {
   scheduledAt: IFormField<string>
   intervalMinutes: IFormField<number | null>
   triggeredByTask: IFormField<SelectOption | null>
+  webhookValidateSignature: IFormField<boolean>
   maxExecutions: IFormField<number | null>
 }
 
@@ -162,6 +163,12 @@ export class AgentTaskForm extends Form<AgentTaskFormInputs> {
     placeholder: 'Select task that will trigger this task',
     type: 'select',
     value: null,
+  })
+
+  static webhookValidateSignature = FormField.create({
+    label: 'Validate Webhook Signature',
+    type: 'checkbox',
+    value: true,
   })
 
   static maxExecutions = FormField.create({

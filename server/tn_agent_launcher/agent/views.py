@@ -7,7 +7,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
+import hashlib
+import hmac
+import json
 from .filters import AgentInstanceFilter
 from .models import (
     AgentInstance,
@@ -96,6 +98,77 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(task)
         return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[],
+        url_path="webhook",
+        url_name="webhook",
+    )
+    def webhook(self, request, pk=None):
+        """Receive webhook and trigger task execution"""
+        try:
+            # Get the task without permission check (public endpoint)
+            task = AgentTask.objects.get(pk=pk)
+        except AgentTask.DoesNotExist:
+            return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Verify task is a webhook task
+        if task.schedule_type != AgentTask.ScheduleTypeChoices.WEBHOOK:
+            return Response(
+                {"error": "Task is not configured for webhook triggers"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Verify task is active
+        if task.status != AgentTask.StatusChoices.ACTIVE:
+            return Response({"error": "Task is not active"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate signature if enabled
+        if task.webhook_validate_signature:
+            signature = request.headers.get("X-Webhook-Signature")
+            if not signature:
+                return Response(
+                    {"error": "Missing webhook signature"}, status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            # Calculate expected signature
+            body = request.body
+            expected_signature = hmac.new(
+                task.webhook_secret.encode(), body, hashlib.sha256
+            ).hexdigest()
+
+            if not hmac.compare_digest(signature, expected_signature):
+                return Response(
+                    {"error": "Invalid webhook signature"}, status=status.HTTP_401_UNAUTHORIZED
+                )
+
+        # Parse JSON payload
+        try:
+            payload = request.data
+        except json.JSONDecodeError:
+            return Response(
+                {"error": "Invalid JSON payload"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Schedule task execution
+        execution = schedule_agent_task_execution(task.id, force_execute=True)
+
+        if execution:
+            return Response(
+                {
+                    "message": "Webhook received and task scheduled",
+                    "execution_id": str(execution.id),
+                    "task_id": str(task.id),
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
+        else:
+            return Response(
+                {"error": "Failed to schedule task execution"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=False, methods=["post"])
     def generate_presigned_url(self, request):
@@ -210,3 +283,82 @@ class ProjectEnvironmentSecretViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class WebhookReceiverViewSet(viewsets.ViewSet):
+    """Webhook receiver for agent tasks"""
+
+    permission_classes = []  # Public endpoint, uses signature validation instead
+
+    def create(self, request, task_id=None):
+        """Receive webhook and trigger task execution"""
+
+
+        try:
+            # Get the task
+            task = AgentTask.objects.get(id=task_id)
+        except AgentTask.DoesNotExist:
+            return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Verify task is a webhook task
+        if task.schedule_type != AgentTask.ScheduleTypeChoices.WEBHOOK:
+            return Response(
+                {"error": "Task is not configured for webhook triggers"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Verify task is active
+        if task.status != AgentTask.StatusChoices.ACTIVE:
+            return Response(
+                {"error": "Task is not active"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate signature if enabled
+        if task.webhook_validate_signature:
+            signature = request.headers.get("X-Webhook-Signature")
+            if not signature:
+                return Response(
+                    {"error": "Missing webhook signature"}, status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            # Calculate expected signature
+            body = request.body
+            expected_signature = hmac.new(
+                task.webhook_secret.encode(), body, hashlib.sha256
+            ).hexdigest()
+
+            if not hmac.compare_digest(signature, expected_signature):
+                return Response(
+                    {"error": "Invalid webhook signature"}, status=status.HTTP_401_UNAUTHORIZED
+                )
+
+        # Parse JSON payload
+        try:
+            payload = request.data
+        except json.JSONDecodeError:
+            return Response(
+                {"error": "Invalid JSON payload"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Convert payload to input sources if it contains data
+        # The payload can be used to dynamically generate input sources
+        # For now, we'll just trigger the task with the original input sources
+        # Future enhancement: parse payload to create dynamic input sources
+
+        # Schedule task execution
+        execution = schedule_agent_task_execution(task.id, force_execute=True)
+
+        if execution:
+            return Response(
+                {
+                    "message": "Webhook received and task scheduled",
+                    "execution_id": str(execution.id),
+                    "task_id": str(task.id),
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
+        else:
+            return Response(
+                {"error": "Failed to schedule task execution"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

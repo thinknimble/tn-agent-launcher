@@ -11,6 +11,7 @@ import { ErrorsList } from 'src/components/errors'
 import { InputSourceUploader } from 'src/components/input-source-uploader'
 import { DocumentProcessingConfigModal } from 'src/components/document-processing-config'
 import { VariableBinding, Variable } from 'src/components/variable-binding'
+import { WebhookHelp } from 'src/components/webhook-help'
 import {
   AgentTask,
   AgentTaskForm,
@@ -150,6 +151,7 @@ const CreateEditAgentTaskInner = ({
       updatedForm.inputSources.value = initialData.inputSources || []
       updatedForm.scheduledAt.value = initialData.scheduledAt || ''
       updatedForm.intervalMinutes.value = initialData.intervalMinutes
+      updatedForm.webhookValidateSignature.value = initialData.webhookValidateSignature ?? true
       updatedForm.maxExecutions.value = initialData.maxExecutions
 
       // Set agent instance
@@ -191,6 +193,7 @@ const CreateEditAgentTaskInner = ({
       updatedForm.inputSources.value = duplicateFrom.inputSources || []
       updatedForm.scheduledAt.value = duplicateFrom.scheduledAt || ''
       updatedForm.intervalMinutes.value = duplicateFrom.intervalMinutes
+      updatedForm.webhookValidateSignature.value = duplicateFrom.webhookValidateSignature ?? true
       updatedForm.maxExecutions.value = duplicateFrom.maxExecutions
 
       // Set agent instance
@@ -234,14 +237,16 @@ const CreateEditAgentTaskInner = ({
     }
   }, [preselectedAgent, overrideForm, isEditing, duplicateFrom])
 
-  const { isScheduleTypeOnce, isScheduleTypeCustom, isScheduleTypeAgent } = useMemo(() => {
-    const scheduleValue = form.scheduleType.value?.value
-    return {
-      isScheduleTypeOnce: scheduleValue === scheduleTypeEnum.ONCE,
-      isScheduleTypeCustom: scheduleValue === scheduleTypeEnum.CUSTOM_INTERVAL,
-      isScheduleTypeAgent: scheduleValue === scheduleTypeEnum.AGENT,
-    }
-  }, [form.scheduleType.value?.value])
+  const { isScheduleTypeOnce, isScheduleTypeCustom, isScheduleTypeAgent, isScheduleTypeWebhook } =
+    useMemo(() => {
+      const scheduleValue = form.scheduleType.value?.value
+      return {
+        isScheduleTypeOnce: scheduleValue === scheduleTypeEnum.ONCE,
+        isScheduleTypeCustom: scheduleValue === scheduleTypeEnum.CUSTOM_INTERVAL,
+        isScheduleTypeAgent: scheduleValue === scheduleTypeEnum.AGENT,
+        isScheduleTypeWebhook: scheduleValue === scheduleTypeEnum.WEBHOOK,
+      }
+    }, [form.scheduleType.value?.value])
 
   // Helper function to create InputSource object from URL
   const createInputSourceFromUrl = (url: string): InputSource => {
@@ -293,6 +298,7 @@ const CreateEditAgentTaskInner = ({
         scheduledAt: formValue.scheduledAt || undefined,
         intervalMinutes: formValue.intervalMinutes || undefined,
         triggeredByTask: formValue.triggeredByTask?.value || undefined,
+        webhookValidateSignature: formValue.webhookValidateSignature ?? true,
         maxExecutions: formValue.maxExecutions || undefined,
       }
 
@@ -610,6 +616,88 @@ const CreateEditAgentTaskInner = ({
               <p className="mt-1 text-xs text-primary-400">
                 This task will be executed when the selected task completes successfully
               </p>
+            </div>
+          )}
+
+          {isScheduleTypeWebhook && (
+            <div className="col-span-2 space-y-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="webhookValidateSignature"
+                  checked={form.webhookValidateSignature.value}
+                  onChange={(e) =>
+                    createFormFieldChangeHandler(form.webhookValidateSignature)(e.target.checked)
+                  }
+                  className="h-4 w-4 rounded border-primary-300 text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="webhookValidateSignature" className="text-sm text-primary-600">
+                  Validate webhook signature (recommended for security)
+                </label>
+              </div>
+
+              {initialData?.webhookUrl && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-primary-600">
+                      Webhook URL
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={initialData.webhookUrl}
+                        className="flex-1 rounded-md border border-primary-200 bg-primary-50 p-2 font-mono text-sm text-primary-700"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(initialData.webhookUrl || '')
+                        }}
+                        className="rounded-md bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+
+                  {initialData.webhookSecret && (
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-primary-600">
+                        Webhook Secret
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          readOnly
+                          value={initialData.webhookSecret}
+                          className="flex-1 rounded-md border border-primary-200 bg-primary-50 p-2 font-mono text-sm text-primary-700"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(initialData.webhookSecret || '')
+                          }}
+                          className="rounded-md bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      <p className="mt-1 text-xs text-primary-400">
+                        Use this secret to sign your webhook requests
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!initialData && (
+                <p className="text-sm text-primary-500">
+                  Webhook URL and secret will be generated after creating the task.
+                </p>
+              )}
+
+              <WebhookHelp />
             </div>
           )}
         </div>
