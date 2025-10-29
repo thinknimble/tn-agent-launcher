@@ -1,0 +1,45 @@
+name: 'Setup Terraform'
+description: 'Initializes Terraform backend and workspace'
+
+inputs:
+  environment:
+    description: 'Environment name'
+    required: true
+  service_name:
+    description: 'Service name'
+    required: false
+    default: 'tn-agent-launcher'
+  terraform_version:
+    description: 'Terraform version'
+    required: false
+    default: '1.0.11'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform_version }}
+
+    - name: Initialize Terraform Backend
+      shell: bash
+      run: |
+        # Use the init_backend script with environment-specific configuration
+        ./scripts/init_backend.sh -e "${{ inputs.environment }}" -s "${{ inputs.service_name }}"
+
+    - name: Create and Select Terraform Workspace
+      shell: bash
+      run: |
+        cd terraform
+        
+        # Check if workspace already exists
+        if terraform workspace list | grep -q "${{ inputs.environment }}"; then
+          echo "📋 Workspace '${{ inputs.environment }}' exists, selecting it"
+          terraform workspace select ${{ inputs.environment }}
+        else
+          echo "📋 Creating new workspace: ${{ inputs.environment }}"
+          terraform workspace new ${{ inputs.environment }}
+        fi
+        
+        echo "✅ Using Terraform workspace: $(terraform workspace show)"

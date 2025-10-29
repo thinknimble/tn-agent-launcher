@@ -1,0 +1,184 @@
+name: 'Setup Environment Variables'
+description: 'Sets up environment variables based on GitHub context'
+
+inputs:
+  manual_environment:
+    description: 'Manual environment name for workflow_dispatch'
+    required: false
+    default: ''
+
+outputs:
+  environment:
+    description: 'Environment name'
+    value: ${{ steps.env-vars.outputs.environment }}
+  image_tag:
+    description: 'Docker image tag'
+    value: ${{ steps.env-vars.outputs.image_tag }}
+  is_pr:
+    description: 'Whether this is a PR deployment'
+    value: ${{ steps.env-vars.outputs.is_pr }}
+  account_id:
+    description: 'AWS Account ID'
+    value: ${{ steps.env-vars.outputs.account_id }}
+  role_arn:
+    description: 'AWS Role ARN'
+    value: ${{ steps.env-vars.outputs.role_arn }}
+  ecr_registry:
+    description: 'ECR Registry URL'
+    value: ${{ steps.env-vars.outputs.ecr_registry }}
+  aws_region:
+    description: 'AWS Region'
+    value: ${{ steps.env-vars.outputs.aws_region }}
+  account:
+    description: 'Account name'
+    value: ${{ steps.env-vars.outputs.account }}
+  secrets_bucket:
+    description: 'Secrets bucket name'
+    value: ${{ steps.env-vars.outputs.secrets_bucket }}
+  base_domain:
+    description: 'Base domain'
+    value: ${{ steps.env-vars.outputs.base_domain }}
+  use_custom_domain:
+    description: 'Whether to use custom domain'
+    value: ${{ steps.env-vars.outputs.use_custom_domain }}
+  custom_domain:
+    description: 'Custom domain name'
+    value: ${{ steps.env-vars.outputs.custom_domain }}
+  route53_zone_id:
+    description: 'Route53 hosted zone ID'
+    value: ${{ steps.env-vars.outputs.route53_zone_id }}
+  certificate_arn:
+    description: 'SSL certificate ARN'
+    value: ${{ steps.env-vars.outputs.certificate_arn }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set environment variables
+      id: env-vars
+      shell: bash
+      run: |
+        # Determine environment name based on trigger
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          ENV_NAME="pr-${{ github.event.number }}"
+          echo "environment=$ENV_NAME" >> $GITHUB_OUTPUT
+          echo "image_tag=$ENV_NAME-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "is_pr=true" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.manual_environment }}" ]]; then
+          ENV_NAME="${{ inputs.manual_environment }}"
+          echo "environment=$ENV_NAME" >> $GITHUB_OUTPUT
+          echo "image_tag=$ENV_NAME-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "is_pr=false" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          ENV_NAME="main"
+          echo "environment=$ENV_NAME" >> $GITHUB_OUTPUT
+          echo "image_tag=$ENV_NAME-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "is_pr=false" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+          ENV_NAME="staging"
+          echo "environment=$ENV_NAME" >> $GITHUB_OUTPUT
+          echo "image_tag=$ENV_NAME-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "is_pr=false" >> $GITHUB_OUTPUT
+        fi
+        
+        # Get environment configuration from centralized config
+        echo "🔍 Looking up configuration for environment: $ENV_NAME"
+        
+        # Use existing get-env-config.sh script if available
+        if [[ -f ".github/scripts/get-env-config.sh" ]]; then
+          ENV_CONFIG=$(.github/scripts/get-env-config.sh "$ENV_NAME")
+          
+          # Parse the environment configuration
+          REGION=$(echo "$ENV_CONFIG" | grep "^REGION=" | cut -d= -f2)
+          ACCOUNT=$(echo "$ENV_CONFIG" | grep "^ACCOUNT=" | cut -d= -f2)
+          SECRETS_BUCKET=$(echo "$ENV_CONFIG" | grep "^SECRETS_BUCKET=" | cut -d= -f2)
+          BASE_DOMAIN=$(echo "$ENV_CONFIG" | grep "^BASE_DOMAIN=" | cut -d= -f2)
+          USE_CUSTOM_DOMAIN=$(echo "$ENV_CONFIG" | grep "^USE_CUSTOM_DOMAIN=" | cut -d= -f2)
+          CUSTOM_DOMAIN=$(echo "$ENV_CONFIG" | grep "^CUSTOM_DOMAIN=" | cut -d= -f2)
+          ROUTE53_ZONE_ID=$(echo "$ENV_CONFIG" | grep "^ROUTE53_ZONE_ID=" | cut -d= -f2)
+          CERTIFICATE_ARN=$(echo "$ENV_CONFIG" | grep "^CERTIFICATE_ARN=" | cut -d= -f2)
+          ACCOUNT_ID=$(echo "$ENV_CONFIG" | grep "^ACCOUNT_ID=" | cut -d= -f2)
+          ROLE_ARN=$(echo "$ENV_CONFIG" | grep "^ROLE_ARN=" | cut -d= -f2)
+          
+          # Set outputs
+          echo "aws_region=$REGION" >> $GITHUB_OUTPUT
+          echo "account=$ACCOUNT" >> $GITHUB_OUTPUT
+          echo "secrets_bucket=$SECRETS_BUCKET" >> $GITHUB_OUTPUT
+          echo "base_domain=$BASE_DOMAIN" >> $GITHUB_OUTPUT
+          echo "use_custom_domain=$USE_CUSTOM_DOMAIN" >> $GITHUB_OUTPUT
+          echo "custom_domain=$CUSTOM_DOMAIN" >> $GITHUB_OUTPUT
+          echo "route53_zone_id=$ROUTE53_ZONE_ID" >> $GITHUB_OUTPUT
+          echo "certificate_arn=$CERTIFICATE_ARN" >> $GITHUB_OUTPUT
+          
+          if [[ -n "$ACCOUNT_ID" ]]; then
+            echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+            echo "ecr_registry=$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com" >> $GITHUB_OUTPUT
+          else
+            echo "account_id=${{ vars.AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+            echo "ecr_registry=${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.$REGION.amazonaws.com" >> $GITHUB_OUTPUT
+          fi
+          
+          if [[ -n "$ROLE_ARN" ]]; then
+            echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+          else
+            echo "❌ No role ARN found in configuration for environment: $ENV_NAME"
+            echo "💡 Please add 'role_arn' field to configuration for this environment"
+            exit 1
+          fi
+          
+          echo "✅ Environment '$ENV_NAME' configured for account '$ACCOUNT' in region '$REGION'"
+        
+        else
+          # Fallback to simple environments.json approach
+          echo "⚠️ No .github/scripts/get-env-config.sh found, using fallback approach"
+          
+          # Check if environments.json exists
+          if [[ -f "environments.json" ]]; then
+            CONFIG_FILE="environments.json"
+          elif [[ -f ".github/environments.json" ]]; then
+            CONFIG_FILE=".github/environments.json"
+          else
+            echo "❌ No environments.json found in root or .github directory"
+            echo "💡 Please create environments.json with your environment configurations"
+            exit 1
+          fi
+          
+          echo "📄 Using config file: $CONFIG_FILE"
+          
+          # Parse environment configuration
+          CONFIG=$(jq -r --arg env "$ENV_NAME" '.environments[$env] // empty' "$CONFIG_FILE")
+          
+          if [[ -z "$CONFIG" || "$CONFIG" == "null" ]]; then
+            echo "❌ No configuration found for environment: $ENV_NAME"
+            echo "💡 Please add configuration for '$ENV_NAME' to $CONFIG_FILE"
+            exit 1
+          fi
+          
+          # Extract values
+          ACCOUNT_ID=$(echo "$CONFIG" | jq -r '.account_id // empty')
+          ROLE_ARN=$(echo "$CONFIG" | jq -r '.role_arn // empty')
+          REGION=$(echo "$CONFIG" | jq -r '.aws_region // "us-east-1"')
+          
+          # Validate required fields
+          if [[ -z "$ACCOUNT_ID" ]]; then
+            echo "❌ No account_id found in configuration for environment: $ENV_NAME"
+            echo "💡 Please add 'account_id' field to environments.json for this environment"
+            exit 1
+          else
+            echo "✅ Using account ID from environment config: $ACCOUNT_ID"
+            echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          fi
+          
+          if [[ -z "$ROLE_ARN" ]]; then
+            echo "❌ No role ARN found in configuration for environment: $ENV_NAME"
+            echo "💡 Please add 'role_arn' field to environments.json for this environment"
+            exit 1
+          else
+            echo "✅ Using role ARN from environment config: $ROLE_ARN"
+            echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+          fi
+          
+          # Set other outputs with defaults
+          echo "aws_region=$REGION" >> $GITHUB_OUTPUT
+          echo "ecr_registry=$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com" >> $GITHUB_OUTPUT
+        fi
