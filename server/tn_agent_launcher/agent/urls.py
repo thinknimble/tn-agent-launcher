@@ -8,7 +8,6 @@ from .views import (
     AgentTaskExecutionViewSet,
     AgentTaskViewSet,
     ProjectEnvironmentSecretViewSet,
-    WebhookReceiverViewSet,
 )
 
 router = routers.SimpleRouter()

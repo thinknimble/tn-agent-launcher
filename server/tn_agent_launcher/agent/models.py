@@ -9,6 +9,7 @@ from pydantic_ai import Agent
 
 from tn_agent_launcher.common.models import AbstractBaseModel
 
+
 class AgentInstance(AbstractBaseModel):
     class ProviderChoices(models.TextChoices):
         GEMINI = "GEMINI", "Google Gemini"
@@ -56,8 +57,6 @@ class AgentInstance(AbstractBaseModel):
         ordering = ["friendly_name"]
 
     def clean(self):
-
-
         errors = {}
 
         # Validate that BEDROCK provider requires use_lambda
@@ -209,8 +208,6 @@ class AgentTask(AbstractBaseModel):
             self._set_next_execution()
             # Generate webhook secret for webhook tasks
             if self.schedule_type == self.ScheduleTypeChoices.WEBHOOK and not self.webhook_secret:
-                
-
                 self.webhook_secret = secrets.token_urlsafe(32)
         else:
             # Handle state transitions for existing tasks
@@ -238,8 +235,6 @@ class AgentTask(AbstractBaseModel):
         elif self.schedule_type == self.ScheduleTypeChoices.WEBHOOK:
             # Webhook executions are triggered externally, not scheduled
             return None
-
-
 
         base_time = self.last_executed_at or timezone.now()
 

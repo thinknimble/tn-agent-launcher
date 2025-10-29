@@ -1,15 +1,20 @@
+import hashlib
+import hmac
+import json
 import uuid
 
+from background_task.models import Task
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.core.files.storage import get_storage_class
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-import hashlib
-import hmac
-import json
+
+from tn_agent_launcher.utils.sandbox import SandboxManager
+
 from .filters import AgentInstanceFilter
 from .models import (
     AgentInstance,
@@ -143,14 +148,39 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
                 return Response(
                     {"error": "Invalid webhook signature"}, status=status.HTTP_401_UNAUTHORIZED
                 )
-
+        payload = None
         # Parse JSON payload
         try:
-            payload = request.data
+            payload = request.data  # noqa
+
         except json.JSONDecodeError:
-            return Response(
-                {"error": "Invalid JSON payload"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Invalid JSON payload"}, status=status.HTTP_400_BAD_REQUEST)
+        # Convert payload to input sources if it contains data
+        if payload and isinstance(payload, dict) and "data" in payload:
+            with transaction.atomic():
+                sandbox = SandboxManager(base_name=f"task_{task.id}_webhook")
+                with sandbox as sandbox_dir:
+                    filename = "input.json"
+                    file_path = sandbox_dir / filename
+                    with open(file_path, "w") as f:
+                        json.dump(payload["data"], f)
+
+                    storage_class = get_storage_class(settings.DEFAULT_FILE_STORAGE)
+                    storage = storage_class()
+
+                    # Generate unique key for the file
+                    aws_location = getattr(settings, "AWS_LOCATION", "")
+                    if aws_location:
+                        file_key = f"{storage.location}/input-sources/{uuid.uuid4()}/{filename}"
+                    else:
+                        file_key = f"input-sources/{uuid.uuid4()}/{filename}"
+
+                    with open(file_path, "rb") as f:
+                        storage.save(file_key, f)
+
+                    # Store the URL of the uploaded file
+                    task.input_sources = [storage.url(file_key)]
+                    task.save()
 
         # Schedule task execution
         execution = schedule_agent_task_execution(task.id, force_execute=True)
@@ -252,8 +282,6 @@ class AgentTaskExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         # Try to cancel the background task if it exists
         if execution.background_task_id:
             try:
-                from background_task.models import Task
-
                 bg_task = Task.objects.get(id=execution.background_task_id)
                 bg_task.delete()
             except Task.DoesNotExist:
@@ -283,82 +311,3 @@ class ProjectEnvironmentSecretViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
-
-
-class WebhookReceiverViewSet(viewsets.ViewSet):
-    """Webhook receiver for agent tasks"""
-
-    permission_classes = []  # Public endpoint, uses signature validation instead
-
-    def create(self, request, task_id=None):
-        """Receive webhook and trigger task execution"""
-
-
-        try:
-            # Get the task
-            task = AgentTask.objects.get(id=task_id)
-        except AgentTask.DoesNotExist:
-            return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Verify task is a webhook task
-        if task.schedule_type != AgentTask.ScheduleTypeChoices.WEBHOOK:
-            return Response(
-                {"error": "Task is not configured for webhook triggers"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Verify task is active
-        if task.status != AgentTask.StatusChoices.ACTIVE:
-            return Response(
-                {"error": "Task is not active"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Validate signature if enabled
-        if task.webhook_validate_signature:
-            signature = request.headers.get("X-Webhook-Signature")
-            if not signature:
-                return Response(
-                    {"error": "Missing webhook signature"}, status=status.HTTP_401_UNAUTHORIZED
-                )
-
-            # Calculate expected signature
-            body = request.body
-            expected_signature = hmac.new(
-                task.webhook_secret.encode(), body, hashlib.sha256
-            ).hexdigest()
-
-            if not hmac.compare_digest(signature, expected_signature):
-                return Response(
-                    {"error": "Invalid webhook signature"}, status=status.HTTP_401_UNAUTHORIZED
-                )
-
-        # Parse JSON payload
-        try:
-            payload = request.data
-        except json.JSONDecodeError:
-            return Response(
-                {"error": "Invalid JSON payload"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Convert payload to input sources if it contains data
-        # The payload can be used to dynamically generate input sources
-        # For now, we'll just trigger the task with the original input sources
-        # Future enhancement: parse payload to create dynamic input sources
-
-        # Schedule task execution
-        execution = schedule_agent_task_execution(task.id, force_execute=True)
-
-        if execution:
-            return Response(
-                {
-                    "message": "Webhook received and task scheduled",
-                    "execution_id": str(execution.id),
-                    "task_id": str(task.id),
-                },
-                status=status.HTTP_202_ACCEPTED,
-            )
-        else:
-            return Response(
-                {"error": "Failed to schedule task execution"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
