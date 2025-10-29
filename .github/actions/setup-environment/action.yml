@@ -92,17 +92,17 @@ runs:
         if [[ -f ".github/scripts/get-env-config.sh" ]]; then
           ENV_CONFIG=$(.github/scripts/get-env-config.sh "$ENV_NAME")
           
-          # Parse the environment configuration
-          REGION=$(echo "$ENV_CONFIG" | grep "^REGION=" | cut -d= -f2)
-          ACCOUNT=$(echo "$ENV_CONFIG" | grep "^ACCOUNT=" | cut -d= -f2)
-          SECRETS_BUCKET=$(echo "$ENV_CONFIG" | grep "^SECRETS_BUCKET=" | cut -d= -f2)
-          BASE_DOMAIN=$(echo "$ENV_CONFIG" | grep "^BASE_DOMAIN=" | cut -d= -f2)
-          USE_CUSTOM_DOMAIN=$(echo "$ENV_CONFIG" | grep "^USE_CUSTOM_DOMAIN=" | cut -d= -f2)
-          CUSTOM_DOMAIN=$(echo "$ENV_CONFIG" | grep "^CUSTOM_DOMAIN=" | cut -d= -f2)
-          ROUTE53_ZONE_ID=$(echo "$ENV_CONFIG" | grep "^ROUTE53_ZONE_ID=" | cut -d= -f2)
-          CERTIFICATE_ARN=$(echo "$ENV_CONFIG" | grep "^CERTIFICATE_ARN=" | cut -d= -f2)
-          ACCOUNT_ID=$(echo "$ENV_CONFIG" | grep "^ACCOUNT_ID=" | cut -d= -f2)
-          ROLE_ARN=$(echo "$ENV_CONFIG" | grep "^ROLE_ARN=" | cut -d= -f2)
+          # Parse the environment configuration (using lowercase keys from get-env-config.sh)
+          REGION=$(echo "$ENV_CONFIG" | grep "^region=" | cut -d= -f2)
+          ACCOUNT=$(echo "$ENV_CONFIG" | grep "^account=" | cut -d= -f2)
+          SECRETS_BUCKET=$(echo "$ENV_CONFIG" | grep "^secrets_bucket=" | cut -d= -f2)
+          BASE_DOMAIN=$(echo "$ENV_CONFIG" | grep "^base_domain=" | cut -d= -f2)
+          USE_CUSTOM_DOMAIN=$(echo "$ENV_CONFIG" | grep "^use_custom_domain=" | cut -d= -f2)
+          CUSTOM_DOMAIN=$(echo "$ENV_CONFIG" | grep "^custom_domain=" | cut -d= -f2)
+          ROUTE53_ZONE_ID=$(echo "$ENV_CONFIG" | grep "^route53_zone_id=" | cut -d= -f2)
+          CERTIFICATE_ARN=$(echo "$ENV_CONFIG" | grep "^certificate_arn=" | cut -d= -f2)
+          ACCOUNT_ID=$(echo "$ENV_CONFIG" | grep "^account_id=" | cut -d= -f2)
+          ROLE_ARN=$(echo "$ENV_CONFIG" | grep "^role_arn=" | cut -d= -f2)
           
           # Set outputs
           echo "aws_region=$REGION" >> $GITHUB_OUTPUT
