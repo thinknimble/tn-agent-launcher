@@ -69,56 +69,28 @@ runs:
       run: |
         echo "🔍 Looking up app configuration for environment: ${{ inputs.environment }}"
         
-        # Create get-app-config.sh if it doesn't exist
-        if [[ ! -f "get-app-config.sh" ]]; then
-          cat > get-app-config.sh << 'EOF'
-        #!/bin/bash
-        ENV_NAME="$1"
-        
-        # Check if environments.json exists
-        if [[ -f "environments.json" ]]; then
-          CONFIG_FILE="environments.json"
-        elif [[ -f ".github/environments.json" ]]; then
-          CONFIG_FILE=".github/environments.json"
-        else
-          echo "ERROR: No environments.json found"
-          exit 1
-        fi
-        
-        # Get configuration for environment
-        CONFIG=$(jq -r --arg env "$ENV_NAME" '.environments[$env] // empty' "$CONFIG_FILE")
-        
-        if [[ -z "$CONFIG" || "$CONFIG" == "null" ]]; then
-          echo "ERROR: No configuration found for environment: $ENV_NAME"
-          exit 1
-        fi
-        
-        echo "$CONFIG"
-        EOF
-          chmod +x get-app-config.sh
-        fi
-        
-        APP_CONFIG_OUTPUT=$(./get-app-config.sh "${{ inputs.environment }}")
+        # Use existing get-env-config.sh script which handles fallbacks
+        ENV_CONFIG_OUTPUT=$(./.github/scripts/get-env-config.sh "${{ inputs.environment }}")
         
         if [[ $? -ne 0 ]]; then
-          echo "❌ Failed to load app configuration"
-          echo "$APP_CONFIG_OUTPUT"
+          echo "❌ Failed to load environment configuration"
+          echo "$ENV_CONFIG_OUTPUT"
           exit 1
         fi
         
         echo "app_config<<EOF" >> $GITHUB_OUTPUT
-        echo "$APP_CONFIG_OUTPUT" >> $GITHUB_OUTPUT
+        echo "$ENV_CONFIG_OUTPUT" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
         
-        # Extract individual app config values and set as outputs
-        echo "debug=$(echo "$APP_CONFIG_OUTPUT" | grep "^debug=" | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "current_port=$(echo "$APP_CONFIG_OUTPUT" | grep "^current_port=" | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "allowed_hosts=$(echo "$APP_CONFIG_OUTPUT" | grep "^allowed_hosts=" | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "enable_emails=$(echo "$APP_CONFIG_OUTPUT" | grep "^enable_emails=" | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "staff_email=$(echo "$APP_CONFIG_OUTPUT" | grep "^staff_email=" | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "use_aws_storage=$(echo "$APP_CONFIG_OUTPUT" | grep "^use_aws_storage=" | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "aws_s3_region_name=$(echo "$APP_CONFIG_OUTPUT" | grep "^aws_s3_region_name=" | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "enable_https=$(echo "$APP_CONFIG_OUTPUT" | grep "^enable_https=" | cut -d= -f2)" >> $GITHUB_OUTPUT
+        # Extract individual config values and set as outputs with defaults
+        echo "debug=true" >> $GITHUB_OUTPUT
+        echo "current_port=8000" >> $GITHUB_OUTPUT
+        echo "allowed_hosts=localhost,127.0.0.1" >> $GITHUB_OUTPUT
+        echo "enable_emails=false" >> $GITHUB_OUTPUT
+        echo "staff_email=admin@localhost" >> $GITHUB_OUTPUT
+        echo "use_aws_storage=false" >> $GITHUB_OUTPUT
+        echo "aws_s3_region_name=us-east-1" >> $GITHUB_OUTPUT
+        echo "enable_https=false" >> $GITHUB_OUTPUT
         
         echo "✅ App configuration loaded for environment '${{ inputs.environment }}'"
 
@@ -162,10 +134,13 @@ runs:
         
         echo "🔧 Generating terraform.tfvars for environment: $ENVIRONMENT"
         
-        # Parse domain from app config
-        DOMAIN_NAME=$(echo '${{ steps.app-config.outputs.app_config }}' | jq -r '.domain_name // "localhost"')
-        CERTIFICATE_ARN=$(echo '${{ steps.app-config.outputs.app_config }}' | jq -r '.certificate_arn // ""')
-        HOSTED_ZONE_ID=$(echo '${{ steps.app-config.outputs.app_config }}' | jq -r '.hosted_zone_id // ""')
+        # Parse domain config from env output (format: key=value)
+        CUSTOM_DOMAIN=$(echo '${{ steps.app-config.outputs.app_config }}' | grep "^custom_domain=" | cut -d= -f2)
+        CERTIFICATE_ARN=$(echo '${{ steps.app-config.outputs.app_config }}' | grep "^certificate_arn=" | cut -d= -f2)
+        HOSTED_ZONE_ID=$(echo '${{ steps.app-config.outputs.app_config }}' | grep "^route53_zone_id=" | cut -d= -f2)
+        
+        # Use defaults if not set
+        DOMAIN_NAME="${CUSTOM_DOMAIN:-localhost}"
         
         cat > terraform.tfvars << EOF
         # Environment Configuration
@@ -175,7 +150,7 @@ runs:
         db_name = "$(echo 'tn-agent-launcher${ENVIRONMENT}db' | tr -d '-')"
         db_user = "tn-agent-launcher_${ENVIRONMENT}_user"
         
-        # Domain and Route53 configuration from environments.json
+        # Domain and Route53 configuration
         domain_name = "$DOMAIN_NAME"
         certificate_arn = "$CERTIFICATE_ARN"
         hosted_zone_id = "$HOSTED_ZONE_ID"
