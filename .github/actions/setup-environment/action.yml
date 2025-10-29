@@ -6,6 +6,10 @@ inputs:
     description: 'Manual environment name for workflow_dispatch'
     required: false
     default: ''
+  aws_account_id:
+    description: 'AWS Account ID fallback'
+    required: false
+    default: ''
 
 outputs:
   environment:
@@ -114,8 +118,8 @@ runs:
             echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
             echo "ecr_registry=$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com" >> $GITHUB_OUTPUT
           else
-            echo "account_id=${{ vars.AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
-            echo "ecr_registry=${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.$REGION.amazonaws.com" >> $GITHUB_OUTPUT
+            echo "account_id=${{ inputs.aws_account_id }}" >> $GITHUB_OUTPUT
+            echo "ecr_registry=${{ inputs.aws_account_id }}.dkr.ecr.$REGION.amazonaws.com" >> $GITHUB_OUTPUT
           fi
           
           if [[ -n "$ROLE_ARN" ]]; then

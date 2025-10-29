@@ -40,6 +40,7 @@ jobs:
         uses: ./.github/actions/setup-environment
         with:
           manual_environment: ${{ github.event.inputs.environment }}
+          aws_account_id: ${{ vars.AWS_ACCOUNT_ID }}
 
       - name: Setup AWS
         uses: ./.github/actions/setup-aws
@@ -146,6 +147,8 @@ jobs:
       - name: Setup Environment  
         id: setup-env
         uses: ./.github/actions/setup-environment
+        with:
+          aws_account_id: ${{ vars.AWS_ACCOUNT_ID }}
 
       - name: Setup AWS
         uses: ./.github/actions/setup-aws
@@ -197,6 +200,7 @@ jobs:
         uses: ./.github/actions/setup-environment
         with:
           manual_environment: ${{ github.event.inputs.environment }}
+          aws_account_id: ${{ vars.AWS_ACCOUNT_ID }}
 
       - name: Setup AWS
         uses: ./.github/actions/setup-aws
