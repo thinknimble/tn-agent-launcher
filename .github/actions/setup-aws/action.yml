@@ -10,6 +10,10 @@ inputs:
   aws_region:
     description: 'AWS Region'
     required: true
+  ecr_repository_name:
+    description: 'ECR Repository Name'
+    required: false
+    default: 'tn-agent-launcher-app'
 
 runs:
   using: 'composite'
@@ -25,7 +29,7 @@ runs:
     - name: Create ECR repository if it doesn't exist
       shell: bash
       run: |
-        REPO_NAME="${{ vars.ECR_REPOSITORY_NAME || 'tn-agent-launcher-app' }}"
+        REPO_NAME="${{ inputs.ecr_repository_name }}"
         echo "Checking ECR repository: $REPO_NAME"
         
         if ! aws ecr describe-repositories --repository-names "$REPO_NAME" >/dev/null 2>&1; then

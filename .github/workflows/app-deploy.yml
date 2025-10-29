@@ -48,6 +48,7 @@ jobs:
           account_id: ${{ steps.setup-env.outputs.account_id }}
           role_arn: ${{ steps.setup-env.outputs.role_arn }}
           aws_region: ${{ env.AWS_REGION }}
+          ecr_repository_name: ${{ vars.ECR_REPOSITORY_NAME || 'tn-agent-launcher-app' }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -164,6 +165,7 @@ jobs:
           account_id: ${{ steps.setup-env.outputs.account_id }}
           role_arn: ${{ steps.setup-env.outputs.role_arn }}
           aws_region: ${{ env.AWS_REGION }}
+          ecr_repository_name: ${{ vars.ECR_REPOSITORY_NAME || 'tn-agent-launcher-app' }}
 
       - name: Setup Terraform
         uses: ./.github/actions/setup-terraform
@@ -216,6 +218,7 @@ jobs:
           account_id: ${{ steps.setup-env.outputs.account_id }}
           role_arn: ${{ steps.setup-env.outputs.role_arn }}
           aws_region: ${{ env.AWS_REGION }}
+          ecr_repository_name: ${{ vars.ECR_REPOSITORY_NAME || 'tn-agent-launcher-app' }}
 
       - name: Setup Terraform
         uses: ./.github/actions/setup-terraform
