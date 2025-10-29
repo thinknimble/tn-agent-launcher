@@ -1,4 +1,5 @@
 import pytest
+
 from tn_agent_launcher.agent.factories import AgentInstanceFactory, AgentTaskFactory
 
 
