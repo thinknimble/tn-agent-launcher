@@ -63,8 +63,10 @@ class ExecutionManager:
         # Process input sources
         processed_inputs = self.input_processor.process_input_sources(task.input_sources or [])
 
-        # Get agent instance instruction
-        agent_instruction = getattr(task.agent_instance, "instruction", None)
+        # Get agent instance instruction if append_agent_instruction is True
+        agent_instruction = None
+        if getattr(task, "append_agent_instruction", True):
+            agent_instruction = getattr(task.agent_instance, "instruction", None)
 
         # Create enhanced instruction with agent instruction
         enhanced_instruction = self.input_processor.create_enhanced_instruction(

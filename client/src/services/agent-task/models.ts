@@ -106,6 +106,7 @@ export const agentTaskShape = {
   agentInstance: z.string().uuid(),
   agentInstanceRef: z.object(agentInstanceShape).optional().nullable(), // Expanded agent instance when included
   instruction: z.string(),
+  appendAgentInstruction: z.boolean().default(true),
   variables: z.record(z.any()).optional(),
   inputSources: z.array(z.object(inputSourceShape)).optional().nullable(),
   scheduleType: z.nativeEnum(scheduleTypeEnum),
@@ -129,6 +130,7 @@ export const createAgentTaskShape = {
   description: agentTaskShape.description,
   agentInstance: agentTaskShape.agentInstance,
   instruction: agentTaskShape.instruction,
+  appendAgentInstruction: agentTaskShape.appendAgentInstruction,
   variables: agentTaskShape.variables,
   inputSources: agentTaskShape.inputSources,
   scheduleType: agentTaskShape.scheduleType,
