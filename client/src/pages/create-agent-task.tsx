@@ -7,6 +7,7 @@ import Select from 'react-dropdown-select'
 
 import { Button } from 'src/components/button'
 import { Input } from 'src/components/input'
+import { PasswordInput } from 'src/components/password-input'
 import { ErrorsList } from 'src/components/errors'
 import { InputSourceUploader } from 'src/components/input-source-uploader'
 import { DocumentProcessingConfigModal } from 'src/components/document-processing-config'
@@ -50,8 +51,10 @@ const CreateEditAgentTaskInner = ({
   const [urlConfigModalOpen, setUrlConfigModalOpen] = useState(false)
   const [currentUrlIndex, setCurrentUrlIndex] = useState<number | null>(null)
   const [instructionVariables, setInstructionVariables] = useState<Record<string, any>>({})
-
-  console.log('Agent Task Form State:', projectId)
+  const [createdWebhookData, setCreatedWebhookData] = useState<{
+    webhookUrl?: string
+    webhookSecret?: string
+  } | null>(null)
 
   const { data: agentInstances } = useQuery({
     ...agentInstanceQueries.list(new Pagination(), {
@@ -94,6 +97,14 @@ const CreateEditAgentTaskInner = ({
   const { mutate: create, isPending: isCreating } = useMutation({
     mutationFn: agentTaskApi.create,
     async onSuccess(data) {
+      // Store webhook data if this is a webhook task
+      if (data.webhookUrl && data.webhookSecret) {
+        setCreatedWebhookData({
+          webhookUrl: data.webhookUrl,
+          webhookSecret: data.webhookSecret,
+        })
+      }
+
       // Invalidate all agent-tasks queries with prefix matching
       await queryClient.invalidateQueries({
         queryKey: ['agent-tasks'],
@@ -106,12 +117,41 @@ const CreateEditAgentTaskInner = ({
   const { mutate: update, isPending: isUpdating } = useMutation({
     mutationFn: agentTaskApi.update,
     async onSuccess(data) {
+      // Store webhook data if this is a webhook task and we have new data
+      if (data.webhookUrl && data.webhookSecret) {
+        setCreatedWebhookData({
+          webhookUrl: data.webhookUrl,
+          webhookSecret: data.webhookSecret,
+        })
+      }
+
       // Invalidate all agent-tasks queries with prefix matching
       await queryClient.invalidateQueries({
         queryKey: ['agent-tasks'],
         exact: false,
       })
       onSuccess(data)
+    },
+  })
+
+  const { mutate: regenerateWebhookSecret, isPending: isRegenerating } = useMutation({
+    mutationFn: agentTaskApi.csc.regenerateWebhookSecret,
+    async onSuccess(data) {
+      // Update both initial data and created webhook data
+      if (initialData) {
+        // Update the initial data reference
+        Object.assign(initialData, data)
+      }
+      setCreatedWebhookData({
+        webhookUrl: (data as any).webhookUrl,
+        webhookSecret: (data as any).webhookSecret,
+      })
+
+      // Invalidate queries
+      await queryClient.invalidateQueries({
+        queryKey: ['agent-tasks'],
+        exact: false,
+      })
     },
   })
 
@@ -228,7 +268,7 @@ const CreateEditAgentTaskInner = ({
   useEffect(() => {
     if (preselectedAgent && !isEditing && !duplicateFrom) {
       const selectedAgent = { label: preselectedAgent.friendlyName, value: preselectedAgent.id }
-      console.log('Preselecting agent:', selectedAgent)
+
       if (selectedAgent) {
         const updatedForm = new AgentTaskForm() as TAgentTaskForm
         updatedForm.agentInstance.value = selectedAgent
@@ -286,7 +326,6 @@ const CreateEditAgentTaskInner = ({
     e.preventDefault()
     if (form.isValid) {
       const formValue = form.value
-      console.log(form.value)
       const data = {
         name: formValue._name || '',
         description: formValue.description || '',
@@ -303,13 +342,13 @@ const CreateEditAgentTaskInner = ({
       }
 
       if (isEditing && initialData) {
-        console.log('Updating with data:', { ...data, id: initialData.id })
         update({ ...data, id: initialData.id })
       } else {
         create(data)
       }
     }
   }
+  console.log(form.errors)
 
   return (
     <div className="rounded-lg border border-primary-200 bg-white p-6 shadow-sm">
@@ -636,62 +675,80 @@ const CreateEditAgentTaskInner = ({
                 </label>
               </div>
 
-              {initialData?.webhookUrl && (
+              {(initialData?.webhookUrl || createdWebhookData?.webhookUrl) && (
                 <div className="space-y-3">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-primary-600">
-                      Webhook URL
-                    </label>
                     <div className="flex gap-2">
-                      <input
+                      <Input
+                        label="Webhook URL"
                         type="text"
-                        readOnly
-                        value={initialData.webhookUrl}
-                        className="bg-primary-50 flex-1 rounded-md border border-primary-200 p-2 font-mono text-sm text-primary-700"
+                        disabled
+                        value={createdWebhookData?.webhookUrl || initialData?.webhookUrl || ''}
+                        className="bg-primary-50 flex-1 border-primary-200 font-mono text-sm"
                       />
                       <button
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(initialData.webhookUrl || '')
+                          navigator.clipboard.writeText(
+                            createdWebhookData?.webhookUrl || initialData?.webhookUrl || '',
+                          )
                         }}
-                        className="rounded-md bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700"
+                        className="mt-6 rounded-md bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700"
                       >
                         Copy
                       </button>
                     </div>
                   </div>
 
-                  {initialData.webhookSecret && (
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-primary-600">
-                        Webhook Secret
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="password"
-                          readOnly
-                          value={initialData.webhookSecret}
-                          className="bg-primary-50 flex-1 rounded-md border border-primary-200 p-2 font-mono text-sm text-primary-700"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(initialData.webhookSecret || '')
-                          }}
-                          className="rounded-md bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700"
-                        >
-                          Copy
-                        </button>
+                  {form.webhookValidateSignature.value &&
+                    (initialData?.webhookSecret || createdWebhookData?.webhookSecret) && (
+                      <div>
+                        <div className="flex items-center justify-between">
+                          {initialData?.id && (
+                            <button
+                              type="button"
+                              onClick={() => regenerateWebhookSecret(initialData.id)}
+                              disabled={isRegenerating}
+                              className="mb-2 rounded-md bg-yellow-600 px-3 py-1 text-xs text-white hover:bg-yellow-700 disabled:opacity-50"
+                            >
+                              {isRegenerating ? 'Regenerating...' : 'Regenerate Secret'}
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <PasswordInput
+                            label="Webhook Secret"
+                            disabled={true}
+                            value={
+                              createdWebhookData?.webhookSecret || initialData?.webhookSecret || ''
+                            }
+                            className="bg-primary-50 flex-1 border-primary-200 font-mono text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(
+                                createdWebhookData?.webhookSecret ||
+                                  initialData?.webhookSecret ||
+                                  '',
+                              )
+                            }}
+                            className="mt-6 rounded-md bg-primary-600 px-4 py-2 text-sm text-white hover:bg-primary-700"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        {form.webhookValidateSignature.value && (
+                          <p className="mt-1 text-xs text-primary-400">
+                            Use this secret to sign your webhook requests. Keep this secure!
+                          </p>
+                        )}
                       </div>
-                      <p className="mt-1 text-xs text-primary-400">
-                        Use this secret to sign your webhook requests
-                      </p>
-                    </div>
-                  )}
+                    )}
                 </div>
               )}
 
-              {!initialData && (
+              {!initialData && !createdWebhookData && (
                 <p className="text-sm text-primary-500">
                   Webhook URL and secret will be generated after creating the task.
                 </p>

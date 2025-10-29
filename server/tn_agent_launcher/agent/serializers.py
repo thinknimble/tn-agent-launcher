@@ -86,6 +86,8 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "created",
             "last_edited",
             "webhook_validate_signature",
+            "webhook_url",
+            "webhook_secret",
         ]
         read_only_fields = [
             "id",
@@ -96,6 +98,8 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "execution_count",
             "agent_instance_name",
             "triggered_by_task_name",
+            "webhook_url",
+            "webhook_secret",
         ]
 
     def get_next_execution_display(self, obj):

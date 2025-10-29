@@ -105,6 +105,27 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(task)
         return Response(serializer.data)
 
+    @action(detail=True, methods=["post"])
+    def regenerate_webhook_secret(self, request, pk=None):
+        """Regenerate the webhook secret for a webhook task"""
+        task = self.get_object()
+
+        # Verify this is a webhook task
+        if task.schedule_type != AgentTask.ScheduleTypeChoices.WEBHOOK:
+            return Response(
+                {"error": "Task is not configured for webhook triggers"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Generate new webhook secret
+        import secrets
+
+        task.webhook_secret = secrets.token_urlsafe(32)
+        task.save()
+
+        serializer = self.get_serializer(task)
+        return Response(serializer.data)
+
     @action(
         detail=True,
         methods=["post"],
@@ -175,7 +196,18 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
                         storage.save(file_key, f)
 
                     # Store the URL of the uploaded file
-                    task.input_sources = [storage.url(file_key)]
+                    existing_sources = task.input_sources or []
+                    existing_sources.append(
+                        {
+                            "url": storage.url(file_key),
+                            "source_type": "our_s3",
+                            "filename": filename,
+                            "content_type": "application/json",
+                            "size": file_path.stat().st_size,
+                            "skip_preprocessing": True,
+                        }
+                    )
+                    task.input_sources = existing_sources
                     task.save()
 
         # Schedule task execution

@@ -46,6 +46,15 @@ const generatePresignedUrlCall = createCustomServiceCall({
   },
 })
 
+const regenerateWebhookSecretCall = createCustomServiceCall({
+  inputShape: z.string().uuid(),
+  outputShape: agentTaskShape,
+  cb: async ({ client, slashEndingBaseUri, input, utils: { fromApi } }) => {
+    const response = await client.post(`${slashEndingBaseUri}${input}/regenerate_webhook_secret/`)
+    return fromApi(response.data)
+  },
+})
+
 export const agentTaskApi = createApi({
   client: axiosInstance,
   baseUri: '/agents/tasks/',
@@ -59,5 +68,6 @@ export const agentTaskApi = createApi({
     pause: pauseCall,
     resume: resumeCall,
     generatePresignedUrl: generatePresignedUrlCall,
+    regenerateWebhookSecret: regenerateWebhookSecretCall,
   },
 })

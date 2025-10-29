@@ -8,6 +8,7 @@ from encrypted_model_fields.fields import EncryptedTextField
 from pydantic_ai import Agent
 
 from tn_agent_launcher.common.models import AbstractBaseModel
+from tn_agent_launcher.utils.sites import get_site_url
 
 
 class AgentInstance(AbstractBaseModel):
@@ -212,6 +213,13 @@ class AgentTask(AbstractBaseModel):
         else:
             # Handle state transitions for existing tasks
             self._handle_state_transitions()
+            # Generate webhook secret on update if conditions are met
+            if (
+                self.schedule_type == self.ScheduleTypeChoices.WEBHOOK
+                and self.webhook_validate_signature
+                and not self.webhook_secret
+            ):
+                self.webhook_secret = secrets.token_urlsafe(32)
         super().save(*args, **kwargs)
 
     def _set_next_execution(self):
@@ -299,10 +307,8 @@ class AgentTask(AbstractBaseModel):
     def webhook_url(self):
         """Get the webhook URL for this task."""
         if self.schedule_type == self.ScheduleTypeChoices.WEBHOOK:
-            from tn_agent_launcher.utils.sites import get_site_url
-
             base_url = get_site_url()
-            return f"{base_url}/api/webhooks/tasks/{self.id}/"
+            return f"{base_url}/api/agents/tasks/{self.id}/webhook/"
         return None
 
     @property
