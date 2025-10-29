@@ -29,9 +29,6 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: ${{ steps.setup-env.outputs.environment }}
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout code
