@@ -53,14 +53,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Create ECR repository if it doesn't exist
-        run: |
-          aws ecr describe-repositories --repository-names ${{ vars.ECR_REPOSITORY_NAME || 'tn-agent-launcher-app' }} || \
-          aws ecr create-repository --repository-name ${{ vars.ECR_REPOSITORY_NAME || 'tn-agent-launcher-app' }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -85,7 +77,7 @@ jobs:
             --field environment='${{ steps.setup-env.outputs.environment }}' \
             --field description='Deploy to ${{ steps.setup-env.outputs.environment }}' \
             --field auto_merge=false \
-            --field required_contexts='[]'
+            --raw-field required_contexts='[]'
 
       - name: Setup Terraform
         uses: ./.github/actions/setup-terraform
