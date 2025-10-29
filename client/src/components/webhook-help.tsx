@@ -1,6 +1,6 @@
 export const WebhookHelp = () => {
   return (
-    <div className="space-y-4 rounded-lg border border-primary-200 bg-primary-50 p-4 text-sm">
+    <div className="bg-primary-50 space-y-4 rounded-lg border border-primary-200 p-4 text-sm">
       <h3 className="font-semibold text-primary-700">How to Use Webhooks</h3>
 
       <div className="space-y-3">
@@ -12,7 +12,9 @@ export const WebhookHelp = () => {
         </div>
 
         <div>
-          <h4 className="mb-1 font-medium text-primary-600">2. Signature Validation (Recommended)</h4>
+          <h4 className="mb-1 font-medium text-primary-600">
+            2. Signature Validation (Recommended)
+          </h4>
           <p className="text-primary-500">
             When enabled, incoming webhooks must include an{' '}
             <code className="rounded bg-primary-100 px-1 text-xs">X-Webhook-Signature</code> header

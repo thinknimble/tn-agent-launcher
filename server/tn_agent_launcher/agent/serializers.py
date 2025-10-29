@@ -85,6 +85,7 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "execution_count",
             "created",
             "last_edited",
+            "webhook_validate_signature",
         ]
         read_only_fields = [
             "id",

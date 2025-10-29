@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import uuid
+from datetime import datetime
 
 from background_task.models import Task
 from botocore.exceptions import ClientError
@@ -156,24 +157,19 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
         except json.JSONDecodeError:
             return Response({"error": "Invalid JSON payload"}, status=status.HTTP_400_BAD_REQUEST)
         # Convert payload to input sources if it contains data
-        if payload and isinstance(payload, dict) and "data" in payload:
+        if payload and isinstance(payload, dict):
             with transaction.atomic():
                 sandbox = SandboxManager(base_name=f"task_{task.id}_webhook")
                 with sandbox as sandbox_dir:
-                    filename = "input.json"
+                    filename = f"task_{task.id}_{datetime.now().timestamp()}_webhook_payload.json"
                     file_path = sandbox_dir / filename
                     with open(file_path, "w") as f:
-                        json.dump(payload["data"], f)
+                        json.dump(payload, f)
 
                     storage_class = get_storage_class(settings.DEFAULT_FILE_STORAGE)
                     storage = storage_class()
 
-                    # Generate unique key for the file
-                    aws_location = getattr(settings, "AWS_LOCATION", "")
-                    if aws_location:
-                        file_key = f"{storage.location}/input-sources/{uuid.uuid4()}/{filename}"
-                    else:
-                        file_key = f"input-sources/{uuid.uuid4()}/{filename}"
+                    file_key = f"input-sources/{uuid.uuid4()}/{filename}"
 
                     with open(file_path, "rb") as f:
                         storage.save(file_key, f)
@@ -214,13 +210,7 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
             storage_class = get_storage_class(settings.DEFAULT_FILE_STORAGE)
             storage = storage_class()
 
-            # Generate unique key for the file
-            # Use AWS_LOCATION directly instead of storage.location to avoid /media/ duplication
-            aws_location = getattr(settings, "AWS_LOCATION", "")
-            if aws_location:
-                file_key = f"{storage.location}/input-sources/{uuid.uuid4()}/{filename}"
-            else:
-                file_key = f"input-sources/{uuid.uuid4()}/{filename}"
+            file_key = f"{storage.location}/input-sources/{uuid.uuid4()}/{filename}"
 
             # Generate presigned POST using django-storages
             presigned_post = storage.connection.meta.client.generate_presigned_post(

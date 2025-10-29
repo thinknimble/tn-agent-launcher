@@ -647,7 +647,7 @@ const CreateEditAgentTaskInner = ({
                         type="text"
                         readOnly
                         value={initialData.webhookUrl}
-                        className="flex-1 rounded-md border border-primary-200 bg-primary-50 p-2 font-mono text-sm text-primary-700"
+                        className="bg-primary-50 flex-1 rounded-md border border-primary-200 p-2 font-mono text-sm text-primary-700"
                       />
                       <button
                         type="button"
@@ -671,7 +671,7 @@ const CreateEditAgentTaskInner = ({
                           type="password"
                           readOnly
                           value={initialData.webhookSecret}
-                          className="flex-1 rounded-md border border-primary-200 bg-primary-50 p-2 font-mono text-sm text-primary-700"
+                          className="bg-primary-50 flex-1 rounded-md border border-primary-200 p-2 font-mono text-sm text-primary-700"
                         />
                         <button
                           type="button"
