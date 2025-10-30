@@ -142,6 +142,11 @@ runs:
         # Use defaults if not set
         DOMAIN_NAME="${CUSTOM_DOMAIN:-localhost}"
         
+        # Get secrets that were extracted earlier in this step
+        DJANGO_SECRET_KEY=$(echo "$GITHUB_OUTPUT" | grep "^django_secret_key=" | cut -d= -f2 || echo "default-secret-key")
+        FIELD_ENCRYPTION_KEY=$(echo "$GITHUB_OUTPUT" | grep "^field_encryption_key=" | cut -d= -f2 || echo "default-encryption-key")
+        DB_PASSWORD=$(echo "$GITHUB_OUTPUT" | grep "^db_password=" | cut -d= -f2 || echo "default-db-password")
+        
         cat > terraform.tfvars << EOF
         # Environment Configuration
         environment = "$ENVIRONMENT"
@@ -149,6 +154,11 @@ runs:
         # Database Configuration  
         db_name = "$(echo 'tn-agent-launcher${ENVIRONMENT}db' | tr -d '-')"
         db_user = "tn-agent-launcher_${ENVIRONMENT}_user"
+        db_pass = "$DB_PASSWORD"
+        
+        # Security Configuration
+        secret_key = "$DJANGO_SECRET_KEY"
+        field_encryption_key = "$FIELD_ENCRYPTION_KEY"
         
         # Domain and Route53 configuration
         domain_name = "$DOMAIN_NAME"
