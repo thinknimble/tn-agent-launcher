@@ -344,7 +344,8 @@ jobs:
           aws_access_key_id = "${{ steps.secrets.outputs.aws_access_key_id }}"
           aws_secret_access_key = "${{ steps.secrets.outputs.aws_secret_access_key }}"
           playwright_test_user_pass = "${{ steps.secrets.outputs.playwright_test_user_pass }}"
-          
+          field_encryption_key = "${{ steps.secrets.outputs.field_encryption_key }}"
+
           # Database config
           db_name = "$(echo 'tn-agent-launcher${{ steps.env-vars.outputs.environment }}db' | tr -d '-')"
           db_user = "tn-agent-launcher_${{ steps.env-vars.outputs.environment }}_user"
@@ -630,6 +631,7 @@ jobs:
           aws_access_key_id = ""
           aws_secret_access_key = ""
           playwright_test_user_pass = "cleanup_placeholder"
+          field_encryption_key = "cleanup_placeholder"
           
           # Database config placeholders (must match deployment naming for cleanup)
           db_name = "$(echo 'tn-agent-launcher${ENVIRONMENT}db' | tr -d '-')"
@@ -766,7 +768,8 @@ jobs:
           aws_access_key_id = ""
           aws_secret_access_key = ""
           playwright_test_user_pass = "teardown_placeholder"
-          
+          field_encryption_key = "cleanup_placeholder"
+               
           # Database config placeholders (must match deployment naming for teardown)
           db_name = "$(echo 'tn-agent-launcher${ENVIRONMENT}db' | tr -d '-')"
           db_user = "tn-agent-launcher_${ENVIRONMENT}_user"
