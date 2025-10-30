@@ -292,7 +292,7 @@ jobs:
             echo "aws_access_key_id=$(jq -r '.secrets.aws_access_key_id // ""' secrets.json)" >> $GITHUB_OUTPUT
             echo "aws_secret_access_key=$(jq -r '.secrets.aws_secret_access_key // ""' secrets.json)" >> $GITHUB_OUTPUT
             echo "playwright_test_user_pass=$(jq -r '.secrets.playwright_test_user_pass' secrets.json)" >> $GITHUB_OUTPUT
-            echo "field_encryption_key=$(jq -r '.secrets.field_encryption_key // ""' secrets.json)" >> $GITHUB_OUTPUT
+            echo "field_encryption_key=$(jq -r '.secrets.field_encryption_key // "default-encryption-key-change-in-production"' secrets.json)" >> $GITHUB_OUTPUT
             
             echo "✅ Secrets extracted and masked"
           else
