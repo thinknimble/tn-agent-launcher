@@ -161,6 +161,7 @@ INSTALLED_APPS = [
     "tn_agent_launcher.core",
     "tn_agent_launcher.chat",
     "tn_agent_launcher.agent",
+    "tn_agent_launcher.integrations",
     # Django
     "django.contrib.admin",
     "django.contrib.auth",
@@ -435,6 +436,19 @@ else:
     AWS_LAMBDA_REGION = None
     LAMBDA_AGENT_FUNCTION_NAME = None
     BEDROCK_MODEL_ID = None
+
+#
+# Integration System Credentials
+# ------------------------
+# These settings are used for system-wide integrations that can be shared across users
+
+# Google OAuth System Integration
+GOOGLE_OAUTH_CREDENTIALS = config("GOOGLE_OAUTH_CREDENTIALS", default="")
+GOOGLE_OAUTH_REDIRECT_URL = config("GOOGLE_OAUTH_REDIRECT_URL", default="")
+
+# AWS S3 System Integration uses existing AWS settings above:
+# - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (already defined)
+# - AWS_STORAGE_BUCKET_NAME, AWS_LOCATION, AWS_S3_REGION_NAME (already defined when USE_AWS_STORAGE=True)
 
 #
 # STATIC
