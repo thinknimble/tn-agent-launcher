@@ -1,12 +1,20 @@
+import hashlib
+import hmac
+import json
 import uuid
+from datetime import datetime
 
+from background_task.models import Task
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.core.files.storage import get_storage_class
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
+from tn_agent_launcher.utils.sandbox import SandboxManager
 
 from .filters import AgentInstanceFilter
 from .models import (
@@ -97,6 +105,129 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(task)
         return Response(serializer.data)
 
+    @action(detail=True, methods=["post"])
+    def regenerate_webhook_secret(self, request, pk=None):
+        """Regenerate the webhook secret for a webhook task"""
+        task = self.get_object()
+
+        # Verify this is a webhook task
+        if task.schedule_type != AgentTask.ScheduleTypeChoices.WEBHOOK:
+            return Response(
+                {"error": "Task is not configured for webhook triggers"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Generate new webhook secret
+        import secrets
+
+        task.webhook_secret = secrets.token_urlsafe(32)
+        task.save()
+
+        serializer = self.get_serializer(task)
+        return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[],
+        url_path="webhook",
+        url_name="webhook",
+    )
+    def webhook(self, request, pk=None):
+        """Receive webhook and trigger task execution"""
+        try:
+            # Get the task without permission check (public endpoint)
+            task = AgentTask.objects.get(pk=pk)
+        except AgentTask.DoesNotExist:
+            return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Verify task is a webhook task
+        if task.schedule_type != AgentTask.ScheduleTypeChoices.WEBHOOK:
+            return Response(
+                {"error": "Task is not configured for webhook triggers"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Verify task is active
+        if task.status != AgentTask.StatusChoices.ACTIVE:
+            return Response({"error": "Task is not active"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate signature if enabled
+        if task.webhook_validate_signature:
+            signature = request.headers.get("X-Webhook-Signature")
+            if not signature:
+                return Response(
+                    {"error": "Missing webhook signature"}, status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            # Calculate expected signature
+            body = request.body
+            expected_signature = hmac.new(
+                task.webhook_secret.encode(), body, hashlib.sha256
+            ).hexdigest()
+
+            if not hmac.compare_digest(signature, expected_signature):
+                return Response(
+                    {"error": "Invalid webhook signature"}, status=status.HTTP_401_UNAUTHORIZED
+                )
+        payload = None
+        # Parse JSON payload
+        try:
+            payload = request.data  # noqa
+
+        except json.JSONDecodeError:
+            return Response({"error": "Invalid JSON payload"}, status=status.HTTP_400_BAD_REQUEST)
+        # Convert payload to input sources if it contains data
+        if payload and isinstance(payload, dict):
+            with transaction.atomic():
+                sandbox = SandboxManager(base_name=f"task_{task.id}_webhook")
+                with sandbox as sandbox_dir:
+                    filename = f"task_{task.id}_{datetime.now().timestamp()}_webhook_payload.json"
+                    file_path = sandbox_dir / filename
+                    with open(file_path, "w") as f:
+                        json.dump(payload, f)
+
+                    storage_class = get_storage_class(settings.DEFAULT_FILE_STORAGE)
+                    storage = storage_class()
+
+                    file_key = f"input-sources/{uuid.uuid4()}/{filename}"
+
+                    with open(file_path, "rb") as f:
+                        storage.save(file_key, f)
+
+                    # Store the URL of the uploaded file
+                    existing_sources = task.input_sources or []
+                    existing_sources.append(
+                        {
+                            "url": storage.url(file_key),
+                            "source_type": "our_s3",
+                            "filename": filename,
+                            "content_type": "application/json",
+                            "size": file_path.stat().st_size,
+                            "skip_preprocessing": True,
+                        }
+                    )
+                    task.input_sources = existing_sources
+                    task.save()
+
+        # Schedule task execution
+        execution = schedule_agent_task_execution(task.id, force_execute=True)
+
+        if execution:
+            return Response(
+                {
+                    "message": "Webhook received and task scheduled",
+                    "execution_id": str(execution.id),
+                    "task_id": str(task.id),
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
+        else:
+            return Response(
+                {"error": "Failed to schedule task execution"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     @action(detail=False, methods=["post"])
     def generate_presigned_url(self, request):
         """Generate a presigned URL for file upload to S3"""
@@ -111,13 +242,7 @@ class AgentTaskViewSet(viewsets.ModelViewSet):
             storage_class = get_storage_class(settings.DEFAULT_FILE_STORAGE)
             storage = storage_class()
 
-            # Generate unique key for the file
-            # Use AWS_LOCATION directly instead of storage.location to avoid /media/ duplication
-            aws_location = getattr(settings, "AWS_LOCATION", "")
-            if aws_location:
-                file_key = f"{storage.location}/input-sources/{uuid.uuid4()}/{filename}"
-            else:
-                file_key = f"input-sources/{uuid.uuid4()}/{filename}"
+            file_key = f"{storage.location}/input-sources/{uuid.uuid4()}/{filename}"
 
             # Generate presigned POST using django-storages
             presigned_post = storage.connection.meta.client.generate_presigned_post(
@@ -179,8 +304,6 @@ class AgentTaskExecutionViewSet(viewsets.ReadOnlyModelViewSet):
         # Try to cancel the background task if it exists
         if execution.background_task_id:
             try:
-                from background_task.models import Task
-
                 bg_task = Task.objects.get(id=execution.background_task_id)
                 bg_task.delete()
             except Task.DoesNotExist:

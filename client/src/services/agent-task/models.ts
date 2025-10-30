@@ -52,6 +52,7 @@ export const scheduleTypeEnum = {
   HOURLY: 'hourly',
   CUSTOM_INTERVAL: 'custom_interval',
   AGENT: 'agent',
+  WEBHOOK: 'webhook',
 } as const
 
 export type ScheduleTypeValues = (typeof scheduleTypeEnum)[keyof typeof scheduleTypeEnum]
@@ -65,6 +66,7 @@ export const scheduleTypeLabelMap = {
   [scheduleTypeEnum.HOURLY]: 'Hourly',
   [scheduleTypeEnum.CUSTOM_INTERVAL]: 'Custom Interval',
   [scheduleTypeEnum.AGENT]: 'Triggered by Another Task',
+  [scheduleTypeEnum.WEBHOOK]: 'Webhook Trigger',
 }
 
 export const taskStatusEnum = {
@@ -114,6 +116,9 @@ export const agentTaskShape = {
   intervalMinutes: z.number().positive().optional().nullable(),
   triggeredByTask: z.string().uuid().optional().nullable(),
   triggeredByTaskName: z.string().optional().nullable(),
+  webhookSecret: z.string().optional().nullable(),
+  webhookValidateSignature: z.boolean().default(true),
+  webhookUrl: z.string().optional().nullable(),
   status: z.nativeEnum(taskStatusEnum),
   lastExecutedAt: z.string().datetime().optional().nullable(),
   lastExecutionDisplay: z.string().optional().nullable(),
@@ -137,6 +142,7 @@ export const createAgentTaskShape = {
   scheduledAt: agentTaskShape.scheduledAt,
   intervalMinutes: agentTaskShape.intervalMinutes,
   triggeredByTask: agentTaskShape.triggeredByTask,
+  webhookValidateSignature: agentTaskShape.webhookValidateSignature,
   maxExecutions: agentTaskShape.maxExecutions,
 }
 
