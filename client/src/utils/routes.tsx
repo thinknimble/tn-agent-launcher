@@ -8,6 +8,7 @@ import {
   AgentChat,
   PromptStance,
   ProjectSettings,
+  Integrations,
 } from 'src/pages'
 import { Dashboard } from 'src/pages/dashboard'
 import { ChatDemo } from 'src/pages/chat-demo'
@@ -26,6 +27,7 @@ const PrivateRoutes = () => {
         <Route path=":projectId/settings" element={<ProjectSettings />} />
         <Route path=":projectId/tasks" element={<AgentTasks />} />
       </Route>
+      <Route path="/integrations" element={<Integrations />} />
       <Route path="/chat" element={<ChatDemo />} />
       <Route path="/chat/agent/:agentId" element={<AgentChat />} />
       {/* Legacy route - redirect to nested structure */}

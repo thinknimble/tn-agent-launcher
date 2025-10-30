@@ -8,6 +8,7 @@ urlpatterns = [
     path(r"staff/", admin.site.urls),
     path(r"", include("tn_agent_launcher.agent.urls")),
     path(r"api/chat/", include("tn_agent_launcher.chat.urls")),
+    path(r"api/", include("tn_agent_launcher.integrations.urls")),
     # order matters
     path(r"", include("tn_agent_launcher.core.urls")),
     path(r"", include("tn_agent_launcher.common.favicon_urls")),

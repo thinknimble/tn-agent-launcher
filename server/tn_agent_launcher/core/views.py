@@ -212,5 +212,8 @@ def app_config(request):
     return Response(
         {
             "enableDocPreprocessing": settings.ENABLE_DOC_PREPROCESSING,
+            "enableSystemS3Integration": settings.USE_AWS_STORAGE,
+            "enableGoogleDriveIntegration": bool(settings.GOOGLE_OAUTH_CREDENTIALS),
         }
     )
+948
