@@ -23,6 +23,7 @@ export const integrationShape = {
   integrationType: z.nativeEnum(integrationTypeEnum),
   isSystemProvided: z.boolean(),
   webhookUrl: z.string().nullable(),
+  webhookSecret: z.string().nullable().readonly(),
   agentTasks: z.array(z.string().uuid()).default([]),
   created: z.string().datetime(),
   lastEdited: z.string().datetime(),
@@ -36,6 +37,7 @@ export const createIntegrationShape = {
   integrationType: integrationShape.integrationType,
   isSystemProvided: integrationShape.isSystemProvided,
   webhookUrl: integrationShape.webhookUrl.optional(),
+  webhookSecret: z.string().optional(),
   agentTasks: integrationShape.agentTasks.optional(),
   // S3 credential fields
   awsAccessKeyId: z.string().optional(),
@@ -60,6 +62,8 @@ export const googleOAuthUrlShape = {
 export const googleOAuthCallbackShape = {
   code: z.string(),
   state: z.string(),
+  isSystem: z.boolean(),
+  credentialsFile: z.instanceof(File).optional(),
 }
 
 export const googleOAuthResponseShape = {

@@ -39,9 +39,9 @@ class IntegrationSerializer(serializers.ModelSerializer):
             'aws_access_key_id', 'aws_secret_access_key', 'bucket_name', 
             'region', 'location', 'credentials_file',
             # Read-only status fields
-            'has_app_credentials', 'has_oauth_credentials', 'oauth_status'
+            'has_app_credentials', 'has_oauth_credentials', 'oauth_status', "webhook_secret"
         ]
-        read_only_fields = ['id', 'created', 'last_edited', 'user']
+        read_only_fields = ['id', 'created', 'last_edited', 'user', 'webhook_secret']
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

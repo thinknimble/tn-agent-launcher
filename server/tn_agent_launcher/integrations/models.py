@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from tn_agent_launcher.common.models import AbstractBaseModel
 import json 
+import secrets
 from encrypted_model_fields.fields import EncryptedTextField
 
 class Integration(AbstractBaseModel):
@@ -9,7 +10,7 @@ class Integration(AbstractBaseModel):
         GOOGLE_DRIVE = 'google_drive', 'Google Drive'
         AWS_S3 = 'aws_s3', 'AWS S3'
         WEBHOOK = 'webhook', 'Webhook'
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
     integration_type = models.CharField(max_length=100, choices=IntegrationTypes.choices)
     is_system_provided = models.BooleanField(default=False, help_text="Uses Server-wide credentials, not available for webhooks")
     user = models.ForeignKey('core.User', on_delete=models.CASCADE)
@@ -25,7 +26,8 @@ class Integration(AbstractBaseModel):
     def __str__(self):
         return self.name
     
-
+    class Meta: 
+        unique_together = ('user', 'integration_type')
 
 
     @property
@@ -69,4 +71,11 @@ class Integration(AbstractBaseModel):
     def oauth_credentials(self, value):
         self._oauth_credentials = json.dumps(value) if value else "" 
         
+    def save(self, *args, **kwargs):
+        # Generate webhook secret for webhook integrations
+        if (self.integration_type == self.IntegrationTypes.WEBHOOK 
+            and self.webhook_url 
+            and not self.webhook_secret):
+            self.webhook_secret = secrets.token_urlsafe(32)
         
+        super().save(*args, **kwargs)

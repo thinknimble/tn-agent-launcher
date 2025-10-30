@@ -122,10 +122,14 @@ export class CustomGoogleDriveForm extends Form<CustomGoogleDriveFormInputs> {
 export type TCustomGoogleDriveForm = CustomGoogleDriveFormInputs & CustomGoogleDriveForm
 
 export type WebHookFormInputs = {
+  _name: IFormField<string>
   webhookUrl: IFormField<string>
 }
 
 export class WebHookForm extends Form<WebHookFormInputs> {
+  static _name = FormField.create({
+    validators: [new RequiredValidator()],
+  })
   static webhookUrl = FormField.create({
     validators: [new RequiredValidator()],
   })
