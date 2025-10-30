@@ -188,6 +188,7 @@ const CreateEditAgentTaskInner = ({
       updatedForm._name.value = initialData.name
       updatedForm.description.value = initialData.description || ''
       updatedForm.instruction.value = initialData.instruction
+      updatedForm.appendAgentInstruction.value = initialData.appendAgentInstruction ?? true
       updatedForm.inputSources.value = initialData.inputSources || []
       updatedForm.scheduledAt.value = initialData.scheduledAt || ''
       updatedForm.intervalMinutes.value = initialData.intervalMinutes
@@ -230,6 +231,7 @@ const CreateEditAgentTaskInner = ({
       updatedForm._name.value = `${duplicateFrom.name} (Copy)`
       updatedForm.description.value = duplicateFrom.description || ''
       updatedForm.instruction.value = duplicateFrom.instruction
+      updatedForm.appendAgentInstruction.value = duplicateFrom.appendAgentInstruction ?? true
       updatedForm.inputSources.value = duplicateFrom.inputSources || []
       updatedForm.scheduledAt.value = duplicateFrom.scheduledAt || ''
       updatedForm.intervalMinutes.value = duplicateFrom.intervalMinutes
@@ -331,6 +333,7 @@ const CreateEditAgentTaskInner = ({
         description: formValue.description || '',
         agentInstance: formValue.agentInstance?.value || '',
         instruction: formValue.instruction || '',
+        appendAgentInstruction: formValue.appendAgentInstruction ?? true,
         variables: instructionVariables,
         inputSources: (formValue.inputSources || []).filter((source) => source.url.trim() !== ''),
         scheduleType: (formValue.scheduleType?.value || '') as ScheduleTypeValues,
@@ -448,6 +451,21 @@ const CreateEditAgentTaskInner = ({
               project settings.
             </p>
           )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="appendAgentInstruction"
+            checked={form.appendAgentInstruction.value}
+            onChange={(e) =>
+              createFormFieldChangeHandler(form.appendAgentInstruction)(e.target.checked)
+            }
+            className="h-4 w-4 rounded border-primary-300 text-primary-600 focus:ring-primary-500"
+          />
+          <label htmlFor="appendAgentInstruction" className="text-sm text-primary-600">
+            Append agent instance instruction to task instruction
+          </label>
         </div>
 
         <div>

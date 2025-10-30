@@ -141,6 +141,10 @@ resource "aws_ecs_task_definition" "app" {
         {
           name      = "DB_PASS",
           valueFrom = aws_secretsmanager_secret_version.db_pass.arn
+        },
+        {
+          name      = "FIELD_ENCRYPTION_KEY",
+          valueFrom = aws_secretsmanager_secret_version.field_encryption_key.arn
         }
       ],
       logConfiguration = {

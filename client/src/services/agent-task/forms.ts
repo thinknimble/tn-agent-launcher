@@ -91,6 +91,7 @@ export type AgentTaskFormInputs = {
   description: IFormField<string>
   agentInstance: IFormField<SelectOption | null>
   instruction: IFormField<string>
+  appendAgentInstruction: IFormField<boolean>
   inputSources: IFormField<InputSource[]>
   scheduleType: IFormField<SelectOption | null>
   scheduledAt: IFormField<string>
@@ -127,6 +128,12 @@ export class AgentTaskForm extends Form<AgentTaskFormInputs> {
     placeholder: 'Write the prompt/instruction for the agent...',
     type: 'textarea',
     value: '',
+  })
+
+  static appendAgentInstruction = FormField.create({
+    label: 'Append Agent Instruction',
+    type: 'checkbox',
+    value: true,
   })
 
   static inputSources = FormField.create({

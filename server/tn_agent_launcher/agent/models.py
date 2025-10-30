@@ -146,6 +146,10 @@ class AgentTask(AbstractBaseModel):
         limit_choices_to={"agent_type": AgentInstance.AgentTypeChoices.ONE_SHOT},
     )
     instruction = models.TextField(help_text="The prompt/instruction to send to the agent")
+    append_agent_instruction = models.BooleanField(
+        default=True,
+        help_text="Whether to append the agent instance instruction to the task instruction",
+    )
 
     # Input sources
     input_sources = models.JSONField(
