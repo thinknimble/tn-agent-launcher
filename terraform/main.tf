@@ -68,13 +68,6 @@ resource "aws_vpc" "main" {
   }
 }
 
-# Local to get the correct VPC ID
-locals {
-  vpc_id = local.is_shared_vpc_env ? (
-    length(try(data.aws_vpc.shared, [])) > 0 ? data.aws_vpc.shared[0].id : aws_vpc.shared[0].id
-  ) : aws_vpc.main[0].id
-}
-
 # Data source to find existing shared Internet Gateway (only if VPC exists)
 data "aws_internet_gateway" "shared" {
   count = local.is_shared_vpc_env && try(data.external.check_shared_vpc[0].result.exists, "false") == "true" ? 1 : 0
@@ -109,13 +102,6 @@ resource "aws_internet_gateway" "main" {
   tags = {
     Name = "igw-${var.service}-${var.environment}"
   }
-}
-
-# Local to get the correct Internet Gateway ID
-locals {
-  igw_id = local.is_shared_vpc_env ? (
-    length(try(data.aws_internet_gateway.shared, [])) > 0 ? data.aws_internet_gateway.shared[0].id : aws_internet_gateway.shared[0].id
-  ) : aws_internet_gateway.main[0].id
 }
 
 # Data source to find existing shared route table (only if VPC exists)
@@ -162,13 +148,6 @@ resource "aws_route_table" "main" {
   tags = {
     Name = "rt-${var.service}-${var.environment}"
   }
-}
-
-# Local to get the correct Route Table ID
-locals {
-  route_table_id = local.is_shared_vpc_env ? (
-    length(try(data.aws_route_table.shared, [])) > 0 ? data.aws_route_table.shared[0].id : aws_route_table.shared[0].id
-  ) : aws_route_table.main[0].id
 }
 
 # Create environment-specific public subnets
