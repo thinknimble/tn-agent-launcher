@@ -165,10 +165,7 @@ jobs:
           echo "Creating deployment for environment: ${{ steps.env-vars.outputs.environment }}"
           DEPLOYMENT_ID=$(gh api repos/${{ github.repository }}/deployments \
             --method POST \
-            --field ref='${{ github.sha }}' \
-            --field environment='${{ steps.env-vars.outputs.environment }}' \
-            --field auto_merge=false \
-            --raw-field required_contexts='[]' \
+            --input - <<< '{"ref": "${{ github.sha }}", "environment": "${{ steps.env-vars.outputs.environment }}", "auto_merge": false, "required_contexts": []}' \
             --jq '.id')
           
           if [ -z "$DEPLOYMENT_ID" ] || [ "$DEPLOYMENT_ID" = "null" ]; then
