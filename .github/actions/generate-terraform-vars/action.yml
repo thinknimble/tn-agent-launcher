@@ -115,7 +115,7 @@ runs:
               exit 1
             fi
             
-            # Extract secrets and set as outputs (matching original workflow)
+            # Extract secrets and set as outputs
             echo "django_secret_key=$(jq -r '.secrets.django_secret_key' secrets.json)" >> $GITHUB_OUTPUT
             echo "field_encryption_key=$(jq -r '.secrets.field_encryption_key' secrets.json)" >> $GITHUB_OUTPUT
             echo "db_password=$(jq -r '.secrets.db_password' secrets.json)" >> $GITHUB_OUTPUT
