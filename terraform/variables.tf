@@ -180,6 +180,18 @@ variable "enable_https" {
   default     = true  # Enable by default for review apps
 }
 
+variable "enable_doc_preprocessing" {
+  type        = bool
+  description = "Enable document preprocessing for the app service backend - not available in heroku"
+  default     = false
+}
+variable "field_encryption_key" {
+  type        = string
+  description = "Hash secrets in db"
+  sensitive   = true
+}
+
+
 # Domain and DNS configuration
 variable "base_domain" {
   type        = string
@@ -218,21 +230,10 @@ variable "custom_certificate_arn" {
   default     = ""
 }
 
-# VPC sharing configuration
-variable "use_per_project_shared_vpc" {
-  type        = bool
-  description = "If true, create per-project shared VPCs (shared-dev-vpc-PROJECT). If false, use account-wide shared VPC (shared-dev-vpc)"
-  default     = false
+variable "shared_vpc_name" {
+  type        = string
+  description = "Name of the shared VPC to use (only used when use_per_project_shared_vpc = false)"
+  default     = "tn-app-io"
 }
 
-variable "enable_doc_preprocessing" {
-  type        = bool
-  description = "Enable document preprocessing for the app service backend - not available in heroku"
-  default     = false
-}
-variable "field_encryption_key" {
-  type        = string
-  description = "Hash secrets in db"
-  sensitive   = true
-}
 
