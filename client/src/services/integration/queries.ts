@@ -16,10 +16,4 @@ export const integrationQueries = {
       queryFn: () => integrationApi.retrieve(id),
       enabled: Boolean(id),
     }),
-  googleOAuthUrl: (integrationId: string) =>
-    queryOptions({
-      queryKey: [...integrationQueries.all(), integrationId, 'google-oauth-url'],
-      queryFn: () => integrationApi.csc.getGoogleOAuthUrl({ integrationId }),
-      enabled: Boolean(integrationId),
-    }),
 }

@@ -25,7 +25,6 @@ import {
 } from 'src/services/integration'
 import { useOAuthStore } from 'src/stores/oauth-state'
 
-
 const S3IntegrationModal = ({
   isOpen,
   onClose,
@@ -48,15 +47,15 @@ const S3IntegrationModal = ({
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <section className="p-6">
         <h2 className="mb-4 text-2xl font-bold">Custom S3 Integration</h2>
-        <div className="text-center py-8">
-          <p className="text-gray-500 text-lg">Custom S3 integration not implemented yet</p>
+        <div className="py-8 text-center">
+          <p className="text-lg text-gray-500">Custom S3 integration not implemented yet</p>
         </div>
         <div className="flex justify-end">
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
         </div>
-        
+
         {/* <div className="space-y-4">
           <form onSubmit={(e) => {
             e.preventDefault()
@@ -126,9 +125,10 @@ const GoogleDriveIntegrationModal = ({
 }) => {
   const [credentialsFile, setCredentialsFile] = useState<File | null>(null)
   const [oauthProcessing, setOauthProcessing] = useState(false)
-  const { oauthState, oauthWindow, setOauthState, setOauthWindow, setOauthCompleted } = useOAuthStore()
+  const { oauthState, oauthWindow, setOauthState, setOauthWindow, setOauthCompleted } =
+    useOAuthStore()
   const queryClient = useQueryClient()
-  
+
   const { mutate: getOAuthUrl } = useMutation({
     mutationFn: integrationApi.csc.getGoogleOAuthUrl,
     onSuccess: (response) => {
@@ -139,9 +139,13 @@ const GoogleDriveIntegrationModal = ({
         timestamp: Date.now(),
         integrationType: integrationTypeEnum.GOOGLE_DRIVE,
       })
-      
+
       // Open OAuth window
-      const popup = window.open(response.authUrl, 'oauth', 'width=500,height=600,scrollbars=yes,resizable=yes')
+      const popup = window.open(
+        response.authUrl,
+        'oauth',
+        'width=500,height=600,scrollbars=yes,resizable=yes',
+      )
       setOauthWindow(popup)
     },
   })
@@ -152,11 +156,11 @@ const GoogleDriveIntegrationModal = ({
     onSuccess: (data) => {
       // Refresh integrations list
       queryClient.invalidateQueries({ queryKey: ['integrations'] })
-      
+
       // Show success and close modal
       alert('Google Drive integration created successfully!')
       onClose()
-      
+
       // Clean up
       setOauthState(null)
       setOauthWindow(null)
@@ -165,13 +169,13 @@ const GoogleDriveIntegrationModal = ({
     },
     onError: (error: any) => {
       alert(`OAuth error: ${error?.response?.data?.error || 'OAuth callback failed'}`)
-      
+
       // Clean up
       setOauthState(null)
       setOauthWindow(null)
       setOauthCompleted(null)
       setOauthProcessing(false)
-    }
+    },
   })
 
   // Listen for OAuth completion
@@ -182,9 +186,9 @@ const GoogleDriveIntegrationModal = ({
         if (oauthProcessing || !oauthState) {
           return
         }
-        
+
         setOauthProcessing(true)
-        
+
         // Combine OAuth callback data with stored state
         handleOAuthCallback({
           code: event.data.data.code,
@@ -196,9 +200,9 @@ const GoogleDriveIntegrationModal = ({
         if (oauthProcessing) {
           return
         }
-        
+
         alert(`OAuth error: ${event.data.error}`)
-        
+
         // Clean up
         setOauthState(null)
         setOauthWindow(null)
@@ -208,7 +212,14 @@ const GoogleDriveIntegrationModal = ({
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [oauthState, handleOAuthCallback, oauthProcessing, setOauthState, setOauthWindow, setOauthCompleted])
+  }, [
+    oauthState,
+    handleOAuthCallback,
+    oauthProcessing,
+    setOauthState,
+    setOauthWindow,
+    setOauthCompleted,
+  ])
 
   // Check if OAuth window is closed
   useEffect(() => {
@@ -228,17 +239,17 @@ const GoogleDriveIntegrationModal = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (type === 'custom') {
       alert('Custom Google Drive integration not implemented yet')
       return
     }
-    
+
     // if (type === 'custom' && !credentialsFile) {
     //   alert('Please upload your Google credentials JSON file')
     //   return
     // }
-    
+
     getOAuthUrl({
       isSystem: type === 'system',
       // credentialsFile: type === 'custom' ? credentialsFile : undefined,
@@ -253,20 +264,24 @@ const GoogleDriveIntegrationModal = ({
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           {type === 'custom' ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 text-lg">Custom Google Drive integration not implemented yet</p>
+            <div className="py-8 text-center">
+              <p className="text-lg text-gray-500">
+                Custom Google Drive integration not implemented yet
+              </p>
             </div>
           ) : (
-            <div className="text-center py-4">
-              <p className="text-gray-700">You will be redirected to Google to authorize access to your Google Drive.</p>
+            <div className="py-4 text-center">
+              <p className="text-gray-700">
+                You will be redirected to Google to authorize access to your Google Drive.
+              </p>
               {oauthWindow && (
-                <p className="text-sm text-blue-600 mt-2">
+                <p className="mt-2 text-sm text-blue-600">
                   OAuth window opened. Please complete authorization in the popup window.
                 </p>
               )}
             </div>
           )}
-          
+
           {/* {type === 'custom' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -281,13 +296,17 @@ const GoogleDriveIntegrationModal = ({
               />
             </div>
           )} */}
-          
+
           <div className="flex space-x-3">
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
             {type === 'system' && (
-              <Button type="submit" variant="primary" isLoading={isLoading || !!oauthWindow || isHandlingOAuth}>
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={isLoading || !!oauthWindow || isHandlingOAuth}
+              >
                 {oauthWindow ? 'Waiting for Authorization...' : 'Connect to Google Drive'}
               </Button>
             )}
@@ -320,7 +339,7 @@ const WebhookIntegrationModal = ({
     onSuccess: (data) => {
       // Invalidate integrations queries
       queryClient.invalidateQueries({ queryKey: ['integrations'] })
-      
+
       // Store webhook data - assuming the API returns webhookUrl and webhookSecret
       setCreatedWebhook({
         webhookUrl: (data as any).webhookUrl,
@@ -358,7 +377,7 @@ const WebhookIntegrationModal = ({
     <Modal isOpen={isOpen} onClose={handleClose} size="lg">
       <section className="p-6">
         <h2 className="mb-4 text-2xl font-bold">Create Webhook Integration</h2>
-        
+
         {!createdWebhook ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
@@ -370,7 +389,7 @@ const WebhookIntegrationModal = ({
               onChange={(e) => createFormFieldChangeHandler(form._name)(e.target.value)}
               required
             />
-            
+
             <Input
               type="url"
               name={form.field.webhookUrl.name}
@@ -392,8 +411,8 @@ const WebhookIntegrationModal = ({
           </form>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-lg bg-green-50 border border-green-200 p-4">
-              <h3 className="font-medium text-green-800 mb-2">✅ Webhook Created Successfully!</h3>
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+              <h3 className="mb-2 font-medium text-green-800">✅ Webhook Created Successfully!</h3>
               <p className="text-sm text-green-600">Your webhook integration has been created.</p>
             </div>
 
@@ -404,9 +423,9 @@ const WebhookIntegrationModal = ({
                   type="text"
                   disabled
                   value={createdWebhook.webhookUrl || form.webhookUrl.value || ''}
-                  className="bg-gray-50 border-gray-200 font-mono text-sm"
+                  className="border-gray-200 bg-gray-50 font-mono text-sm"
                 />
-                <p className="text-xs text-gray-500 mt-1">This is your configured webhook URL</p>
+                <p className="mt-1 text-xs text-gray-500">This is your configured webhook URL</p>
               </div>
 
               {createdWebhook.webhookSecret && (
@@ -417,7 +436,7 @@ const WebhookIntegrationModal = ({
                       type="text"
                       disabled
                       value={createdWebhook.webhookSecret}
-                      className="bg-gray-50 flex-1 border-gray-200 font-mono text-sm"
+                      className="flex-1 border-gray-200 bg-gray-50 font-mono text-sm"
                     />
                     <Button
                       type="button"
@@ -430,7 +449,7 @@ const WebhookIntegrationModal = ({
                       Copy Secret
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="mt-1 text-xs text-gray-500">
                     Use this secret to validate incoming webhooks. Keep this secure!
                   </p>
                 </div>
@@ -446,7 +465,6 @@ const WebhookIntegrationModal = ({
     </Modal>
   )
 }
-
 
 const IntegrationTypeCard = ({
   type,
@@ -491,7 +509,13 @@ const IntegrationTypeCard = ({
   )
 }
 
-const IntegrationListCard = ({ integration, children }: { integration: Integration, children?: React.ReactNode }) => {
+const IntegrationListCard = ({
+  integration,
+  children,
+}: {
+  integration: Integration
+  children?: React.ReactNode
+}) => {
   const queryClient = useQueryClient()
 
   const deleteIntegration = useMutation({
@@ -516,9 +540,7 @@ const IntegrationListCard = ({ integration, children }: { integration: Integrati
         <div className="flex items-center space-x-2">
           <div className="flex">
             {integration.integrationType === integrationTypeEnum.GOOGLE_DRIVE && (
-              <>
-              {integration.hasOauthCredentials? <>Connected</>: <>Not Connected</>}
-              </>
+              <>{integration.hasOauthCredentials ? <>Connected</> : <>Not Connected</>}</>
             )}
           </div>
           <Button
@@ -530,7 +552,7 @@ const IntegrationListCard = ({ integration, children }: { integration: Integrati
           </Button>
         </div>
       </div>
-      
+
       {/* Webhook details */}
       {integration.integrationType === integrationTypeEnum.WEBHOOK && integration.webhookUrl && (
         <div className="mt-4 space-y-3 border-t border-gray-200 pt-4">
@@ -540,7 +562,7 @@ const IntegrationListCard = ({ integration, children }: { integration: Integrati
                 type="text"
                 disabled
                 value={integration.webhookUrl}
-                className="bg-gray-50 flex-1 border border-gray-200 rounded-md px-3 py-2 font-mono text-sm"
+                className="flex-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-sm"
                 placeholder="Webhook URL"
               />
               <Button
@@ -553,7 +575,7 @@ const IntegrationListCard = ({ integration, children }: { integration: Integrati
                 Copy URL
               </Button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Webhook endpoint URL</p>
+            <p className="mt-1 text-xs text-gray-500">Webhook endpoint URL</p>
           </div>
 
           {integration.webhookSecret && (
@@ -563,7 +585,7 @@ const IntegrationListCard = ({ integration, children }: { integration: Integrati
                   label="Webhook Secret"
                   disabled
                   value={integration.webhookSecret}
-                  className="bg-gray-50 flex-1 border-gray-200 font-mono text-sm"
+                  className="flex-1 border-gray-200 bg-gray-50 font-mono text-sm"
                 />
                 <Button
                   type="button"
@@ -576,14 +598,14 @@ const IntegrationListCard = ({ integration, children }: { integration: Integrati
                   Copy Secret
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="mt-1 text-xs text-gray-500">
                 Use this secret to validate webhook requests. Keep this secure!
               </p>
             </div>
           )}
         </div>
       )}
-      
+
       {children}
     </div>
   )
@@ -666,7 +688,13 @@ export const Integrations = () => {
       description: 'Store and retrieve files from Amazon S3',
       icon: <S3Icon />,
       formClass: CustomS3Form,
-      children: <S3IntegrationModal isOpen={showCustomS3Modal} onClose={() => setShowCustomS3Modal(false)} isLoading={isCreatingIntegration} />,
+      children: (
+        <S3IntegrationModal
+          isOpen={showCustomS3Modal}
+          onClose={() => setShowCustomS3Modal(false)}
+          isLoading={isCreatingIntegration}
+        />
+      ),
     },
     {
       type: integrationTypeEnum.WEBHOOK,
@@ -687,8 +715,8 @@ export const Integrations = () => {
   ]
 
   // Filter out integration types that already exist (for Google Drive and S3 only)
-  const existingTypes = new Set(integrations.map(integration => integration.integrationType))
-  const integrationTypes = allIntegrationTypes.filter(integrationType => {
+  const existingTypes = new Set(integrations.map((integration) => integration.integrationType))
+  const integrationTypes = allIntegrationTypes.filter((integrationType) => {
     // Always show webhooks (users can have multiple)
     if (integrationType.type === integrationTypeEnum.WEBHOOK) {
       return true
@@ -730,7 +758,6 @@ export const Integrations = () => {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {integrationTypes.map((integrationType) => (
                 <FormProvider key={integrationType.type} formClass={integrationType.formClass}>
-                  
                   <IntegrationTypeCard
                     key={integrationType.type}
                     type={integrationType.type}
@@ -745,7 +772,7 @@ export const Integrations = () => {
                         : undefined
                     }
                     onCreateUser={
-                       integrationType.customOption != undefined
+                      integrationType.customOption != undefined
                         ? () => {
                             integrationType?.customOption?.()
                           }
@@ -753,7 +780,7 @@ export const Integrations = () => {
                     }
                   />
                   {integrationType.children}
-                  </FormProvider>
+                </FormProvider>
               ))}
             </div>
           </div>

@@ -10,9 +10,9 @@ import {
 import { util, z } from 'zod'
 
 export const getGoogleOAuthUrl = createCustomServiceCall({
-  inputShape: { 
+  inputShape: {
     isSystem: z.boolean(),
-    credentialsFile: z.instanceof(File).optional()
+    credentialsFile: z.instanceof(File).optional(),
   },
   outputShape: googleOAuthUrlShape,
   cb: async ({ client, slashEndingBaseUri, input, utils: { toApi, fromApi } }) => {
@@ -21,12 +21,16 @@ export const getGoogleOAuthUrl = createCustomServiceCall({
     if (input.credentialsFile) {
       formData.append('credentials', input.credentialsFile)
     }
-    
-    const response = await client.post(`${slashEndingBaseUri}google-oauth-redirect-url/`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
+
+    const response = await client.post(
+      `${slashEndingBaseUri}google-oauth-redirect-url/`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       },
-    })
+    )
     return fromApi(response.data)
   },
 })
@@ -42,7 +46,7 @@ export const handleGoogleOAuthCallback = createCustomServiceCall({
     if (input.credentialsFile) {
       formData.append('credentials', input.credentialsFile)
     }
-    
+
     const response = await client.post(`${slashEndingBaseUri}google-oauth-callback/`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -54,10 +58,9 @@ export const handleGoogleOAuthCallback = createCustomServiceCall({
 
 export const revokeGoogleOAuth = createCustomServiceCall({
   inputShape: { integrationId: z.string() },
-  
+
   cb: async ({ client, slashEndingBaseUri, input }) => {
-     return await client.delete(`${slashEndingBaseUri}${input.integrationId}/google-oauth-revoke/`)
-    
+    return await client.delete(`${slashEndingBaseUri}${input.integrationId}/google-oauth-revoke/`)
   },
 })
 

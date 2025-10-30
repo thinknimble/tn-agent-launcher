@@ -1,6 +1,6 @@
 import { integrationTypeEnum } from 'src/services/integration'
 
-export const GoogleDriveIcon = ({ className = "h-10 w-10" }: { className?: string }) => (
+export const GoogleDriveIcon = ({ className = 'h-10 w-10' }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24">
     <path
       fill="#4285f4"
@@ -21,13 +21,15 @@ export const GoogleDriveIcon = ({ className = "h-10 w-10" }: { className?: strin
   </svg>
 )
 
-export const S3Icon = ({ className = "h-10 w-10" }: { className?: string }) => (
-  <div className={`flex items-center justify-center rounded bg-orange-500 font-bold text-white ${className}`}>
+export const S3Icon = ({ className = 'h-10 w-10' }: { className?: string }) => (
+  <div
+    className={`flex items-center justify-center rounded bg-orange-500 font-bold text-white ${className}`}
+  >
     S3
   </div>
 )
 
-export const WebhookIcon = ({ className = "h-10 w-10" }: { className?: string }) => (
+export const WebhookIcon = ({ className = 'h-10 w-10' }: { className?: string }) => (
   <div className={`flex items-center justify-center rounded bg-blue-500 text-white ${className}`}>
     <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
       <path

@@ -18,7 +18,9 @@ type OAuthStore = {
   } | null
   setOauthState: (state: OAuthState | null) => void
   setOauthWindow: (window: Window | null) => void
-  setOauthCompleted: (completed: { integrationId: string; success: boolean; message: string } | null) => void
+  setOauthCompleted: (
+    completed: { integrationId: string; success: boolean; message: string } | null,
+  ) => void
   clearOAuth: () => void
 }
 
@@ -36,7 +38,10 @@ export const useOAuthStore = create<OAuthStore>()(
     {
       name: 'oauth-storage',
       // Only persist the oauth state, not the window reference
-      partialize: (state) => ({ oauthState: state.oauthState, oauthCompleted: state.oauthCompleted }),
-    }
-  )
+      partialize: (state) => ({
+        oauthState: state.oauthState,
+        oauthCompleted: state.oauthCompleted,
+      }),
+    },
+  ),
 )

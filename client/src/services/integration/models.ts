@@ -3,13 +3,11 @@ import { z } from 'zod'
 
 export const integrationTypeEnum = {
   AWS_S3: 'aws_s3',
-  GOOGLE_DRIVE: 'google_drive', 
+  GOOGLE_DRIVE: 'google_drive',
   WEBHOOK: 'webhook',
 } as const
 
 export type IntegrationTypeValues = (typeof integrationTypeEnum)[keyof typeof integrationTypeEnum]
-
-
 
 export const integrationTypeEnumLabelMap = {
   [integrationTypeEnum.AWS_S3]: 'AWS S3',
@@ -86,22 +84,19 @@ export type GoogleOAuthCallback = GetInferredFromRaw<typeof googleOAuthCallbackS
 export type GoogleOAuthResponse = GetInferredFromRaw<typeof googleOAuthResponseShape>
 export type IntegrationTypeOption = GetInferredFromRaw<typeof integrationTypeOptionShape>
 
-
-
-
 /***
  * S3
  * System Provided Integration Credentials
  * just create
  * User Provided Integration Credentials
  * fill in creds form
- * 
+ *
  * Google Drive
  * System Provided Integration Credentials
  * redirect to google oauth
  * User Provided Integration Credentials
  * redirect to google oauth
- * 
+ *
  * Webhook
  * System Provided Integration Credentials
  * N/A
