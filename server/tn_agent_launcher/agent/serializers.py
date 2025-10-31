@@ -5,8 +5,8 @@ from .models import (
     AgentProject,
     AgentTask,
     AgentTaskExecution,
-    AgentTaskSink,
     AgentTaskFunnel,
+    AgentTaskSink,
     ProjectEnvironmentSecret,
 )
 
@@ -60,18 +60,19 @@ class AgentProjectSerializer(serializers.ModelSerializer):
 class AgentTaskSinkSerializer(serializers.ModelSerializer):
     integration_name = serializers.CharField(source="integration.name", read_only=True)
     integration_type = serializers.CharField(source="integration.integration_type", read_only=True)
-    
+
     class Meta:
         model = AgentTaskSink
         fields = [
             "id",
             "integration",
-            "integration_name", 
+            "integration_name",
             "integration_type",
             "order",
             "is_enabled",
             "configuration",
             "created",
+            "agent_task",
         ]
         read_only_fields = ["id", "created", "integration_name", "integration_type"]
 
@@ -87,18 +88,19 @@ class AgentTaskSinkSerializer(serializers.ModelSerializer):
 class AgentTaskFunnelSerializer(serializers.ModelSerializer):
     integration_name = serializers.CharField(source="integration.name", read_only=True)
     integration_type = serializers.CharField(source="integration.integration_type", read_only=True)
-    
+
     class Meta:
         model = AgentTaskFunnel
         fields = [
             "id",
             "integration",
             "integration_name",
-            "integration_type", 
+            "integration_type",
             "order",
             "is_enabled",
             "configuration",
             "created",
+            "agent_task",
         ]
         read_only_fields = ["id", "created", "integration_name", "integration_type"]
 
@@ -116,10 +118,12 @@ class AgentTaskSerializer(serializers.ModelSerializer):
     triggered_by_task_name = serializers.CharField(source="triggered_by_task.name", read_only=True)
     next_execution_display = serializers.SerializerMethodField()
     last_execution_display = serializers.SerializerMethodField()
-    
+
     # Through model relationships
     task_sinks = AgentTaskSinkSerializer(source="agenttasksink_set", many=True, read_only=True)
-    task_funnels = AgentTaskFunnelSerializer(source="agenttaskfunnel_set", many=True, read_only=True)
+    task_funnels = AgentTaskFunnelSerializer(
+        source="agenttaskfunnel_set", many=True, read_only=True
+    )
 
     class Meta:
         model = AgentTask

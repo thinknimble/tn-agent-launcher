@@ -10,6 +10,8 @@ import {
   createAgentTaskFunnelShape,
   presignedUrlRequestShape,
   presignedUrlResponseShape,
+  agentTaskSinkFilterShape,
+  agentTaskFunnelFilterShape,
 } from './models'
 import { z } from 'zod'
 import { agentTaskExecutionShape } from '../agent-task-execution'
@@ -83,6 +85,7 @@ export const agentTaskSinkApi = createApi({
   models: {
     entity: agentTaskSinkShape,
     create: createAgentTaskSinkShape,
+    extraFilters: agentTaskSinkFilterShape,
   },
 })
 
@@ -92,5 +95,6 @@ export const agentTaskFunnelApi = createApi({
   models: {
     entity: agentTaskFunnelShape,
     create: createAgentTaskFunnelShape,
+    extraFilters: agentTaskFunnelFilterShape,
   },
 })

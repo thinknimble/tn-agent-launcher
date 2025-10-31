@@ -25,7 +25,7 @@ class Integration(AbstractBaseModel):
         models.CharField(max_length=10, choices=IntegrationRoles.choices),
         size=2,
         default=list,
-        help_text="Defines whether this integration can be used as SINK, FUNNEL, or both"
+        help_text="Defines whether this integration can be used as SINK, FUNNEL, or both",
     )
     is_system_provided = models.BooleanField(
         default=False, help_text="Uses Server-wide credentials, not available for webhooks"
@@ -48,8 +48,9 @@ class Integration(AbstractBaseModel):
     webhook_secret = EncryptedTextField(
         max_length=255, blank=True, default="", help_text="Secret for validating webhook payloads"
     )
+    # configuration - when using system_s3 we will use the userid/funnels to store and list from
+    # for now this will be the default
 
-    # decide if this is needed
     agent_tasks = models.ManyToManyField(
         "agent.AgentTask",
         blank=True,

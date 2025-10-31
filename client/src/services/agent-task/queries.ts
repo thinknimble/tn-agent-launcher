@@ -21,10 +21,10 @@ export const agentTaskQueries = {
 }
 
 export const agentTaskSinkQueries = {
-  list: ({ 
-    filters, 
-    pagination 
-  }: { 
+  list: ({
+    filters,
+    pagination,
+  }: {
     filters?: { agentTask?: string; integration?: string; isEnabled?: boolean }
     pagination: Pagination
   }) => ({
@@ -39,10 +39,10 @@ export const agentTaskSinkQueries = {
 }
 
 export const agentTaskFunnelQueries = {
-  list: ({ 
-    filters, 
-    pagination 
-  }: { 
+  list: ({
+    filters,
+    pagination,
+  }: {
     filters?: { agentTask?: string; integration?: string; isEnabled?: boolean }
     pagination: Pagination
   }) => ({

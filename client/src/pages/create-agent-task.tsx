@@ -19,6 +19,10 @@ import {
   TAgentTaskForm,
   agentTaskApi,
   agentTaskQueries,
+  agentTaskSinkApi,
+  agentTaskFunnelApi,
+  agentTaskSinkQueries,
+  agentTaskFunnelQueries,
   scheduleTypeLabelMap,
   scheduleTypeEnum,
   ScheduleTypeValues,
@@ -28,10 +32,7 @@ import {
 import { AgentInstance, agentInstanceQueries, agentTypeEnum } from 'src/services/agent-instance'
 import { SelectOption } from 'src/services/base-model'
 import { environmentSecretQueries } from 'src/services/environment-secrets'
-import {
-  integrationQueries,
-  integrationRoleEnum,
-} from 'src/services/integration'
+import { integrationQueries, integrationRoleEnum } from 'src/services/integration'
 import { CustomSelect } from 'src/components/custom-select'
 
 const CreateEditAgentTaskInner = ({
@@ -60,6 +61,8 @@ const CreateEditAgentTaskInner = ({
     webhookUrl?: string
     webhookSecret?: string
   } | null>(null)
+  const [createdTaskId, setCreatedTaskId] = useState<string | null>(null)
+  const [showSinksAndFunnels, setShowSinksAndFunnels] = useState(false)
 
   const { data: agentInstances } = useQuery({
     ...agentInstanceQueries.list(new Pagination(), {
@@ -90,6 +93,24 @@ const CreateEditAgentTaskInner = ({
       pagination: new Pagination({ page: 1, size: 100 }),
       filters: { integrationRoles: [integrationRoleEnum.FUNNEL] },
     }),
+  })
+
+  // Get existing sinks and funnels if editing a task
+  const taskId = initialData?.id || createdTaskId
+  const { data: existingSinks } = useQuery({
+    ...agentTaskSinkQueries.list({
+      pagination: new Pagination({ page: 1, size: 100 }),
+      filters: { agentTask: taskId ?? '' },
+    }),
+    enabled: !!taskId,
+  })
+
+  const { data: existingFunnels } = useQuery({
+    ...agentTaskFunnelQueries.list({
+      pagination: new Pagination({ page: 1, size: 100 }),
+      filters: { agentTask: taskId ?? '' },
+    }),
+    enabled: !!taskId,
   })
 
   // Transform environment secrets into variables for binding component
@@ -124,12 +145,20 @@ const CreateEditAgentTaskInner = ({
         })
       }
 
+      // Store created task ID to enable sinks/funnels management
+      setCreatedTaskId(data.id)
+      setShowSinksAndFunnels(true)
+
       // Invalidate all agent-tasks queries with prefix matching
       await queryClient.invalidateQueries({
         queryKey: ['agent-tasks'],
         exact: false,
       })
-      onSuccess(data)
+
+      // For new tasks, don't call onSuccess immediately - wait for sinks/funnels to be configured
+      if (isEditing) {
+        onSuccess(data)
+      }
     },
   })
 
@@ -169,6 +198,47 @@ const CreateEditAgentTaskInner = ({
       // Invalidate queries
       await queryClient.invalidateQueries({
         queryKey: ['agent-tasks'],
+        exact: false,
+      })
+    },
+  })
+
+  // Mutations for managing sinks and funnels
+  const { mutate: createSink } = useMutation({
+    mutationFn: agentTaskSinkApi.create,
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: ['agent-task-sinks'],
+        exact: false,
+      })
+    },
+  })
+
+  const { mutate: deleteSink } = useMutation({
+    mutationFn: agentTaskSinkApi.remove,
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: ['agent-task-sinks'],
+        exact: false,
+      })
+    },
+  })
+
+  const { mutate: createFunnel } = useMutation({
+    mutationFn: agentTaskFunnelApi.create,
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: ['agent-task-funnels'],
+        exact: false,
+      })
+    },
+  })
+
+  const { mutate: deleteFunnel } = useMutation({
+    mutationFn: agentTaskFunnelApi.remove,
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: ['agent-task-funnels'],
         exact: false,
       })
     },
@@ -217,6 +287,49 @@ const CreateEditAgentTaskInner = ({
       })) || []
     )
   }, [integrationFunnels])
+
+  // Show sinks and funnels section for editing
+  useEffect(() => {
+    if (isEditing && initialData) {
+      setShowSinksAndFunnels(true)
+    }
+  }, [isEditing, initialData])
+
+  // Helper functions for managing sinks and funnels
+  const handleAddSink = (integrationId: string) => {
+    if (taskId) {
+      createSink({
+        agentTask: taskId,
+        integration: integrationId,
+        isEnabled: true,
+      })
+    }
+  }
+
+  const handleAddFunnel = (integrationId: string) => {
+    if (taskId) {
+      createFunnel({
+        agentTask: taskId,
+        integration: integrationId,
+        isEnabled: true,
+      })
+    }
+  }
+
+  const handleRemoveSink = (sinkId: string) => {
+    deleteSink(sinkId)
+  }
+
+  const handleRemoveFunnel = (funnelId: string) => {
+    deleteFunnel(funnelId)
+  }
+
+  const handleFinishConfiguration = () => {
+    if (createdTaskId) {
+      // Find the created task data and call onSuccess
+      agentTaskApi.retrieve(createdTaskId).then(onSuccess)
+    }
+  }
 
   // Pre-populate form for editing
   useEffect(() => {
@@ -379,8 +492,6 @@ const CreateEditAgentTaskInner = ({
         triggeredByTask: formValue.triggeredByTask?.value || undefined,
         webhookValidateSignature: formValue.webhookValidateSignature ?? true,
         maxExecutions: formValue.maxExecutions || undefined,
-        sinks: formValue.sinks?.map((sink) => sink.value) || [],
-        funnels: formValue.funnels?.map((funnel) => funnel.value) || [],
       }
 
       if (isEditing && initialData) {
@@ -506,16 +617,127 @@ const CreateEditAgentTaskInner = ({
             Append agent instance instruction to task instruction
           </label>
         </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-primary-600">Sinks</label>
-          <CustomSelect
-            clearable
-            options={integrationFunnelOptions}
-            values={form.funnels.value ?? []}
-            onChange={(e) => createFormFieldChangeHandler(form.funnels)(e)}
-            className="bg-primary-50 border-primary-200 focus:border-primary-500"
-          />
-        </div>
+
+        {/* Sinks and Funnels Management Section */}
+        {showSinksAndFunnels && (
+          <div className="space-y-6 border-t border-primary-200 pt-6">
+            <div>
+              <h3 className="mb-4 text-lg font-semibold text-primary-600">
+                Integration Management
+              </h3>
+
+              {/* Sinks Section */}
+              <div className="mb-6">
+                <h4 className="text-md mb-3 font-medium text-primary-600">
+                  Output Destinations (Sinks)
+                </h4>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {/* Existing Sinks */}
+                  {existingSinks?.results?.map((sink) => (
+                    <div
+                      key={sink.id}
+                      className="flex items-center justify-between rounded-lg border border-primary-200 bg-white p-3"
+                    >
+                      <div>
+                        <div className="font-medium text-primary-700">{sink.integrationName}</div>
+                        <div className="text-sm text-primary-500">{sink.integrationType}</div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => handleRemoveSink(sink.id)}
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+
+                  {/* Add New Sink Card */}
+                  <div className="bg-primary-50 rounded-lg border-2 border-dashed border-primary-300">
+                    <label className="mb-2 block p-3 text-sm font-medium text-primary-600">
+                      Add Sink
+                    </label>
+                    <div className="p-3 pt-0">
+                      <Select
+                        options={integrationSinkOptions.filter(
+                          (option) =>
+                            !existingSinks?.results?.some(
+                              (sink) => sink.integration === option.value,
+                            ),
+                        )}
+                        values={[]}
+                        onChange={(values) => {
+                          if (values && values[0]) {
+                            handleAddSink(values[0].value)
+                          }
+                        }}
+                        placeholder="Select integration"
+                        className="border-primary-200 bg-white"
+                        clearable={false}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Funnels Section */}
+              <div>
+                <h4 className="text-md mb-3 font-medium text-primary-600">
+                  Input Sources (Funnels)
+                </h4>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {/* Existing Funnels */}
+                  {existingFunnels?.results?.map((funnel) => (
+                    <div
+                      key={funnel.id}
+                      className="flex items-center justify-between rounded-lg border border-primary-200 bg-white p-3"
+                    >
+                      <div>
+                        <div className="font-medium text-primary-700">{funnel.integrationName}</div>
+                        <div className="text-sm text-primary-500">{funnel.integrationType}</div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => handleRemoveFunnel(funnel.id)}
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+
+                  {/* Add New Funnel Card */}
+                  <div className="bg-primary-50 rounded-lg border-2 border-dashed border-primary-300">
+                    <label className="mb-2 block p-3 text-sm font-medium text-primary-600">
+                      Add Funnel
+                    </label>
+                    <div className="p-3 pt-0">
+                      <Select
+                        options={integrationFunnelOptions.filter(
+                          (option) =>
+                            !existingFunnels?.results?.some(
+                              (funnel) => funnel.integration === option.value,
+                            ),
+                        )}
+                        values={[]}
+                        onChange={(values) => {
+                          if (values && values[0]) {
+                            handleAddFunnel(values[0].value)
+                          }
+                        }}
+                        placeholder="Select integration"
+                        className="border-primary-200 bg-white"
+                        clearable={false}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <div>
           <label className="mb-3 block text-sm font-medium text-primary-600">Input Sources</label>
 
@@ -843,17 +1065,6 @@ const CreateEditAgentTaskInner = ({
             Maximum number of times this task should execute
           </p>
         </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-primary-600">Sinks</label>
-          <CustomSelect
-            clearable
-            options={integrationSinkOptions}
-            values={form.sinks.value ?? []}
-            onChange={(e) => createFormFieldChangeHandler(form.sinks)(e)}
-            className="bg-primary-50 border-primary-200 focus:border-primary-500"
-          />
-        </div>
-
         <div className="flex justify-end space-x-3 border-t border-primary-200 pt-4">
           {onCancel && (
             <Button
@@ -866,13 +1077,24 @@ const CreateEditAgentTaskInner = ({
             </Button>
           )}
 
-          <Button
-            type="submit"
-            disabled={isPending || !form.isValid}
-            className="bg-primary-600 hover:bg-primary-700"
-          >
-            {isPending ? 'Saving...' : isEditing ? 'Update Task' : 'Create Task'}
-          </Button>
+          {/* Show different buttons based on creation state */}
+          {createdTaskId && !isEditing ? (
+            <Button
+              type="button"
+              onClick={handleFinishConfiguration}
+              className="bg-primary-600 hover:bg-primary-700"
+            >
+              Finish Setup
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              disabled={isPending || !form.isValid}
+              className="bg-primary-600 hover:bg-primary-700"
+            >
+              {isPending ? 'Saving...' : isEditing ? 'Update Task' : 'Create Task'}
+            </Button>
+          )}
         </div>
       </form>
 

@@ -6,9 +6,9 @@ from .views import (
     AgentInstanceViewSet,
     AgentProjectViewSet,
     AgentTaskExecutionViewSet,
-    AgentTaskViewSet,
-    AgentTaskSinkViewSet,
     AgentTaskFunnelViewSet,
+    AgentTaskSinkViewSet,
+    AgentTaskViewSet,
     ProjectEnvironmentSecretViewSet,
 )
 

@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
@@ -14,10 +15,10 @@ from rest_framework.response import Response
 
 from tn_agent_launcher.utils.sites import get_site_url
 
+from .filters import IntegrationFilters
 from .models import Integration
 from .serializers import IntegrationSerializer
-from django_filters.rest_framework import DjangoFilterBackend
-from .filters import IntegrationFilters
+
 logger = logging.getLogger(__name__)
 
 

@@ -125,6 +125,7 @@ export const agentTaskFunnelShape = {
 }
 
 export const createAgentTaskSinkShape = {
+  agentTask: z.string().uuid(),
   integration: agentTaskSinkShape.integration,
   order: agentTaskSinkShape.order.optional(),
   isEnabled: agentTaskSinkShape.isEnabled.optional(),
@@ -132,6 +133,7 @@ export const createAgentTaskSinkShape = {
 }
 
 export const createAgentTaskFunnelShape = {
+  agentTask: z.string().uuid(),
   integration: agentTaskFunnelShape.integration,
   order: agentTaskFunnelShape.order.optional(),
   isEnabled: agentTaskFunnelShape.isEnabled.optional(),
@@ -186,6 +188,18 @@ export const createAgentTaskShape = {
 export const agentTaskFilterShape = {
   agentInstance: z.string(),
   agentInstance__projects: z.string().array(),
+}
+
+export const agentTaskSinkFilterShape = {
+  agentTask: z.string(),
+  integration: z.string(),
+  isEnabled: z.boolean(),
+}
+
+export const agentTaskFunnelFilterShape = {
+  agentTask: z.string(),
+  integration: z.string(),
+  isEnabled: z.boolean(),
 }
 
 export type InputSource = GetInferredFromRaw<typeof inputSourceShape>

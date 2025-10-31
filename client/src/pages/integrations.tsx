@@ -24,6 +24,7 @@ import {
   type IntegrationTypeValues,
 } from 'src/services/integration'
 import { useOAuthStore } from 'src/stores/oauth-state'
+import { useUser } from 'src/services/user'
 
 const S3IntegrationModal = ({
   isOpen,
@@ -128,6 +129,10 @@ const GoogleDriveIntegrationModal = ({
   const { oauthState, oauthWindow, setOauthState, setOauthWindow, setOauthCompleted } =
     useOAuthStore()
   const queryClient = useQueryClient()
+  const { data: user } = useUser()
+
+  // Check if user's domain is allowed for Google Drive
+  const isDomainAllowed = user?.email?.endsWith('@thinknimble.com') ?? false
 
   const { mutate: getOAuthUrl } = useMutation({
     mutationFn: integrationApi.csc.getGoogleOAuthUrl,
@@ -262,56 +267,73 @@ const GoogleDriveIntegrationModal = ({
         <h2 className="mb-4 text-2xl font-bold">
           {type === 'system' ? 'System' : 'Custom'} Google Drive Integration
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {type === 'custom' ? (
+
+        {!isDomainAllowed ? (
+          <div className="space-y-4">
             <div className="py-8 text-center">
-              <p className="text-lg text-gray-500">
-                Custom Google Drive integration not implemented yet
+              <p className="text-lg text-gray-600">Integration not available for your domain yet</p>
+              <p className="mt-2 text-sm text-gray-500">
+                Google Drive integration is currently restricted to @thinknimble.com users
               </p>
             </div>
-          ) : (
-            <div className="py-4 text-center">
-              <p className="text-gray-700">
-                You will be redirected to Google to authorize access to your Google Drive.
-              </p>
-              {oauthWindow && (
-                <p className="mt-2 text-sm text-blue-600">
-                  OAuth window opened. Please complete authorization in the popup window.
+            <div className="flex justify-end">
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Close
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {type === 'custom' ? (
+              <div className="py-8 text-center">
+                <p className="text-lg text-gray-500">
+                  Custom Google Drive integration not implemented yet
                 </p>
+              </div>
+            ) : (
+              <div className="py-4 text-center">
+                <p className="text-gray-700">
+                  You will be redirected to Google to authorize access to your Google Drive.
+                </p>
+                {oauthWindow && (
+                  <p className="mt-2 text-sm text-blue-600">
+                    OAuth window opened. Please complete authorization in the popup window.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* {type === 'custom' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Google Credentials JSON
+                </label>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={(e) => setCredentialsFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  required
+                />
+              </div>
+            )} */}
+
+            <div className="flex space-x-3">
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Cancel
+              </Button>
+              {type === 'system' && (
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={isLoading || !!oauthWindow || isHandlingOAuth}
+                >
+                  {oauthWindow ? 'Waiting for Authorization...' : 'Connect to Google Drive'}
+                </Button>
               )}
             </div>
-          )}
-
-          {/* {type === 'custom' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Google Credentials JSON
-              </label>
-              <input
-                type="file"
-                accept=".json"
-                onChange={(e) => setCredentialsFile(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                required
-              />
-            </div>
-          )} */}
-
-          <div className="flex space-x-3">
-            <Button type="button" variant="secondary" onClick={onClose}>
-              Cancel
-            </Button>
-            {type === 'system' && (
-              <Button
-                type="submit"
-                variant="primary"
-                isLoading={isLoading || !!oauthWindow || isHandlingOAuth}
-              >
-                {oauthWindow ? 'Waiting for Authorization...' : 'Connect to Google Drive'}
-              </Button>
-            )}
-          </div>
-        </form>
+          </form>
+        )}
       </section>
     </Modal>
   )

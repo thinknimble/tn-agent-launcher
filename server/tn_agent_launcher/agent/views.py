@@ -22,17 +22,17 @@ from .models import (
     AgentProject,
     AgentTask,
     AgentTaskExecution,
-    AgentTaskSink,
     AgentTaskFunnel,
+    AgentTaskSink,
     ProjectEnvironmentSecret,
 )
 from .serializers import (
     AgentInstanceSerializer,
     AgentProjectSerializer,
     AgentTaskExecutionSerializer,
+    AgentTaskFunnelSerializer,
     AgentTaskSerializer,
     AgentTaskSinkSerializer,
-    AgentTaskFunnelSerializer,
     ProjectEnvironmentSecretSerializer,
 )
 from .tasks import schedule_agent_task_execution
@@ -351,17 +351,19 @@ class AgentTaskSinkViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Ensure the agent_task belongs to the current user
-        agent_task = serializer.validated_data['agent_task']
+        agent_task = serializer.validated_data["agent_task"]
         if agent_task.agent_instance.user != self.request.user:
             from rest_framework.exceptions import PermissionDenied
+
             raise PermissionDenied("You can only add sinks to your own agent tasks")
-        
+
         # Ensure the integration belongs to the current user
-        integration = serializer.validated_data['integration']
+        integration = serializer.validated_data["integration"]
         if integration.user != self.request.user:
             from rest_framework.exceptions import PermissionDenied
+
             raise PermissionDenied("You can only use your own integrations")
-        
+
         serializer.save()
 
 
@@ -377,15 +379,17 @@ class AgentTaskFunnelViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Ensure the agent_task belongs to the current user
-        agent_task = serializer.validated_data['agent_task']
+        agent_task = serializer.validated_data["agent_task"]
         if agent_task.agent_instance.user != self.request.user:
             from rest_framework.exceptions import PermissionDenied
+
             raise PermissionDenied("You can only add funnels to your own agent tasks")
-        
+
         # Ensure the integration belongs to the current user
-        integration = serializer.validated_data['integration']
+        integration = serializer.validated_data["integration"]
         if integration.user != self.request.user:
             from rest_framework.exceptions import PermissionDenied
+
             raise PermissionDenied("You can only use your own integrations")
-        
+
         serializer.save()
