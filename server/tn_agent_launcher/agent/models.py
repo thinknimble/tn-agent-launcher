@@ -202,6 +202,22 @@ class AgentTask(AbstractBaseModel):
         default=True, help_text="Whether to validate webhook signatures"
     )
 
+    # Integration relationships
+    sinks = models.ManyToManyField(
+        "integrations.Integration",
+        through="AgentTaskSink",
+        blank=True,
+        related_name="sink_tasks",
+        help_text="Output integrations where task results will be sent",
+    )
+    funnels = models.ManyToManyField(
+        "integrations.Integration",
+        through="AgentTaskFunnel",
+        blank=True,
+        related_name="funnel_tasks",
+        help_text="Input integrations that provide data to this task",
+    )
+
     class Meta:
         ordering = ["-created"]
 
@@ -423,8 +439,6 @@ class ProjectEnvironmentSecret(AbstractBaseModel):
         return ""
 
     def clean(self):
-        from django.core.exceptions import ValidationError
-
         errors = {}
 
         # Validate key format (alphanumeric and underscores only)
@@ -438,4 +452,68 @@ class ProjectEnvironmentSecret(AbstractBaseModel):
         if errors:
             raise ValidationError(errors)
 
+        super().clean()
+
+
+class AgentTaskSink(AbstractBaseModel):
+    """
+    Through model for AgentTask -> Integration (Sink) relationship.
+    Allows for future expansion of sink-specific configuration.
+    """
+
+    agent_task = models.ForeignKey(AgentTask, on_delete=models.CASCADE)
+    integration = models.ForeignKey("integrations.Integration", on_delete=models.CASCADE)
+
+    # Future expansion fields
+    order = models.PositiveIntegerField(default=0, help_text="Order in which to process this sink")
+    is_enabled = models.BooleanField(default=True, help_text="Whether this sink is active")
+    configuration = models.JSONField(
+        default=dict, blank=True, help_text="Sink-specific configuration options"
+    )
+
+    class Meta:
+        unique_together = [["agent_task", "integration"]]
+        ordering = ["order", "created"]
+
+    def __str__(self):
+        return f"{self.agent_task.name} -> {self.integration.name} (Sink)"
+
+    def clean(self):
+        # Validate that the integration can be used as a sink
+        if self.integration and not self.integration.can_be_sink:
+            raise ValidationError(f"Integration '{self.integration.name}' cannot be used as a sink")
+        super().clean()
+
+
+class AgentTaskFunnel(AbstractBaseModel):
+    """
+    Through model for AgentTask -> Integration (Funnel) relationship.
+    Allows for future expansion of funnel-specific configuration.
+    """
+
+    agent_task = models.ForeignKey(AgentTask, on_delete=models.CASCADE)
+    integration = models.ForeignKey("integrations.Integration", on_delete=models.CASCADE)
+
+    # Future expansion fields
+    order = models.PositiveIntegerField(
+        default=0, help_text="Order in which to process this funnel"
+    )
+    is_enabled = models.BooleanField(default=True, help_text="Whether this funnel is active")
+    configuration = models.JSONField(
+        default=dict, blank=True, help_text="Funnel-specific configuration options"
+    )
+
+    class Meta:
+        unique_together = [["agent_task", "integration"]]
+        ordering = ["order", "created"]
+
+    def __str__(self):
+        return f"{self.integration.name} -> {self.agent_task.name} (Funnel)"
+
+    def clean(self):
+        # Validate that the integration can be used as a funnel
+        if self.integration and not self.integration.can_be_funnel:
+            raise ValidationError(
+                f"Integration '{self.integration.name}' cannot be used as a funnel"
+            )
         super().clean()

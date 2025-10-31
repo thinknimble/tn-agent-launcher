@@ -5,6 +5,8 @@ from .models import (
     AgentProject,
     AgentTask,
     AgentTaskExecution,
+    AgentTaskFunnel,
+    AgentTaskSink,
     ProjectEnvironmentSecret,
 )
 
@@ -55,11 +57,73 @@ class AgentProjectSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
 
 
+class AgentTaskSinkSerializer(serializers.ModelSerializer):
+    integration_name = serializers.CharField(source="integration.name", read_only=True)
+    integration_type = serializers.CharField(source="integration.integration_type", read_only=True)
+
+    class Meta:
+        model = AgentTaskSink
+        fields = [
+            "id",
+            "integration",
+            "integration_name",
+            "integration_type",
+            "order",
+            "is_enabled",
+            "configuration",
+            "created",
+            "agent_task",
+        ]
+        read_only_fields = ["id", "created", "integration_name", "integration_type"]
+
+    def validate_integration(self, value):
+        """Ensure the integration can be used as a sink"""
+        if not value.can_be_sink:
+            raise serializers.ValidationError(
+                f"Integration '{value.name}' cannot be used as a sink"
+            )
+        return value
+
+
+class AgentTaskFunnelSerializer(serializers.ModelSerializer):
+    integration_name = serializers.CharField(source="integration.name", read_only=True)
+    integration_type = serializers.CharField(source="integration.integration_type", read_only=True)
+
+    class Meta:
+        model = AgentTaskFunnel
+        fields = [
+            "id",
+            "integration",
+            "integration_name",
+            "integration_type",
+            "order",
+            "is_enabled",
+            "configuration",
+            "created",
+            "agent_task",
+        ]
+        read_only_fields = ["id", "created", "integration_name", "integration_type"]
+
+    def validate_integration(self, value):
+        """Ensure the integration can be used as a funnel"""
+        if not value.can_be_funnel:
+            raise serializers.ValidationError(
+                f"Integration '{value.name}' cannot be used as a funnel"
+            )
+        return value
+
+
 class AgentTaskSerializer(serializers.ModelSerializer):
     agent_instance_ref = serializers.CharField(source="agent_instance", read_only=True)
     triggered_by_task_name = serializers.CharField(source="triggered_by_task.name", read_only=True)
     next_execution_display = serializers.SerializerMethodField()
     last_execution_display = serializers.SerializerMethodField()
+
+    # Through model relationships
+    task_sinks = AgentTaskSinkSerializer(source="agenttasksink_set", many=True, read_only=True)
+    task_funnels = AgentTaskFunnelSerializer(
+        source="agenttaskfunnel_set", many=True, read_only=True
+    )
 
     class Meta:
         model = AgentTask
@@ -88,6 +152,9 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "webhook_validate_signature",
             "webhook_url",
             "webhook_secret",
+            "integrations",
+            "task_sinks",
+            "task_funnels",
         ]
         read_only_fields = [
             "id",
@@ -100,7 +167,12 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "triggered_by_task_name",
             "webhook_url",
             "webhook_secret",
+            "task_sinks",
+            "task_funnels",
         ]
+        extra_kwargs = {
+            "integrations": {"required": False},
+        }
 
     def get_next_execution_display(self, obj):
         if obj.next_execution_at:

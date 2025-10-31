@@ -15,10 +15,23 @@ export const integrationTypeEnumLabelMap = {
   [integrationTypeEnum.WEBHOOK]: 'Webhook',
 }
 
+export const integrationRoleEnum = {
+  SINK: 'SINK',
+  FUNNEL: 'FUNNEL',
+} as const
+
+export type IntegrationRoleValues = (typeof integrationRoleEnum)[keyof typeof integrationRoleEnum]
+
+export const integrationRoleEnumLabelMap = {
+  [integrationRoleEnum.SINK]: 'Sink',
+  [integrationRoleEnum.FUNNEL]: 'Funnel',
+}
+
 export const integrationShape = {
   id: z.string().uuid(),
   name: z.string(),
   integrationType: z.nativeEnum(integrationTypeEnum),
+  integrationRoles: z.array(z.nativeEnum(integrationRoleEnum)).default([]),
   isSystemProvided: z.boolean(),
   webhookUrl: z.string().nullable(),
   webhookSecret: z.string().nullable().readonly(),
@@ -76,6 +89,9 @@ export const integrationTypeOptionShape = {
   description: z.string(),
 }
 
+export const integrationFilterShape = {
+  integrationRoles: z.string().array(),
+}
 export type Integration = GetInferredFromRaw<typeof integrationShape>
 export type CreateIntegration = GetInferredFromRaw<typeof createIntegrationShape>
 export type UpdateIntegration = GetInferredFromRaw<typeof updateIntegrationShape>
@@ -83,7 +99,7 @@ export type GoogleOAuthUrl = GetInferredFromRaw<typeof googleOAuthUrlShape>
 export type GoogleOAuthCallback = GetInferredFromRaw<typeof googleOAuthCallbackShape>
 export type GoogleOAuthResponse = GetInferredFromRaw<typeof googleOAuthResponseShape>
 export type IntegrationTypeOption = GetInferredFromRaw<typeof integrationTypeOptionShape>
-
+export type IntegrationFilter = GetInferredFromRaw<typeof integrationFilterShape>
 /***
  * S3
  * System Provided Integration Credentials

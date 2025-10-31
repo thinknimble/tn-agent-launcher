@@ -101,6 +101,45 @@ export const executionStatusLabelMap = {
   [executionStatusEnum.FAILED]: 'Failed',
 }
 
+// Through model shapes for sinks and funnels
+export const agentTaskSinkShape = {
+  id: z.string().uuid(),
+  integration: z.string().uuid(),
+  integrationName: z.string().readonly(),
+  integrationType: z.string().readonly(),
+  order: z.number().nonnegative().default(0),
+  isEnabled: z.boolean().default(true),
+  configuration: z.record(z.any()).default({}),
+  created: z.string().datetime(),
+}
+
+export const agentTaskFunnelShape = {
+  id: z.string().uuid(),
+  integration: z.string().uuid(),
+  integrationName: z.string().readonly(),
+  integrationType: z.string().readonly(),
+  order: z.number().nonnegative().default(0),
+  isEnabled: z.boolean().default(true),
+  configuration: z.record(z.any()).default({}),
+  created: z.string().datetime(),
+}
+
+export const createAgentTaskSinkShape = {
+  agentTask: z.string().uuid(),
+  integration: agentTaskSinkShape.integration,
+  order: agentTaskSinkShape.order.optional(),
+  isEnabled: agentTaskSinkShape.isEnabled.optional(),
+  configuration: agentTaskSinkShape.configuration.optional(),
+}
+
+export const createAgentTaskFunnelShape = {
+  agentTask: z.string().uuid(),
+  integration: agentTaskFunnelShape.integration,
+  order: agentTaskFunnelShape.order.optional(),
+  isEnabled: agentTaskFunnelShape.isEnabled.optional(),
+  configuration: agentTaskFunnelShape.configuration.optional(),
+}
+
 export const agentTaskShape = {
   id: z.string().uuid(),
   name: z.string(),
@@ -151,10 +190,26 @@ export const agentTaskFilterShape = {
   agentInstance__projects: z.string().array(),
 }
 
+export const agentTaskSinkFilterShape = {
+  agentTask: z.string(),
+  integration: z.string(),
+  isEnabled: z.boolean(),
+}
+
+export const agentTaskFunnelFilterShape = {
+  agentTask: z.string(),
+  integration: z.string(),
+  isEnabled: z.boolean(),
+}
+
 export type InputSource = GetInferredFromRaw<typeof inputSourceShape>
 export type AgentTask = GetInferredFromRaw<typeof agentTaskShape>
 export type CreateAgentTask = GetInferredFromRaw<typeof createAgentTaskShape>
 export type AgentTaskFilter = GetInferredFromRaw<typeof agentTaskFilterShape>
+export type AgentTaskSink = GetInferredFromRaw<typeof agentTaskSinkShape>
+export type AgentTaskFunnel = GetInferredFromRaw<typeof agentTaskFunnelShape>
+export type CreateAgentTaskSink = GetInferredFromRaw<typeof createAgentTaskSinkShape>
+export type CreateAgentTaskFunnel = GetInferredFromRaw<typeof createAgentTaskFunnelShape>
 
 export const presignedUrlRequestShape = {
   filename: z.string(),

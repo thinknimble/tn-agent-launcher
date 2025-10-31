@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
@@ -14,6 +15,7 @@ from rest_framework.response import Response
 
 from tn_agent_launcher.utils.sites import get_site_url
 
+from .filters import IntegrationFilters
 from .models import Integration
 from .serializers import IntegrationSerializer
 
@@ -28,6 +30,8 @@ class IntegrationViewSet(viewsets.ModelViewSet):
     serializer_class = IntegrationSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [JSONParser, MultiPartParser]  # Support file uploads
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = IntegrationFilters
 
     def get_queryset(self):
         """Users can only see their own integrations"""

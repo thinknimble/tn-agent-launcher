@@ -507,3 +507,116 @@ class TestAgentTaskCRUD:
         response = api_client.post(f"/api/agents/tasks/{task.id}/resume/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "active"
+
+
+@pytest.mark.django_db
+class TestAgentTaskSinksFunnels:
+    """Test the through models for sinks and funnels"""
+
+    def test_agent_task_sink_creation(self, api_client, sample_user):
+        """Test creating agent task sinks through the API"""
+        from tn_agent_launcher.integrations.models import Integration
+
+        api_client.force_authenticate(user=sample_user)
+
+        # Create an agent task
+        agent_instance = AgentInstanceFactory(user=sample_user, agent_type="one-shot")
+        task = AgentTaskFactory(agent_instance=agent_instance)
+
+        # Create an integration that can be used as a sink
+        integration = Integration.objects.create(
+            user=sample_user,
+            name="Test Webhook",
+            integration_type=Integration.IntegrationTypes.WEBHOOK,
+            webhook_url="https://example.com/webhook",
+        )
+
+        # Verify the integration has the right roles
+        assert integration.can_be_sink
+        assert not integration.can_be_funnel
+
+        data = {
+            "agent_task": str(task.id),
+            "integration": str(integration.id),
+            "order": 1,
+            "is_enabled": True,
+            "configuration": {"test": "value"},
+        }
+
+        response = api_client.post("/api/agents/task-sinks/", data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["integration_name"] == "Test Webhook"
+        assert response.data["integration_type"] == "webhook"
+        assert response.data["order"] == 1
+
+    def test_agent_task_funnel_creation(self, api_client, sample_user):
+        """Test creating agent task funnels through the API"""
+        from tn_agent_launcher.integrations.models import Integration
+
+        api_client.force_authenticate(user=sample_user)
+
+        # Create an agent task
+        agent_instance = AgentInstanceFactory(user=sample_user, agent_type="one-shot")
+        task = AgentTaskFactory(agent_instance=agent_instance)
+
+        # Create an integration that can be used as a funnel
+        integration = Integration.objects.create(
+            user=sample_user, name="Test S3", integration_type=Integration.IntegrationTypes.AWS_S3
+        )
+
+        # Verify the integration has the right roles
+        assert integration.can_be_sink
+        assert integration.can_be_funnel
+
+        data = {
+            "agent_task": str(task.id),
+            "integration": str(integration.id),
+            "order": 0,
+            "is_enabled": True,
+        }
+
+        response = api_client.post("/api/agents/task-funnels/", data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["integration_name"] == "Test S3"
+        assert response.data["integration_type"] == "aws_s3"
+
+    def test_task_with_sinks_and_funnels_in_response(self, api_client, sample_user):
+        """Test that agent task response includes sinks and funnels"""
+        from tn_agent_launcher.agent.models import AgentTaskFunnel, AgentTaskSink
+        from tn_agent_launcher.integrations.models import Integration
+
+        api_client.force_authenticate(user=sample_user)
+
+        # Create an agent task
+        agent_instance = AgentInstanceFactory(user=sample_user, agent_type="one-shot")
+        task = AgentTaskFactory(agent_instance=agent_instance)
+
+        # Create integrations
+        webhook = Integration.objects.create(
+            user=sample_user,
+            name="Test Webhook",
+            integration_type=Integration.IntegrationTypes.WEBHOOK,
+            webhook_url="https://example.com/webhook",
+        )
+
+        s3_integration = Integration.objects.create(
+            user=sample_user, name="Test S3", integration_type=Integration.IntegrationTypes.AWS_S3
+        )
+
+        # Create through model instances
+        AgentTaskSink.objects.create(agent_task=task, integration=webhook, order=0)
+
+        AgentTaskFunnel.objects.create(agent_task=task, integration=s3_integration, order=0)
+
+        # Retrieve the task and verify the relationships are included
+        response = api_client.get(f"/api/agents/tasks/{task.id}/")
+        assert response.status_code == status.HTTP_200_OK
+
+        assert "task_sinks" in response.data
+        assert "task_funnels" in response.data
+
+        assert len(response.data["task_sinks"]) == 1
+        assert len(response.data["task_funnels"]) == 1
+
+        assert response.data["task_sinks"][0]["integration_name"] == "Test Webhook"
+        assert response.data["task_funnels"][0]["integration_name"] == "Test S3"
