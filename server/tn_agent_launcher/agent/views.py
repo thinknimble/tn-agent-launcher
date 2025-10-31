@@ -12,6 +12,7 @@ from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from tn_agent_launcher.utils.sandbox import SandboxManager
@@ -353,15 +354,11 @@ class AgentTaskSinkViewSet(viewsets.ModelViewSet):
         # Ensure the agent_task belongs to the current user
         agent_task = serializer.validated_data["agent_task"]
         if agent_task.agent_instance.user != self.request.user:
-            from rest_framework.exceptions import PermissionDenied
-
             raise PermissionDenied("You can only add sinks to your own agent tasks")
 
         # Ensure the integration belongs to the current user
         integration = serializer.validated_data["integration"]
         if integration.user != self.request.user:
-            from rest_framework.exceptions import PermissionDenied
-
             raise PermissionDenied("You can only use your own integrations")
 
         serializer.save()
@@ -381,15 +378,11 @@ class AgentTaskFunnelViewSet(viewsets.ModelViewSet):
         # Ensure the agent_task belongs to the current user
         agent_task = serializer.validated_data["agent_task"]
         if agent_task.agent_instance.user != self.request.user:
-            from rest_framework.exceptions import PermissionDenied
-
             raise PermissionDenied("You can only add funnels to your own agent tasks")
 
         # Ensure the integration belongs to the current user
         integration = serializer.validated_data["integration"]
         if integration.user != self.request.user:
-            from rest_framework.exceptions import PermissionDenied
-
             raise PermissionDenied("You can only use your own integrations")
 
         serializer.save()

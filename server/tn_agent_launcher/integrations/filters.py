@@ -1,7 +1,5 @@
 import django_filters
 
-from tn_agent_launcher.common.filters import MultiValueCharFilter
-
 from .models import Integration
 
 
@@ -11,7 +9,9 @@ class IntegrationFilters(django_filters.FilterSet):
     )
     integration_roles = django_filters.MultipleChoiceFilter(
         field_name="integration_roles",
-        choices=getattr(Integration, "RoleChoices", getattr(Integration, "INTEGRATION_ROLE_CHOICES", [])),
+        choices=getattr(
+            Integration, "RoleChoices", getattr(Integration, "INTEGRATION_ROLE_CHOICES", [])
+        ),
         lookup_expr="contains",
     )
 

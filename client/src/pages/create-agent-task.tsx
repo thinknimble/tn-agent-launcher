@@ -1,6 +1,5 @@
 import { FormProvider, useTnForm } from '@thinknimble/tn-forms-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { useMemo, useState, useEffect } from 'react'
 import { Pagination } from '@thinknimble/tn-models'
 import Select from 'react-dropdown-select'
@@ -33,7 +32,6 @@ import { AgentInstance, agentInstanceQueries, agentTypeEnum } from 'src/services
 import { SelectOption } from 'src/services/base-model'
 import { environmentSecretQueries } from 'src/services/environment-secrets'
 import { integrationQueries, integrationRoleEnum } from 'src/services/integration'
-import { CustomSelect } from 'src/components/custom-select'
 
 const CreateEditAgentTaskInner = ({
   onSuccess,

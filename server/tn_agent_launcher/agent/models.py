@@ -439,8 +439,6 @@ class ProjectEnvironmentSecret(AbstractBaseModel):
         return ""
 
     def clean(self):
-        from django.core.exceptions import ValidationError
-
         errors = {}
 
         # Validate key format (alphanumeric and underscores only)
@@ -483,8 +481,6 @@ class AgentTaskSink(AbstractBaseModel):
     def clean(self):
         # Validate that the integration can be used as a sink
         if self.integration and not self.integration.can_be_sink:
-            from django.core.exceptions import ValidationError
-
             raise ValidationError(f"Integration '{self.integration.name}' cannot be used as a sink")
         super().clean()
 
@@ -517,8 +513,6 @@ class AgentTaskFunnel(AbstractBaseModel):
     def clean(self):
         # Validate that the integration can be used as a funnel
         if self.integration and not self.integration.can_be_funnel:
-            from django.core.exceptions import ValidationError
-
             raise ValidationError(
                 f"Integration '{self.integration.name}' cannot be used as a funnel"
             )

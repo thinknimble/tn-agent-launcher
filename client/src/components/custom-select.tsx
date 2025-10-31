@@ -58,7 +58,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                 e.stopPropagation()
               }}
               placeholder={hasValues ? 'Search...' : rendererProps.placeholder}
-              className="!focus:ring-0 !focus:border-0 !border-0 !p-0 !ring-0"
+              className="!border-0 !p-0 !ring-0 focus:!border-0 focus:!ring-0"
             />
           ) : !hasValues ? (
             <span className="text-sm text-slate-500">{rendererProps.placeholder}</span>
