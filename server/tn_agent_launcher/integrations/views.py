@@ -5,6 +5,7 @@ import pickle
 import time
 from urllib.parse import urlencode
 
+import boto3
 import requests
 from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
@@ -305,3 +306,218 @@ class IntegrationViewSet(viewsets.ModelViewSet):
                     "integration_id": str(integration.id),
                 }
             )
+
+    @action(detail=True, methods=["get"], url_path="directories")
+    def get_directories(self, request, pk=None):
+        """
+        Get available directories for the integration.
+        For system S3 integrations, only returns directories within user_id/ prefix.
+        """
+        integration = self.get_object()
+        
+        try:
+            if integration.integration_type == Integration.IntegrationTypes.AWS_S3:
+                return self._get_s3_directories(integration, request.user)
+            elif integration.integration_type == Integration.IntegrationTypes.GOOGLE_DRIVE:
+                return self._get_google_drive_directories(integration, request.user)
+            else:
+                return Response(
+                    {"error": "Directory listing not supported for this integration type"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except Exception as e:
+            logger.error(f"Error retrieving directories for integration {integration.id}: {str(e)}")
+            return Response(
+                {"error": "Failed to retrieve directories"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def _get_s3_directories(self, integration, user):
+        """Get S3 directories with user-specific filtering for system integrations."""
+        credentials = integration.app_credentials
+        
+        if not credentials:
+            return Response(
+                {"error": "No S3 credentials configured"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Create S3 client
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=credentials.get('aws_access_key_id'),
+                aws_secret_access_key=credentials.get('aws_secret_access_key'),
+                region_name=credentials.get('region', 'us-east-1')
+            )
+            
+            bucket_name = credentials.get('bucket_name')
+            if not bucket_name:
+                return Response(
+                    {"error": "No bucket name configured"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # For system integrations, only show directories under user_id/
+            prefix = ""
+            if integration.is_system_provided:
+                prefix = f"{user.id}/"
+
+            # List objects with delimiter to get "folders"
+            response = s3_client.list_objects_v2(
+                Bucket=bucket_name,
+                Prefix=prefix,
+                Delimiter='/'
+            )
+
+            directories = []
+            
+            # Add common prefixes (folders)
+            for common_prefix in response.get('CommonPrefixes', []):
+                folder_name = common_prefix['Prefix']
+                # Remove the user prefix for display
+                if integration.is_system_provided and folder_name.startswith(f"{user.id}/"):
+                    display_name = folder_name[len(f"{user.id}/"):]
+                else:
+                    display_name = folder_name
+                
+                directories.append({
+                    'name': display_name.rstrip('/'),
+                    'path': folder_name,
+                    'type': 'folder'
+                })
+
+            # Sort directories by name
+            directories.sort(key=lambda x: x['name'])
+
+            return Response({"directories": directories})
+
+        except Exception as e:
+            logger.error(f"S3 directory listing error: {str(e)}")
+            return Response(
+                {"error": "Failed to list S3 directories"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def _get_google_drive_directories(self, integration, user):
+        """Get Google Drive directories (folders)."""
+        oauth_creds = integration.oauth_credentials
+        
+        if not oauth_creds or not oauth_creds.get('access_token'):
+            return Response(
+                {"error": "Google Drive not connected. Please authorize access first."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Use Google Drive API to list folders
+            headers = {
+                'Authorization': f"Bearer {oauth_creds['access_token']}",
+                'Content-Type': 'application/json'
+            }
+            
+            # Query for folders only
+            params = {
+                'q': "mimeType='application/vnd.google-apps.folder' and trashed=false",
+                'fields': 'files(id,name,parents)',
+                'pageSize': 100
+            }
+            
+            response = requests.get(
+                'https://www.googleapis.com/drive/v3/files',
+                headers=headers,
+                params=params
+            )
+            
+            if response.status_code == 401:
+                # Token might be expired, try refreshing
+                if self._refresh_google_token(integration):
+                    # Retry with new token
+                    headers['Authorization'] = f"Bearer {integration.oauth_credentials['access_token']}"
+                    response = requests.get(
+                        'https://www.googleapis.com/drive/v3/files',
+                        headers=headers,
+                        params=params
+                    )
+                else:
+                    return Response(
+                        {"error": "Google Drive access token expired and refresh failed"},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                    )
+            
+            if response.status_code != 200:
+                logger.error(f"Google Drive API error: {response.text}")
+                return Response(
+                    {"error": "Failed to retrieve Google Drive folders"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            data = response.json()
+            directories = []
+            
+            for file in data.get('files', []):
+                directories.append({
+                    'name': file['name'],
+                    'path': file['id'],  # Google Drive uses file ID as path
+                    'type': 'folder',
+                    'parents': file.get('parents', [])
+                })
+
+            # Sort directories by name
+            directories.sort(key=lambda x: x['name'])
+
+            return Response({"directories": directories})
+
+        except Exception as e:
+            logger.error(f"Google Drive directory listing error: {str(e)}")
+            return Response(
+                {"error": "Failed to list Google Drive directories"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def _refresh_google_token(self, integration):
+        """Refresh Google OAuth token if refresh token is available."""
+        oauth_creds = integration.oauth_credentials
+        app_creds = integration.app_credentials
+        
+        refresh_token = oauth_creds.get('refresh_token')
+        if not refresh_token:
+            return False
+
+        # Extract client credentials
+        client_id = None
+        client_secret = None
+        
+        if "web" in app_creds:
+            client_id = app_creds["web"].get("client_id")
+            client_secret = app_creds["web"].get("client_secret")
+        elif "installed" in app_creds:
+            client_id = app_creds["installed"].get("client_id")
+            client_secret = app_creds["installed"].get("client_secret")
+
+        if not client_id or not client_secret:
+            return False
+
+        try:
+            # Refresh the token
+            token_url = "https://oauth2.googleapis.com/token"
+            token_data = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token",
+            }
+
+            response = requests.post(token_url, data=token_data)
+            if response.status_code == 200:
+                new_tokens = response.json()
+                # Update stored credentials
+                oauth_creds.update(new_tokens)
+                integration.oauth_credentials = oauth_creds
+                integration.save()
+                return True
+
+        except Exception as e:
+            logger.error(f"Token refresh error: {str(e)}")
+        
+        return False

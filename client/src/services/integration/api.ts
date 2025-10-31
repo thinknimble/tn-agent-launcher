@@ -65,6 +65,22 @@ export const revokeGoogleOAuth = createCustomServiceCall({
   },
 })
 
+export const getDirectories = createCustomServiceCall({
+  inputShape: { integrationId: z.string() },
+  outputShape: {
+    directories: z.array(z.object({
+      name: z.string(),
+      path: z.string(),
+      type: z.string(),
+      parents: z.array(z.string()).optional(),
+    })),
+  },
+  cb: async ({ client, slashEndingBaseUri, input, utils: { fromApi } }) => {
+    const response = await client.get(`${slashEndingBaseUri}${input.integrationId}/directories/`)
+    return fromApi(response.data)
+  },
+})
+
 export const integrationApi = createApi({
   client: axiosInstance,
   baseUri: '/integrations/',
@@ -77,5 +93,6 @@ export const integrationApi = createApi({
     getGoogleOAuthUrl,
     handleGoogleOAuthCallback,
     revokeGoogleOAuth,
+    getDirectories,
   },
 })

@@ -12,6 +12,7 @@ import { InputSourceUploader } from 'src/components/input-source-uploader'
 import { DocumentProcessingConfigModal } from 'src/components/document-processing-config'
 import { VariableBinding, Variable } from 'src/components/variable-binding'
 import { WebhookHelp } from 'src/components/webhook-help'
+import { FolderSelectionModal } from 'src/components/folder-selection-modal'
 import {
   AgentTask,
   AgentTaskForm,
@@ -61,6 +62,10 @@ const CreateEditAgentTaskInner = ({
   } | null>(null)
   const [createdTaskId, setCreatedTaskId] = useState<string | null>(null)
   const [showSinksAndFunnels, setShowSinksAndFunnels] = useState(false)
+  const [showSinkFolderModal, setShowSinkFolderModal] = useState(false)
+  const [showFunnelFolderModal, setShowFunnelFolderModal] = useState(false)
+  const [selectedIntegrationForSink, setSelectedIntegrationForSink] = useState<string | null>(null)
+  const [selectedIntegrationForFunnel, setSelectedIntegrationForFunnel] = useState<string | null>(null)
 
   const { data: agentInstances } = useQuery({
     ...agentInstanceQueries.list(new Pagination(), {
@@ -295,23 +300,37 @@ const CreateEditAgentTaskInner = ({
 
   // Helper functions for managing sinks and funnels
   const handleAddSink = (integrationId: string) => {
-    if (taskId) {
-      createSink({
-        agentTask: taskId,
-        integration: integrationId,
-        isEnabled: true,
-      })
-    }
+    setSelectedIntegrationForSink(integrationId)
+    setShowSinkFolderModal(true)
   }
 
   const handleAddFunnel = (integrationId: string) => {
-    if (taskId) {
-      createFunnel({
+    setSelectedIntegrationForFunnel(integrationId)
+    setShowFunnelFolderModal(true)
+  }
+
+  const handleSinkFolderSelect = (folder: { name: string; path: string; type: string }) => {
+    if (taskId && selectedIntegrationForSink) {
+      createSink({
         agentTask: taskId,
-        integration: integrationId,
+        integration: selectedIntegrationForSink,
         isEnabled: true,
+        configuration: { folder: folder.path, folderName: folder.name },
       })
     }
+    setSelectedIntegrationForSink(null)
+  }
+
+  const handleFunnelFolderSelect = (folder: { name: string; path: string; type: string }) => {
+    if (taskId && selectedIntegrationForFunnel) {
+      createFunnel({
+        agentTask: taskId,
+        integration: selectedIntegrationForFunnel,
+        isEnabled: true,
+        configuration: { folder: folder.path, folderName: folder.name },
+      })
+    }
+    setSelectedIntegrationForFunnel(null)
   }
 
   const handleRemoveSink = (sinkId: string) => {
@@ -639,6 +658,11 @@ const CreateEditAgentTaskInner = ({
                       <div>
                         <div className="font-medium text-primary-700">{sink.integrationName}</div>
                         <div className="text-sm text-primary-500">{sink.integrationType}</div>
+                        {sink.configuration?.folderName && (
+                          <div className="text-xs text-primary-400">
+                            📁 {sink.configuration.folderName}
+                          </div>
+                        )}
                       </div>
                       <Button
                         type="button"
@@ -694,6 +718,11 @@ const CreateEditAgentTaskInner = ({
                       <div>
                         <div className="font-medium text-primary-700">{funnel.integrationName}</div>
                         <div className="text-sm text-primary-500">{funnel.integrationType}</div>
+                        {funnel.configuration?.folderName && (
+                          <div className="text-xs text-primary-400">
+                            📁 {funnel.configuration.folderName}
+                          </div>
+                        )}
                       </div>
                       <Button
                         type="button"
@@ -1107,6 +1136,36 @@ const CreateEditAgentTaskInner = ({
           onConfirm={handleUrlConfigSave}
           filename={form.inputSources.value?.[currentUrlIndex]?.filename || 'URL'}
           contentType={undefined} // We don't know content type for URLs until download
+        />
+      )}
+
+      {/* Sink Folder Selection Modal */}
+      {selectedIntegrationForSink && (
+        <FolderSelectionModal
+          isOpen={showSinkFolderModal}
+          onClose={() => {
+            setShowSinkFolderModal(false)
+            setSelectedIntegrationForSink(null)
+          }}
+          onSelect={handleSinkFolderSelect}
+          integrationId={selectedIntegrationForSink}
+          title="Select Output Folder"
+          description="Choose a folder where outputs from this task will be saved."
+        />
+      )}
+
+      {/* Funnel Folder Selection Modal */}
+      {selectedIntegrationForFunnel && (
+        <FolderSelectionModal
+          isOpen={showFunnelFolderModal}
+          onClose={() => {
+            setShowFunnelFolderModal(false)
+            setSelectedIntegrationForFunnel(null)
+          }}
+          onSelect={handleFunnelFolderSelect}
+          integrationId={selectedIntegrationForFunnel}
+          title="Select Input Folder"
+          description="Choose a folder to monitor for new files that will trigger this task."
         />
       )}
     </div>
