@@ -38,6 +38,7 @@ class IntegrationSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "integration_type",
+            "integration_roles",
             "is_system_provided",
             "webhook_url",
             "agent_tasks",

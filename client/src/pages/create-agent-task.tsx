@@ -28,7 +28,10 @@ import {
 import { AgentInstance, agentInstanceQueries, agentTypeEnum } from 'src/services/agent-instance'
 import { SelectOption } from 'src/services/base-model'
 import { environmentSecretQueries } from 'src/services/environment-secrets'
-import { integrationQueries } from 'src/services/integration'
+import {
+  integrationQueries,
+  integrationRoleEnum,
+} from 'src/services/integration'
 import { CustomSelect } from 'src/components/custom-select'
 
 const CreateEditAgentTaskInner = ({
@@ -75,11 +78,18 @@ const CreateEditAgentTaskInner = ({
     enabled: !!projectId,
   })
 
-  const { data: integrationData } = useQuery({
+  const { data: integrationSinks } = useQuery({
     ...integrationQueries.list({
       pagination: new Pagination({ page: 1, size: 100 }),
+      filters: { integrationRoles: [integrationRoleEnum.SINK] },
     }),
-    enabled: !!projectId,
+  })
+
+  const { data: integrationFunnels } = useQuery({
+    ...integrationQueries.list({
+      pagination: new Pagination({ page: 1, size: 100 }),
+      filters: { integrationRoles: [integrationRoleEnum.FUNNEL] },
+    }),
   })
 
   // Transform environment secrets into variables for binding component
@@ -190,16 +200,23 @@ const CreateEditAgentTaskInner = ({
     )
   }, [agentTasks, initialData?.id])
 
-  const integrationOptions: SelectOption[] = useMemo(() => {
+  const integrationSinkOptions: SelectOption[] = useMemo(() => {
     return (
-      integrationData?.results
-        ?.filter((integration) => integration.id !== initialData?.id) // Don't allow self-reference
-        ?.map((integration) => ({
-          label: integration.name,
-          value: integration.id,
-        })) || []
+      integrationSinks?.results?.map((integration) => ({
+        label: integration.name,
+        value: integration.id,
+      })) || []
     )
-  }, [integrationData, initialData?.id])
+  }, [integrationSinks])
+
+  const integrationFunnelOptions: SelectOption[] = useMemo(() => {
+    return (
+      integrationFunnels?.results?.map((integration) => ({
+        label: integration.name,
+        value: integration.id,
+      })) || []
+    )
+  }, [integrationFunnels])
 
   // Pre-populate form for editing
   useEffect(() => {
@@ -493,7 +510,7 @@ const CreateEditAgentTaskInner = ({
           <label className="mb-2 block text-sm font-medium text-primary-600">Sinks</label>
           <CustomSelect
             clearable
-            options={integrationOptions}
+            options={integrationFunnelOptions}
             values={form.funnels.value ?? []}
             onChange={(e) => createFormFieldChangeHandler(form.funnels)(e)}
             className="bg-primary-50 border-primary-200 focus:border-primary-500"
@@ -830,7 +847,7 @@ const CreateEditAgentTaskInner = ({
           <label className="mb-2 block text-sm font-medium text-primary-600">Sinks</label>
           <CustomSelect
             clearable
-            options={integrationOptions}
+            options={integrationSinkOptions}
             values={form.sinks.value ?? []}
             onChange={(e) => createFormFieldChangeHandler(form.sinks)(e)}
             className="bg-primary-50 border-primary-200 focus:border-primary-500"

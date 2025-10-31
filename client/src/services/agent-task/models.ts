@@ -101,6 +101,43 @@ export const executionStatusLabelMap = {
   [executionStatusEnum.FAILED]: 'Failed',
 }
 
+// Through model shapes for sinks and funnels
+export const agentTaskSinkShape = {
+  id: z.string().uuid(),
+  integration: z.string().uuid(),
+  integrationName: z.string().readonly(),
+  integrationType: z.string().readonly(),
+  order: z.number().nonnegative().default(0),
+  isEnabled: z.boolean().default(true),
+  configuration: z.record(z.any()).default({}),
+  created: z.string().datetime(),
+}
+
+export const agentTaskFunnelShape = {
+  id: z.string().uuid(),
+  integration: z.string().uuid(),
+  integrationName: z.string().readonly(),
+  integrationType: z.string().readonly(),
+  order: z.number().nonnegative().default(0),
+  isEnabled: z.boolean().default(true),
+  configuration: z.record(z.any()).default({}),
+  created: z.string().datetime(),
+}
+
+export const createAgentTaskSinkShape = {
+  integration: agentTaskSinkShape.integration,
+  order: agentTaskSinkShape.order.optional(),
+  isEnabled: agentTaskSinkShape.isEnabled.optional(),
+  configuration: agentTaskSinkShape.configuration.optional(),
+}
+
+export const createAgentTaskFunnelShape = {
+  integration: agentTaskFunnelShape.integration,
+  order: agentTaskFunnelShape.order.optional(),
+  isEnabled: agentTaskFunnelShape.isEnabled.optional(),
+  configuration: agentTaskFunnelShape.configuration.optional(),
+}
+
 export const agentTaskShape = {
   id: z.string().uuid(),
   name: z.string(),
@@ -128,7 +165,6 @@ export const agentTaskShape = {
   executionCount: z.number().nonnegative(),
   created: z.string().datetime(),
   updated: z.string().datetime(),
-  sinks: z.array(z.string().uuid()).default([]),
 }
 
 export const createAgentTaskShape = {
@@ -145,7 +181,6 @@ export const createAgentTaskShape = {
   triggeredByTask: agentTaskShape.triggeredByTask,
   webhookValidateSignature: agentTaskShape.webhookValidateSignature,
   maxExecutions: agentTaskShape.maxExecutions,
-  sinks: agentTaskShape.sinks,
 }
 
 export const agentTaskFilterShape = {
@@ -157,6 +192,10 @@ export type InputSource = GetInferredFromRaw<typeof inputSourceShape>
 export type AgentTask = GetInferredFromRaw<typeof agentTaskShape>
 export type CreateAgentTask = GetInferredFromRaw<typeof createAgentTaskShape>
 export type AgentTaskFilter = GetInferredFromRaw<typeof agentTaskFilterShape>
+export type AgentTaskSink = GetInferredFromRaw<typeof agentTaskSinkShape>
+export type AgentTaskFunnel = GetInferredFromRaw<typeof agentTaskFunnelShape>
+export type CreateAgentTaskSink = GetInferredFromRaw<typeof createAgentTaskSinkShape>
+export type CreateAgentTaskFunnel = GetInferredFromRaw<typeof createAgentTaskFunnelShape>
 
 export const presignedUrlRequestShape = {
   filename: z.string(),

@@ -16,7 +16,8 @@ from tn_agent_launcher.utils.sites import get_site_url
 
 from .models import Integration
 from .serializers import IntegrationSerializer
-
+from django_filters.rest_framework import DjangoFilterBackend
+from .filters import IntegrationFilters
 logger = logging.getLogger(__name__)
 
 
@@ -28,6 +29,8 @@ class IntegrationViewSet(viewsets.ModelViewSet):
     serializer_class = IntegrationSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [JSONParser, MultiPartParser]  # Support file uploads
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = IntegrationFilters
 
     def get_queryset(self):
         """Users can only see their own integrations"""

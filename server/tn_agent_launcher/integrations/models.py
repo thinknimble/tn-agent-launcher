@@ -2,6 +2,7 @@ import json
 import secrets
 
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from encrypted_model_fields.fields import EncryptedTextField
 
@@ -14,8 +15,18 @@ class Integration(AbstractBaseModel):
         AWS_S3 = "aws_s3", "AWS S3"
         WEBHOOK = "webhook", "Webhook"
 
+    class IntegrationRoles(models.TextChoices):
+        SINK = "SINK", "Sink"
+        FUNNEL = "FUNNEL", "Funnel"
+
     name = models.CharField(max_length=255)
     integration_type = models.CharField(max_length=100, choices=IntegrationTypes.choices)
+    integration_roles = ArrayField(
+        models.CharField(max_length=10, choices=IntegrationRoles.choices),
+        size=2,
+        default=list,
+        help_text="Defines whether this integration can be used as SINK, FUNNEL, or both"
+    )
     is_system_provided = models.BooleanField(
         default=False, help_text="Uses Server-wide credentials, not available for webhooks"
     )
@@ -93,6 +104,15 @@ class Integration(AbstractBaseModel):
         self._oauth_credentials = json.dumps(value) if value else ""
 
     def save(self, *args, **kwargs):
+        # Set default integration roles based on integration type
+        if not self.integration_roles:
+            if self.integration_type == self.IntegrationTypes.GOOGLE_DRIVE:
+                self.integration_roles = [self.IntegrationRoles.SINK, self.IntegrationRoles.FUNNEL]
+            elif self.integration_type == self.IntegrationTypes.AWS_S3:
+                self.integration_roles = [self.IntegrationRoles.SINK, self.IntegrationRoles.FUNNEL]
+            elif self.integration_type == self.IntegrationTypes.WEBHOOK:
+                self.integration_roles = [self.IntegrationRoles.SINK]
+
         # Generate webhook secret for webhook integrations
         if (
             self.integration_type == self.IntegrationTypes.WEBHOOK
@@ -102,3 +122,13 @@ class Integration(AbstractBaseModel):
             self.webhook_secret = secrets.token_urlsafe(32)
 
         super().save(*args, **kwargs)
+
+    @property
+    def can_be_sink(self):
+        """Check if this integration can be used as a sink (output)."""
+        return self.IntegrationRoles.SINK in self.integration_roles
+
+    @property
+    def can_be_funnel(self):
+        """Check if this integration can be used as a funnel (input)."""
+        return self.IntegrationRoles.FUNNEL in self.integration_roles

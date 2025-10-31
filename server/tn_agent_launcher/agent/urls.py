@@ -7,6 +7,8 @@ from .views import (
     AgentProjectViewSet,
     AgentTaskExecutionViewSet,
     AgentTaskViewSet,
+    AgentTaskSinkViewSet,
+    AgentTaskFunnelViewSet,
     ProjectEnvironmentSecretViewSet,
 )
 
@@ -18,6 +20,8 @@ router.register("instances", AgentInstanceViewSet)
 router.register("projects", AgentProjectViewSet)
 router.register("tasks", AgentTaskViewSet)
 router.register("executions", AgentTaskExecutionViewSet)
+router.register("task-sinks", AgentTaskSinkViewSet)
+router.register("task-funnels", AgentTaskFunnelViewSet)
 router.register("environment-secrets", ProjectEnvironmentSecretViewSet)
 
 urlpatterns = [

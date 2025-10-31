@@ -22,6 +22,8 @@ from .models import (
     AgentProject,
     AgentTask,
     AgentTaskExecution,
+    AgentTaskSink,
+    AgentTaskFunnel,
     ProjectEnvironmentSecret,
 )
 from .serializers import (
@@ -29,6 +31,8 @@ from .serializers import (
     AgentProjectSerializer,
     AgentTaskExecutionSerializer,
     AgentTaskSerializer,
+    AgentTaskSinkSerializer,
+    AgentTaskFunnelSerializer,
     ProjectEnvironmentSecretSerializer,
 )
 from .tasks import schedule_agent_task_execution
@@ -333,3 +337,55 @@ class ProjectEnvironmentSecretViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class AgentTaskSinkViewSet(viewsets.ModelViewSet):
+    queryset = AgentTaskSink.objects.all()
+    serializer_class = AgentTaskSinkSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["agent_task", "integration", "is_enabled"]
+
+    def get_queryset(self):
+        return self.queryset.filter(agent_task__agent_instance__user=self.request.user)
+
+    def perform_create(self, serializer):
+        # Ensure the agent_task belongs to the current user
+        agent_task = serializer.validated_data['agent_task']
+        if agent_task.agent_instance.user != self.request.user:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You can only add sinks to your own agent tasks")
+        
+        # Ensure the integration belongs to the current user
+        integration = serializer.validated_data['integration']
+        if integration.user != self.request.user:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You can only use your own integrations")
+        
+        serializer.save()
+
+
+class AgentTaskFunnelViewSet(viewsets.ModelViewSet):
+    queryset = AgentTaskFunnel.objects.all()
+    serializer_class = AgentTaskFunnelSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["agent_task", "integration", "is_enabled"]
+
+    def get_queryset(self):
+        return self.queryset.filter(agent_task__agent_instance__user=self.request.user)
+
+    def perform_create(self, serializer):
+        # Ensure the agent_task belongs to the current user
+        agent_task = serializer.validated_data['agent_task']
+        if agent_task.agent_instance.user != self.request.user:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You can only add funnels to your own agent tasks")
+        
+        # Ensure the integration belongs to the current user
+        integration = serializer.validated_data['integration']
+        if integration.user != self.request.user:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You can only use your own integrations")
+        
+        serializer.save()

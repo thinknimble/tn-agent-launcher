@@ -4,6 +4,10 @@ import {
   agentTaskShape,
   createAgentTaskShape,
   agentTaskFilterShape,
+  agentTaskSinkShape,
+  agentTaskFunnelShape,
+  createAgentTaskSinkShape,
+  createAgentTaskFunnelShape,
   presignedUrlRequestShape,
   presignedUrlResponseShape,
 } from './models'
@@ -69,5 +73,24 @@ export const agentTaskApi = createApi({
     resume: resumeCall,
     generatePresignedUrl: generatePresignedUrlCall,
     regenerateWebhookSecret: regenerateWebhookSecretCall,
+  },
+})
+
+// Through model APIs for managing sinks and funnels
+export const agentTaskSinkApi = createApi({
+  client: axiosInstance,
+  baseUri: '/agents/task-sinks/',
+  models: {
+    entity: agentTaskSinkShape,
+    create: createAgentTaskSinkShape,
+  },
+})
+
+export const agentTaskFunnelApi = createApi({
+  client: axiosInstance,
+  baseUri: '/agents/task-funnels/',
+  models: {
+    entity: agentTaskFunnelShape,
+    create: createAgentTaskFunnelShape,
   },
 })

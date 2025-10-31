@@ -619,7 +619,11 @@ export const Integrations = () => {
   const [showWebhookModal, setShowWebhookModal] = useState(false)
 
   // Fetch existing integrations
-  const { data: integrationResponse } = useQuery(integrationQueries.list(new Pagination(), {}))
+  const { data: integrationResponse } = useQuery(
+    integrationQueries.list({
+      pagination: new Pagination({ page: 1, size: 100 }),
+    }),
+  )
 
   const integrations = integrationResponse?.results || []
 

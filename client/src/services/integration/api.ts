@@ -3,6 +3,7 @@ import { axiosInstance } from 'src/services/axios-instance'
 import {
   integrationShape,
   createIntegrationShape,
+  integrationFilterShape,
   googleOAuthUrlShape,
   googleOAuthCallbackShape,
   googleOAuthResponseShape,
@@ -70,6 +71,7 @@ export const integrationApi = createApi({
   models: {
     entity: integrationShape,
     create: createIntegrationShape,
+    extraFilters: integrationFilterShape,
   },
   customCalls: {
     getGoogleOAuthUrl,
