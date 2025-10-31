@@ -99,6 +99,8 @@ export type AgentTaskFormInputs = {
   triggeredByTask: IFormField<SelectOption | null>
   webhookValidateSignature: IFormField<boolean>
   maxExecutions: IFormField<number | null>
+  sinks: IFormField<SelectOption[]>
+  funnels: IFormField<SelectOption[]>
 }
 
 export class AgentTaskForm extends Form<AgentTaskFormInputs> {
@@ -183,6 +185,19 @@ export class AgentTaskForm extends Form<AgentTaskFormInputs> {
     placeholder: 'Leave blank for unlimited',
     type: 'number',
     value: null,
+  })
+
+  static sinks = FormField.create({
+    label: 'Sinks',
+    placeholder: 'Select sinks for this task',
+    type: 'array',
+    value: [],
+  })
+  static funnels = FormField.create({
+    label: 'Funnels',
+    placeholder: 'Select funnels for this task',
+    type: 'array',
+    value: [],
   })
 }
 

@@ -4,10 +4,10 @@ import { Pagination } from '@thinknimble/tn-models'
 
 export const integrationQueries = {
   all: () => ['integrations'],
-  list: (pagination: Pagination, filters: any = {}) =>
+  list: ({ pagination }: { pagination: Pagination }) =>
     queryOptions({
-      queryKey: [...integrationQueries.all(), { pagination, filters }],
-      queryFn: () => integrationApi.list({ ...pagination, ...filters }),
+      queryKey: [...integrationQueries.all(), { pagination }],
+      queryFn: () => integrationApi.list({ pagination }),
       enabled: true,
     }),
   retrieve: (id: string) =>

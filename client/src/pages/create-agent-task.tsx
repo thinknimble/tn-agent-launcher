@@ -28,6 +28,8 @@ import {
 import { AgentInstance, agentInstanceQueries, agentTypeEnum } from 'src/services/agent-instance'
 import { SelectOption } from 'src/services/base-model'
 import { environmentSecretQueries } from 'src/services/environment-secrets'
+import { integrationQueries } from 'src/services/integration'
+import { CustomSelect } from 'src/components/custom-select'
 
 const CreateEditAgentTaskInner = ({
   onSuccess,
@@ -69,6 +71,13 @@ const CreateEditAgentTaskInner = ({
     ...environmentSecretQueries.list({
       pagination: new Pagination({ page: 1, size: 100 }),
       filters: { project: projectId ?? '', search: '' },
+    }),
+    enabled: !!projectId,
+  })
+
+  const { data: integrationData } = useQuery({
+    ...integrationQueries.list({
+      pagination: new Pagination({ page: 1, size: 100 }),
     }),
     enabled: !!projectId,
   })
@@ -180,6 +189,17 @@ const CreateEditAgentTaskInner = ({
         })) || []
     )
   }, [agentTasks, initialData?.id])
+
+  const integrationOptions: SelectOption[] = useMemo(() => {
+    return (
+      integrationData?.results
+        ?.filter((integration) => integration.id !== initialData?.id) // Don't allow self-reference
+        ?.map((integration) => ({
+          label: integration.name,
+          value: integration.id,
+        })) || []
+    )
+  }, [integrationData, initialData?.id])
 
   // Pre-populate form for editing
   useEffect(() => {
@@ -342,6 +362,8 @@ const CreateEditAgentTaskInner = ({
         triggeredByTask: formValue.triggeredByTask?.value || undefined,
         webhookValidateSignature: formValue.webhookValidateSignature ?? true,
         maxExecutions: formValue.maxExecutions || undefined,
+        sinks: formValue.sinks?.map((sink) => sink.value) || [],
+        funnels: formValue.funnels?.map((funnel) => funnel.value) || [],
       }
 
       if (isEditing && initialData) {
@@ -467,7 +489,16 @@ const CreateEditAgentTaskInner = ({
             Append agent instance instruction to task instruction
           </label>
         </div>
-
+        <div>
+          <label className="mb-2 block text-sm font-medium text-primary-600">Sinks</label>
+          <CustomSelect
+            clearable
+            options={integrationOptions}
+            values={form.funnels.value ?? []}
+            onChange={(e) => createFormFieldChangeHandler(form.funnels)(e)}
+            className="bg-primary-50 border-primary-200 focus:border-primary-500"
+          />
+        </div>
         <div>
           <label className="mb-3 block text-sm font-medium text-primary-600">Input Sources</label>
 
@@ -794,6 +825,16 @@ const CreateEditAgentTaskInner = ({
           <p className="mt-1 text-xs text-primary-400">
             Maximum number of times this task should execute
           </p>
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-primary-600">Sinks</label>
+          <CustomSelect
+            clearable
+            options={integrationOptions}
+            values={form.sinks.value ?? []}
+            onChange={(e) => createFormFieldChangeHandler(form.sinks)(e)}
+            className="bg-primary-50 border-primary-200 focus:border-primary-500"
+          />
         </div>
 
         <div className="flex justify-end space-x-3 border-t border-primary-200 pt-4">

@@ -88,6 +88,7 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "webhook_validate_signature",
             "webhook_url",
             "webhook_secret",
+            "integrations",
         ]
         read_only_fields = [
             "id",
@@ -100,7 +101,11 @@ class AgentTaskSerializer(serializers.ModelSerializer):
             "triggered_by_task_name",
             "webhook_url",
             "webhook_secret",
+            
         ]
+        extra_kwargs = {
+            "integrations": {"required": False},
+        }
 
     def get_next_execution_display(self, obj):
         if obj.next_execution_at:

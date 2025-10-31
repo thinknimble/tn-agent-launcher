@@ -128,6 +128,7 @@ export const agentTaskShape = {
   executionCount: z.number().nonnegative(),
   created: z.string().datetime(),
   updated: z.string().datetime(),
+  sinks: z.array(z.string().uuid()).default([]),
 }
 
 export const createAgentTaskShape = {
@@ -144,6 +145,7 @@ export const createAgentTaskShape = {
   triggeredByTask: agentTaskShape.triggeredByTask,
   webhookValidateSignature: agentTaskShape.webhookValidateSignature,
   maxExecutions: agentTaskShape.maxExecutions,
+  sinks: agentTaskShape.sinks,
 }
 
 export const agentTaskFilterShape = {
